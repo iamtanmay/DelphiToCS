@@ -1,0 +1,47 @@
+package DevExpressCommon;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  vclimg,
+  rtl,
+  vcl,
+  dbrtl,
+  dxCoreD15,
+  cxLibraryD15,
+  dxThemeD15,
+  dxGDIPlusD15,
+  cxEditorsD15,
+  cxDataD15,
+  cxPageControlD15,
+  cxExtEditorsD15,
+  cxGridD15,
+  cxTreeListD15;
+
+contains
+  Utility_DevExpress in 'Utility_DevExpress.pas';
+
+end.

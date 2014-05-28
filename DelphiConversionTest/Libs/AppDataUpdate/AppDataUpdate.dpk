@@ -1,0 +1,85 @@
+package AppDataUpdate;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  dbrtl,
+  DevExpressCommon,
+  CommonTableUpdate;
+
+contains
+  AppInstanceUpdateManagerCommon in 'AppInstanceUpdateManagerCommon.pas',
+  ImportColDefTableUpdate in 'ImportColDefTableUpdate.pas',
+  CarrierTableUpdate in 'CarrierTableUpdate.pas',
+  ImportFileDefTableUpdate in 'ImportFileDefTableUpdate.pas',
+  ImportDefTableUpdate in 'ImportDefTableUpdate.pas',
+  CommandTableUpdate in 'CommandTableUpdate.pas',
+  ResSchemeTableUpdate in 'ResSchemeTableUpdate.pas',
+  ResourcesTableUpdate in 'ResourcesTableUpdate.pas',
+  VolcorrTableUpdate in 'VolcorrTableUpdate.pas',
+  SequenceTableUpdate in 'SequenceTableUpdate.pas',
+  RunVarTableUpdate in 'RunVarTableUpdate.pas',
+  MethImportDefsTableUpdate in 'MethImportDefsTableUpdate.pas',
+  WashprogTableUpdate in 'WashprogTableUpdate.pas',
+  TipTypeTableUpdate in 'TipTypeTableUpdate.pas',
+  LiqClassTableUpdate in 'LiqClassTableUpdate.pas',
+  TipsetTableUpdate in 'TipsetTableUpdate.pas',
+  LayoutTableUpdate in 'LayoutTableUpdate.pas',
+  LiqHTableUpdate in 'LiqHTableUpdate.pas',
+  MethodTableUpdate in 'MethodTableUpdate.pas',
+  RackTableUpdate in 'RackTableUpdate.pas',
+  UserTableUpdate in 'UserTableUpdate.pas',
+  SettingsTableUpdate in 'SettingsTableUpdate.pas',
+  CFRUserlogTableUpdate in 'CFRUserlogTableUpdate.pas',
+  CFRUserTableUpdate in 'CFRUserTableUpdate.pas',
+  SQLTermsTableUpdate in 'SQLTermsTableUpdate.pas',
+  StepsToMMUpdate in 'StepsToMMUpdate.pas',
+  IniToSettingsDB in 'IniToSettingsDB.pas',
+  WorkspaceTableUpdate in 'WorkspaceTableUpdate.pas',
+  LayoutWorkspaceTableUpdate in 'LayoutWorkspaceTableUpdate.pas',
+  WorkspaceDevicesTableUpdate in 'WorkspaceDevicesTableUpdate.pas',
+  MethodSettingsTableUpdate in 'MethodSettingsTableUpdate.pas',
+  ZP04Update in 'ZP04Update.pas',
+  ImportDataTypesTableUpdate in 'ImportDataTypesTableUpdate.pas',
+  DataHistoryTableUpdate in 'DataHistoryTableUpdate.pas',
+  DeviceConversion in 'DeviceConversion.pas',
+  DeviceClasses in 'DeviceClasses.pas',
+  UpdateStatusTableUpdate in 'UpdateStatusTableUpdate.pas',
+  MethodGUIParserConverter in 'MethodGUIParserConverter.pas',
+  SubstanceDataTableUpdate in 'SubstanceDataTableUpdate.pas',
+  PipetteListTableUpdate in 'PipetteListTableUpdate.pas',
+  PosinfoTableUpdate in 'PosinfoTableUpdate.pas',
+  DisposableTipTableUpdate in 'DisposableTipTableUpdate.pas',
+  SubstanceSetTableUpdate in 'SubstanceSetTableUpdate.pas',
+  DiscreteRacksTableUpdate in 'DiscreteRacksTableUpdate.pas',
+  DisplayComponentsTableUpdate in 'DisplayComponentsTableUpdate.pas',
+  MethodVarPagesTableUpdate in 'MethodVarPagesTableUpdate.pas',
+  MethodVariablesTableUpdate in 'MethodVariablesTableUpdate.pas',
+  DiscreteCarriersTableUpdate in 'DiscreteCarriersTableUpdate.pas';
+
+end.

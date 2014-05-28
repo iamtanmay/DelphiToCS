@@ -1,0 +1,61 @@
+package RunActionLib;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  RunControlExt,
+  MethodBuilding;
+
+contains
+  RunActionTypeInfo in 'RunActionTypeInfo.pas',
+  RunAction in 'RunAction.pas',
+  RunActionTypeDictionary in 'RunActionTypeDictionary.pas',
+  RunActionFactory in 'RunActionFactory.pas',
+  AppInstanceRunActionLib in 'AppInstanceRunActionLib.pas',
+  RunStepBatcher in 'RunStepBatcher.pas',
+  TipRunStepBatcher in 'TipRunStepBatcher.pas',
+  RackPosRunStepBatcher in 'RackPosRunStepBatcher.pas',
+  AddMethodRunAction in 'AddMethodRunAction.pas',
+  DatasetRunAction in 'DatasetRunAction.pas',
+  BlockRunAction in 'BlockRunAction.pas',
+  RunStepTranslatorTypeInfo in 'RunStepTranslatorTypeInfo.pas',
+  RunStepTranslator in 'RunStepTranslator.pas',
+  RunStepTranslatorTypeDictionary in 'RunStepTranslatorTypeDictionary.pas',
+  RunStepTranslatorFactory in 'RunStepTranslatorFactory.pas',
+  RestartSetMarkRunAction in 'RestartSetMarkRunAction.pas',
+  ForRunAction in 'ForRunAction.pas',
+  ReturnRunAction in 'ReturnRunAction.pas',
+  FlushRunAction in 'FlushRunAction.pas',
+  ParamStoreRunAction in 'ParamStoreRunAction.pas',
+  VariableSetLengthRunAction in 'VariableSetLengthRunAction.pas',
+  InitRunAction in 'InitRunAction.pas',
+  WhileRunAction in 'WhileRunAction.pas',
+  IfRunAction in 'IfRunAction.pas';
+
+end.
+

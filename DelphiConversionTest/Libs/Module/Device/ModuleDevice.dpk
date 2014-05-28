@@ -1,0 +1,84 @@
+package ModuleDevice;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  ModuleDriver,
+  CommonThreading;
+
+contains
+  DeviceManager in 'DeviceManager.pas',
+  DeviceSettingList in 'DeviceSettingList.pas',
+  DeviceTypeDictionary in 'DeviceTypeDictionary.pas',
+  Liquids in 'Liquids.pas',
+  TipSystem in 'TipSystem.pas',
+  IntfXWayValveDevice in 'Intf\IntfXWayValveDevice.pas',
+  IntfArmDevice in 'Intf\IntfArmDevice.pas',
+  IntfBalanceDevice in 'Intf\IntfBalanceDevice.pas',
+  IntfBCReaderDevice in 'Intf\IntfBCReaderDevice.pas',
+  IntfBCTurntableDevice in 'Intf\IntfBCTurntableDevice.pas',
+  IntfDecapperDevice in 'Intf\IntfDecapperDevice.pas',
+  IntfGripDevice in 'Intf\IntfGripDevice.pas',
+  IntfMotionDevice in 'Intf\IntfMotionDevice.pas',
+  IntfMotorDevice in 'Intf\IntfMotorDevice.pas',
+  IntfMultiYMotorDevice in 'Intf\IntfMultiYMotorDevice.pas',
+  IntfMultiZMotorDevice in 'Intf\IntfMultiZMotorDevice.pas',
+  IntfPeriPumpDevice in 'Intf\IntfPeriPumpDevice.pas',
+  IntfPipDevice in 'Intf\IntfPipDevice.pas',
+  IntfPipPumpDevice in 'Intf\IntfPipPumpDevice.pas',
+  IntfRediDevice in 'Intf\IntfRediDevice.pas',
+  IntfSensorDevice in 'Intf\IntfSensorDevice.pas',
+  IntfMixerDevice in 'Intf\IntfMixerDevice.pas',
+  IntfSoftwareProtectionDevice in 'Intf\IntfSoftwareProtectionDevice.pas',
+  IntfStateSignalDevice in 'Intf\IntfStateSignalDevice.pas',
+  IntfSwitchDevice in 'Intf\IntfSwitchDevice.pas',
+  IntfThermostatDevice in 'Intf\IntfThermostatDevice.pas',
+  IntfTurntableAndBCReaderDevice in 'Intf\IntfTurntableAndBCReaderDevice.pas',
+  IntfUserProtectionDevice in 'Intf\IntfUserProtectionDevice.pas',
+  IntfVarRediMotorDevice in 'Intf\IntfVarRediMotorDevice.pas',
+  IntfWatchDogDevice in 'Intf\IntfWatchDogDevice.pas',
+  IntfWeighingDevice in 'Intf\IntfWeighingDevice.pas',
+  Device in 'Device.pas',
+  IntfDevice in 'Intf\IntfDevice.pas',
+  IntfZTravelManager in 'Intf\IntfZTravelManager.pas',
+  IntfMotorBasedMotionDevice in 'Intf\IntfMotorBasedMotionDevice.pas',
+  IntfMemoryDevice in 'Intf\IntfMemoryDevice.pas',
+  IntfTriggerDevice in 'Intf\IntfTriggerDevice.pas',
+  IntfPHMeterDevice in 'Intf\IntfPHMeterDevice.pas',
+  IntfThermometerDevice in 'Intf\IntfThermometerDevice.pas',
+  IntfContainerBCReaderDevice in 'Intf\IntfContainerBCReaderDevice.pas',
+  DeviceDataCache in 'DeviceDataCache.pas',
+  AppInstanceModuleDevice in 'AppInstanceModuleDevice.pas',
+  DeviceSettingsManager in 'DeviceSettingsManager.pas',
+  LocationDataAdaptor in 'LocationDataAdaptor.pas',
+  IntfLevelDetectionDevice in 'Intf\IntfLevelDetectionDevice.pas',
+  IntfValveDevice in 'Intf\IntfValveDevice.pas',
+  IntfProgrammableDevice in 'Intf\IntfProgrammableDevice.pas',
+  LiquidManager in 'LiquidManager.pas';
+
+end.

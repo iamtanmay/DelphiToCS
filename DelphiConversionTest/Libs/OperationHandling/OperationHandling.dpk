@@ -1,0 +1,51 @@
+package OperationHandling;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  OperationCommon;
+
+contains
+  LiquidHandlingDiti in 'LiquidHandlingDiti.pas',
+  LiquidHandlingLow in 'LiquidHandlingLow.pas',
+  PlateHandling in 'PlateHandling.pas',
+  PlateHandlingLow in 'PlateHandlingLow.pas',
+  SamHigh in 'SamHigh.pas',
+  ToolHandling in 'ToolHandling.pas',
+  DeviceInitHandling in 'DeviceInitHandling.pas',
+  TubeHandling in 'TubeHandling.pas',
+  WashProgramHandling in 'WashProgramHandling.pas',
+  ObjModulA in 'ObjModulA.pas',
+  WashHandling in 'WashHandling.pas',
+  LiquidHandling in 'LiquidHandling.pas',
+  PowderHandling in 'PowderHandling.pas',
+  TipPressureHandling in 'TipPressureHandling.pas';
+
+end.
+
+

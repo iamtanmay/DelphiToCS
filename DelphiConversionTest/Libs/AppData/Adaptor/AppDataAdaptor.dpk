@@ -1,0 +1,74 @@
+package AppDataAdaptor;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  AppData;
+
+contains
+  CarrierDataAdaptor in 'CarrierDataAdaptor.pas',
+  ImportDataAdaptor in 'ImportDataAdaptor.pas',
+  ResSchemeDataAdaptor in 'ResSchemeDataAdaptor.pas',
+  ResourcesDataAdaptor in 'ResourcesDataAdaptor.pas',
+  ImportFileDefDataAdaptor in 'ImportFileDefDataAdaptor.pas',
+  ImportColDefDataAdaptor in 'ImportColDefDataAdaptor.pas',
+  VolcorrDataAdaptor in 'VolcorrDataAdaptor.pas',
+  SubstanceDataDataAdaptor in 'SubstanceDataDataAdaptor.pas',
+  RunVarDataAdaptor in 'RunVarDataAdaptor.pas',
+  MethImportDefsDataAdaptor in 'MethImportDefsDataAdaptor.pas',
+  WashprogDataAdaptor in 'WashprogDataAdaptor.pas',
+  TipTypeDataAdaptor in 'TipTypeDataAdaptor.pas',
+  LiqClassDataAdaptor in 'LiqClassDataAdaptor.pas',
+  LayoutDataAdaptor in 'LayoutDataAdaptor.pas',
+  LiqHDataAdaptor in 'LiqHDataAdaptor.pas',
+  MethodDataAdaptor in 'MethodDataAdaptor.pas',
+  RackDataAdaptor in 'RackDataAdaptor.pas',
+  SQLTermsDataAdaptor in 'SQLTermsDataAdaptor.pas',
+  ImportDataProvider in 'ImportDataProvider.pas',
+  LayoutWorkspaceDataAdaptor in 'LayoutWorkspaceDataAdaptor.pas',
+  WorkspaceDataAdaptor in 'WorkspaceDataAdaptor.pas',
+  WorkspaceDevicesDataAdaptor in 'WorkspaceDevicesDataAdaptor.pas',
+  SubstanceDataDataCache in 'SubstanceDataDataCache.pas',
+  TipsetDataAdaptor in 'TipsetDataAdaptor.pas',
+  ImportDataTypesDataAdaptor in 'ImportDataTypesDataAdaptor.pas',
+  DataHistoryDataAdaptor in 'DataHistoryDataAdaptor.pas',
+  MethodSettingsDataAdaptor in 'MethodSettingsDataAdaptor.pas',
+  LiqHDataAdaptorExt in 'LiqHDataAdaptorExt.pas',
+  DisposableTipDataAdaptor in 'DisposableTipDataAdaptor.pas',
+  PosinfoDataAdaptor in 'PosinfoDataAdaptor.pas',
+  SubstanceSetDataAdaptor in 'SubstanceSetDataAdaptor.pas',
+  LiqHDataCache in 'LiqHDataCache.pas',
+  SequenceDataAdaptor in 'SequenceDataAdaptor.pas',
+  PipetteListDataAdaptor in 'PipetteListDataAdaptor.pas',
+  DiscreteRackDataAdaptor in 'DiscreteRackDataAdaptor.pas',
+  DisplayComponentsDataAdaptor in 'DisplayComponentsDataAdaptor.pas',
+  MethodVarPagesDataAdaptor in 'MethodVarPagesDataAdaptor.pas',
+  MethodVariablesDataAdaptor in 'MethodVariablesDataAdaptor.pas',
+  DiscreteCarrierDataAdaptor in 'DiscreteCarrierDataAdaptor.pas';
+
+end.

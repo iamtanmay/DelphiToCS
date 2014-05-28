@@ -1,0 +1,61 @@
+package Tracing;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  RunStepLib,
+  CommonThreading;
+
+contains
+  CallStackDataCache in 'CallStackDataCache.pas',
+  HeapDataCache in 'HeapDataCache.pas',
+  ProcessTraceDataCache in 'ProcessTraceDataCache.pas',
+  ReferenceIdentValueMemoryDataCache in 'ReferenceIdentValueMemoryDataCache.pas',
+  TraceManager in 'TraceManager.pas',
+  ActionDataCache in 'ActionDataCache.pas',
+  RelativeMemAddressData in 'RelativeMemAddressData.pas',
+  IdentItemData in 'IdentItemData.pas',
+  ThreadListDataCache in 'ThreadListDataCache.pas',
+  ProcessInfoDataCache in 'ProcessInfoDataCache.pas',
+  TOCDataCache in 'TOCDataCache.pas',
+  ListDataCache in 'ListDataCache.pas',
+  ActionIDDataCache in 'ActionIDDataCache.pas',
+  ProgramCounterDataCache in 'ProgramCounterDataCache.pas',
+  PendingStepsDataCache in 'PendingStepsDataCache.pas',
+  RunStepBlockDataCache in 'RunStepBlockDataCache.pas',
+  ActionData in 'ActionData.pas',
+  MultiListDataCache in 'MultiListDataCache.pas',
+  PipDeviceDataCache in 'PipDeviceDataCache.pas',
+  TraceDataCache in 'TraceDataCache.pas',
+  RunEffect in 'RunEffect.pas',
+  TraceProcessDetails in 'TraceProcessDetails.pas',
+  TraceThreadDetails in 'TraceThreadDetails.pas',
+  RestartPreparationStep in 'RestartPreparationStep.pas',
+  RunEffectData in 'RunEffectData.pas';
+
+end.

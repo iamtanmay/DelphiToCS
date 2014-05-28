@@ -1,0 +1,61 @@
+package OperationCommon;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  RunControl,
+  PeripherySettingsManagement;
+
+contains
+  AppInstancePeripheryManagement in 'AppInstancePeripheryManagement.pas',
+  LayoutWithDevices in 'LayoutWithDevices.pas',
+  MotionSystemBCReading in 'MotionSystemBCReading.pas',
+  MotionSystemInit in 'MotionSystemInit.pas',
+  MotionSystemPipMove in 'MotionSystemPipMove.pas',
+  MotionSystemRack in 'MotionSystemRack.pas',
+  MotionSystemTravel in 'MotionSystemTravel.pas',
+  MotionSystemTube in 'MotionSystemTube.pas',
+  MotorStepCalculator in 'MotorStepCalculator.pas',
+  ObjModul in 'ObjModul.pas',
+  OperationAxisMove in 'OperationAxisMove.pas',
+  OperationBCReading in 'OperationBCReading.pas',
+  OperationFactory in 'OperationFactory.pas',
+  OperationRack in 'OperationRack.pas',
+  OperationTool in 'OperationTool.pas',
+  OperationTube in 'OperationTube.pas',
+  PeripheryManager in 'PeripheryManager.pas',
+  PipDeviceManager in 'PipDeviceManager.pas',
+  XYRouteFinder in 'XYRouteFinder.pas',
+  SubstanceLoading in 'SubstanceLoading.pas',
+  ArmPositionInfo in 'ArmPositionInfo.pas',
+  DevicesConflictManager in 'DevicesConflictManager.pas',
+  XTrackConflictManager in 'XTrackConflictManager.pas',
+  XTrackConflictUnit in 'XTrackConflictUnit.pas',
+  OperationBalance in 'OperationBalance.pas';
+
+end.

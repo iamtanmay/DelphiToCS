@@ -1,0 +1,236 @@
+﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+		<PropertyGroup>
+			<ProjectGuid>{765D80DE-7405-4FF2-B480-97CD63801FD7}</ProjectGuid>
+			<MainSource>DesignerLib.dpk</MainSource>
+			<ProjectVersion>12.3</ProjectVersion>
+			<Config Condition="'$(Config)'==''">Debug</Config>
+			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+			<Base>True</Base>
+			<Platform>Win32</Platform>
+			<AppType>Package</AppType>
+			<FrameworkType>None</FrameworkType>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
+			<Cfg_1>true</Cfg_1>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
+			<Cfg_2>true</Cfg_2>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Base)'!=''">
+			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
+			<DCC_UnitSearchPath>\DELPHI32\DCP;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_DcuOutput>\Delphi32\DCU</DCC_DcuOutput>
+			<DCC_BplOutput>\Delphi32\Test</DCC_BplOutput>
+			<DCC_DcpOutput>\Delphi32\DCP</DCC_DcpOutput>
+			<DCC_ImageBase>00400000</DCC_ImageBase>
+			<GenPackage>true</GenPackage>
+			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
+			<DCC_Platform>x86</DCC_Platform>
+			<DCC_DependencyCheckOutputName>..\..\Test\DesignerLib.bpl</DCC_DependencyCheckOutputName>
+			<DCC_N>false</DCC_N>
+			<DCC_S>false</DCC_S>
+			<GenDll>true</GenDll>
+			<DCC_E>false</DCC_E>
+			<DCC_F>false</DCC_F>
+			<DCC_K>false</DCC_K>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_1)'!=''">
+			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
+			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+			<DCC_DebugInformation>false</DCC_DebugInformation>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_Optimize>false</DCC_Optimize>
+			<DCC_DebugDCUs>false</DCC_DebugDCUs>
+			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+		</PropertyGroup>
+		<ItemGroup>
+			<DelphiCompile Include="DesignerLib.dpk">
+				<MainSource>MainSource</MainSource>
+			</DelphiCompile>
+			<DCCReference Include="LayoutEditing.dcp"/>
+			<DCCReference Include="vclactnband.dcp"/>
+			<DCCReference Include="rtl.dcp"/>
+			<DCCReference Include="RunDialogs.dcp"/>
+			<DCCReference Include="EditingMethod.dcp"/>
+			<DCCReference Include="AppInstanceDesignerLib.pas"/>
+			<DCCReference Include="CompleteMethodImportForm.pas">
+				<Form>frmCompleteMethodImport</Form>
+			</DCCReference>
+			<DCCReference Include="DisplayComponentEditor.pas">
+				<Form>frmDisplayComponentEditor</Form>
+			</DCCReference>
+			<DCCReference Include="DisplayComponentEditorDataAdaptor.pas"/>
+			<DCCReference Include="EdActionProps.pas">
+				<Form>frmActionProps</Form>
+			</DCCReference>
+			<DCCReference Include="DesignerEditFunctions.pas"/>
+			<DCCReference Include="EditingLayoutManager.pas"/>
+			<DCCReference Include="EditReagent.pas">
+				<Form>frmEditReagent</Form>
+			</DCCReference>
+			<DCCReference Include="EdLayout.pas">
+				<Form>frmEdLayout</Form>
+			</DCCReference>
+			<DCCReference Include="Import.pas">
+				<Form>ImportForm</Form>
+			</DCCReference>
+			<DCCReference Include="LayoutDisplay.pas"/>
+			<DCCReference Include="LayoutEditor.pas">
+				<Form>frmLayoutEditor</Form>
+			</DCCReference>
+			<DCCReference Include="LiquidParamEditor.pas">
+				<Form>frmLiquidParEditor</Form>
+			</DCCReference>
+			<DCCReference Include="MainImportDevelopment.pas">
+				<Form>frmMainImportDevelopment</Form>
+			</DCCReference>
+			<DCCReference Include="MainDisplayDevelopment.pas">
+				<Form>frmMainDisplayDevelopment</Form>
+			</DCCReference>
+			<DCCReference Include="MainRunDevelopment.pas">
+				<Form>frmMainRunDevelopment</Form>
+			</DCCReference>
+			<DCCReference Include="MainMethodDevelopment.pas">
+				<Form>frmMainMethodDevelopment</Form>
+			</DCCReference>
+			<DCCReference Include="ModuleEditor.pas">
+				<Form>frmModuleEditor</Form>
+			</DCCReference>
+			<DCCReference Include="ModuleEditorDataAdaptor.pas"/>
+			<DCCReference Include="ModuleViewItem.pas"/>
+			<DCCReference Include="ParserCodeGenerateDlg.pas">
+				<Form>frmParserCodeGenerateDlg</Form>
+			</DCCReference>
+			<DCCReference Include="PowderParamEditor.pas">
+				<Form>frmPowderParEditor</Form>
+			</DCCReference>
+			<DCCReference Include="ReagentEditor.pas">
+				<Form>frmReagentEditor</Form>
+			</DCCReference>
+			<DCCReference Include="SeqenceEditor.pas">
+				<Form>frmSequenceEditor</Form>
+			</DCCReference>
+			<DCCReference Include="SpecialViewItems.pas"/>
+			<DCCReference Include="SQLTermEditor.pas">
+				<Form>frmSQLTermEditor</Form>
+			</DCCReference>
+			<DCCReference Include="TubeEditor.pas">
+				<Form>frmTubeEditor</Form>
+			</DCCReference>
+			<DCCReference Include="ViewCompileMessages.pas">
+				<Form>frmViewCompileMessages</Form>
+			</DCCReference>
+			<DCCReference Include="ViewDisplayComponentPreview.pas">
+				<Form>frmViewDisplayComponentPreview</Form>
+			</DCCReference>
+			<DCCReference Include="ViewHierarchy.pas">
+				<Form>frmViewHierarchy</Form>
+			</DCCReference>
+			<DCCReference Include="DesignerViewItemsWorkflow.pas"/>
+			<DCCReference Include="ViewItemTypeLibrary.pas"/>
+			<DCCReference Include="ViewSearch.pas">
+				<Form>frmViewSearch</Form>
+			</DCCReference>
+			<DCCReference Include="WashProgramEditor.pas">
+				<Form>frmWashProgEditor</Form>
+			</DCCReference>
+			<DCCReference Include="ZADesignLayout.pas"/>
+			<DCCReference Include="ZADesignLayoutManager.pas"/>
+			<DCCReference Include="DesignerMain.pas">
+				<Form>frmDesignerMain</Form>
+			</DCCReference>
+			<DCCReference Include="MethodStepSelectDialog.pas">
+				<Form>frmMethodStepSelectDialog</Form>
+			</DCCReference>
+			<DCCReference Include="MainCustomDevelopment.pas"/>
+			<DCCReference Include="MainLayoutDevelopment.pas">
+				<Form>frmMainLayoutDevelopment</Form>
+			</DCCReference>
+			<DCCReference Include="MainDeviceDevelopment.pas">
+				<Form>frmMainDeviceDevelopment</Form>
+			</DCCReference>
+			<DCCReference Include="ImportViewItems.pas"/>
+			<DCCReference Include="ImportDefEditor.pas">
+				<Form>frmImportDefEditor</Form>
+			</DCCReference>
+			<DCCReference Include="ImportFileDefEditor.pas">
+				<Form>frmImportFileDefEditor</Form>
+			</DCCReference>
+			<DCCReference Include="ImportSQLEditor.pas">
+				<Form>frmSQLEditor</Form>
+			</DCCReference>
+			<DCCReference Include="DesignerMethodViewItem.pas"/>
+			<DCCReference Include="MethodEditor.pas">
+				<Form>frmMethodEditor</Form>
+			</DCCReference>
+			<BuildConfiguration Include="Debug">
+				<Key>Cfg_2</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Base">
+				<Key>Base</Key>
+			</BuildConfiguration>
+			<BuildConfiguration Include="Release">
+				<Key>Cfg_1</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+		</ItemGroup>
+		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')" Project="$(BDS)\Bin\CodeGear.Delphi.Targets"/>
+		<Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj"/>
+		<ProjectExtensions>
+			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
+			<Borland.ProjectType>Package</Borland.ProjectType>
+			<BorlandProject>
+				<Delphi.Personality>
+					<Source>
+						<Source Name="MainSource">DesignerLib.dpk</Source>
+					</Source>
+					<Parameters/>
+					<VersionInfo>
+						<VersionInfo Name="IncludeVerInfo">True</VersionInfo>
+						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
+						<VersionInfo Name="MajorVer">8</VersionInfo>
+						<VersionInfo Name="MinorVer">1</VersionInfo>
+						<VersionInfo Name="Release">0</VersionInfo>
+						<VersionInfo Name="Build">0</VersionInfo>
+						<VersionInfo Name="Debug">False</VersionInfo>
+						<VersionInfo Name="PreRelease">False</VersionInfo>
+						<VersionInfo Name="Special">False</VersionInfo>
+						<VersionInfo Name="Private">False</VersionInfo>
+						<VersionInfo Name="DLL">False</VersionInfo>
+						<VersionInfo Name="Locale">1033</VersionInfo>
+						<VersionInfo Name="CodePage">1252</VersionInfo>
+					</VersionInfo>
+					<VersionInfoKeys>
+						<VersionInfoKeys Name="CompanyName"/>
+						<VersionInfoKeys Name="FileDescription"/>
+						<VersionInfoKeys Name="FileVersion">8.1.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="InternalName"/>
+						<VersionInfoKeys Name="LegalCopyright"/>
+						<VersionInfoKeys Name="LegalTrademarks"/>
+						<VersionInfoKeys Name="OriginalFilename"/>
+						<VersionInfoKeys Name="ProductName"/>
+						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="Comments"/>
+					</VersionInfoKeys>
+					<Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k120.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclofficexp120.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+					</Excluded_Packages>
+				</Delphi.Personality>
+				<Platforms>
+					<Platform value="Win32">True</Platform>
+				</Platforms>
+			</BorlandProject>
+			<ProjectFileVersion>12</ProjectFileVersion>
+		</ProjectExtensions>
+	</Project>

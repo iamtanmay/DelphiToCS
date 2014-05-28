@@ -1,0 +1,57 @@
+package RunDialogs;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  SimpleDialogs,
+  Tracing;
+
+contains
+  BarcDlg in 'BarcDlg.pas' {BarcodeDLG},
+  Rckplace in 'Rckplace.pas' {RackPlaceList},
+  RunAbortInfo in 'RunAbortInfo.pas' {frmRunAbortInfo},
+  DelayInfo in 'DelayInfo.pas' {fraDelayInfo: TFrame},
+  RunInformation in 'RunInformation.pas' {fraRunInformation: TFrame},
+  RunStandardDisplayComponents in 'RunStandardDisplayComponents.pas',
+  LogInfo in 'LogInfo.pas' {frmLogInfo},
+  RunMainControls in 'RunMainControls.pas',
+  RunDefaultDisplayLayout in 'RunDefaultDisplayLayout.pas' {frmRunDefaultDisplayLayout},
+  VolumesInfo in 'VolumesInfo.pas' {frmVolumesInfo},
+  AskRunStart in 'AskRunStart.pas' {frmAskRunStart},
+  RunDialogsManager in 'RunDialogsManager.pas',
+  SQLResult in 'SQLResult.pas' {SQLResultForm},
+  Toolerr in 'Toolerr.pas' {ToolErrForm},
+  AppInstanceRunDialogs in 'AppInstanceRunDialogs.pas',
+  ErrorMessage in 'ErrorMessage.pas' {frmErrorMessage},
+  TraceEditor in 'TraceEditor.pas' {frmTraceEditor},
+  AskRestart in 'AskRestart.pas' {FrmAskRestart},
+  RestartPreparations in 'RestartPreparations.pas' {frmRestartPreparations},
+  MainRun in 'MainRun.pas' {frmMainRun},
+  RequestAbort in 'RequestAbort.pas' {frmRequestAbort};
+
+end.

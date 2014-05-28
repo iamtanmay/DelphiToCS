@@ -1,0 +1,53 @@
+package LayouterLib;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  LayoutEditing,
+  RunDialogs,
+  vcl,
+  rtl,
+  dbrtl,
+  vcldb,
+  OperationExecuting;
+
+contains
+  TestForm in 'TestForm.pas' {frmTest},
+  ArmMoveControl in 'ArmMoveControl.pas' {frmArmMoveControl},
+  GUIManagerLayouter in 'GUIManagerLayouter.pas',
+  LayEvalu in 'LayEvalu.pas' {frmEvalCarr},
+  LayGlobe in 'LayGlobe.pas',
+  LayouterLayoutManager in 'LayouterLayoutManager.pas',
+  LObjMove in 'LObjMove.pas',
+  LObjTest in 'LObjTest.pas',
+  TeachControl in 'TeachControl.pas' {frmTeachControl},
+  LayMain in 'LayMain.pas' {main},
+  DLLTest in 'DLLTest.pas' {frmDLLTest},
+  RackPositionMoveAction in 'RackPositionMoveAction.pas',
+  Stop in 'Stop.pas' {StopDlg},
+  SystemEventsLayouter in 'SystemEventsLayouter.pas';
+
+end.

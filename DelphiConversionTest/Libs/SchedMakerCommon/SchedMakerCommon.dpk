@@ -1,0 +1,47 @@
+package SchedMakerCommon;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  tee,
+  dbrtl,
+  MethodBuilding;
+
+contains
+  ObjSchedChart in 'ObjSchedChart.pas',
+  ObjScheduler in 'ObjScheduler.pas',
+  ZASCHEDULERLib_TLB in 'ZASCHEDULERLib_TLB.pas',
+  SchedRunners in 'SchedRunners.pas',
+  SchedMakerClasses in 'SchedMakerClasses.pas',
+  SchedMakerTypes in 'SchedMakerTypes.pas',
+  ImplMainSchedChart in 'GUI\ImplMainSchedChart.pas',
+  LnkCommonLinkAll in 'GUI\LnkCommonLinkAll.pas',
+  ufrmScheduleChart in 'GUI\ufrmScheduleChart.pas' {frmScheduleChart},
+  UfrmScheduleChartOptions in 'GUI\UfrmScheduleChartOptions.pas' {FrmScheduleChartOptions};
+
+end.

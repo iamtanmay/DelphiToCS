@@ -1,0 +1,51 @@
+package RunControlExt;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  vcl,
+  rtl,
+  OperationExecuting;
+
+contains
+  ThrdManExt in 'ThrdManExt.pas',
+  ResourceManagerRun in 'ResourceManagerRun.pas',
+  MethodCompiledFile in 'MethodCompiledFile.pas',
+  ReferenceIdentValueMemory in 'ReferenceIdentValueMemory.pas',
+  RunStepBuilderProcessor in 'RunStepBuilderProcessor.pas',
+  RunTraceManager in 'RunTraceManager.pas',
+  StandardRunEffects in 'StandardRunEffects.pas',
+  DataExchangeDatasetWrapper in 'DataExchangeDatasetWrapper.pas',
+  RunTraceDataMaker in 'RunTraceDataMaker.pas',
+  RunStepBlockManager in 'RunStepBlockManager.pas',
+  AppInstanceRunControlExt in 'AppInstanceRunControlExt.pas',
+  GUIManagerRun in 'GUIManagerRun.pas',
+  LayoutRackTrace in 'LayoutRackTrace.pas',
+  StandardRunEffectData in 'StandardRunEffectData.pas',
+  PendingRunStepsTrace in 'PendingRunStepsTrace.pas',
+  LayoutCarrierTrace in 'LayoutCarrierTrace.pas';
+
+end.

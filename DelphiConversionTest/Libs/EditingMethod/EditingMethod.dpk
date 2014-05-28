@@ -1,0 +1,55 @@
+package EditingMethod;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  Editing;
+
+contains
+  CompleteMethodImport in 'CompleteMethodImport.pas',
+  SeqenceNamePage in 'SeqenceNamePage.pas',
+  SelTablePath in 'SelTablePath.pas' {FrmSelTablePath},
+  SeqenceDataAdaptor in 'SeqenceDataAdaptor.pas',
+  SeqenceImport1 in 'SeqenceImport1.pas',
+  SeqenceImport2 in 'SeqenceImport2.pas',
+  SeqenceManager in 'SeqenceManager.pas',
+  ImportDataTypes in 'ImportDataTypes.pas' {FrmImportDataTypes},
+  MethodStepCommentEditor in 'MethodStepCommentEditor.pas' {frmMethodStepCommentEditor},
+  MethodEditDataHelper in 'MethodEditDataHelper.pas',
+  MethodViewItem in 'MethodViewItem.pas',
+  MethodEditForm in 'MethodEditForm.pas',
+  SQLTermParserInterface in 'SQLTermParserInterface.pas' {frmSQLTermParams},
+  EditFunctions in 'EditFunctions.pas',
+  DialogInputRunStepEditor in 'DialogInputRunStepEditor.pas' {frmDialogInputRunStepEditor},
+  EditMethodParamsExt in 'EditMethodParamsExt.pas',
+  MethodVariablesEditor in 'MethodVariablesEditor.pas' {frmMethodVariablesEditor},
+  ParserEditIdent in 'ParserEditIdent.pas' {frmParserEditIdent},
+  MethodSettingsEditor in 'MethodSettingsEditor.pas' {frmMethodSettingsEditor},
+  MethodDataCache in 'MethodDataCache.pas';
+
+end.

@@ -1,0 +1,47 @@
+package AppDataLicencing;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  AppData,
+  CommonWindows;
+
+contains
+  LicenceKeyDlg in 'LicenceKeyDlg.pas' {frmLicenceKeyDialog},
+  Licence in 'Licence.pas',
+  AppInstanceLicencing in 'AppInstanceLicencing.pas',
+  GetMACFromIFTable in 'GetMACFromIFTable.pas',
+  GetMACFromNB30 in 'GetMACFromNB30.pas',
+  LicenseKeyUtils in 'LicenseKeyUtils.pas',
+  LicenseGetPCKey in 'LicenseGetPCKey.pas' {frmLicenseGetPCKey},
+  LicenseKeyMaker in 'LicenseKeyMaker.pas',
+  BlockCiphers in 'BlockCiphers.pas',
+  crc32 in 'crc32.pas',
+  LicenseConfig in 'LicenseConfig.pas';
+
+end.

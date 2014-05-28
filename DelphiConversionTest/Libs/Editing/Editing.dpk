@@ -1,0 +1,51 @@
+package Editing;
+
+{$R *.res}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  dbrtl,
+  VclSmp,
+  vclx,
+  SimpleDialogs,
+  AppDataAdaptorExt;
+
+contains
+  TipTypeEditor in 'TipTypeEditor.pas' {frmEdTipType},
+  WorkspaceEditor in 'WorkspaceEditor.pas' {frmWorkspaceEditor},
+  EditCarr in 'EditCarr.pas' {frmEdCarr},
+  CoordSystemRelationSubEditor in 'CoordSystemRelationSubEditor.pas' {TfraCoordSystemRelation},
+  EditRack in 'EditRack.pas' {frmEdRack},
+  ViewItem in 'ViewItem.pas',
+  ViewItemEditForm in 'ViewItemEditForm.pas',
+  DockableForm in 'DockableForm.pas',
+  ViewAllItems in 'ViewAllItems.pas' {frmViewAllItems},
+  ViewItemsWorkflow in 'ViewItemsWorkflow.pas',
+  TreeListNodesReaderWriter in 'TreeListNodesReaderWriter.pas',
+  ActionImages in 'ActionImages.pas' {frmActionImages};
+
+end.
