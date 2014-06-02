@@ -4,43 +4,43 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DelphiToCSTranslator
+namespace ConvertToCS
 {
     public class DelphiParser
     {
-    	//Logical data
-        public string Unit_Name;
+    	//Output
+        public string name;        
         public Script script;
-        public List<Constant> Objects_ConstLocal, Object_ConstGlobal;
-    	public List<Enum> Objects_ConstLocal, Object_ConstGlobal;
-    	public List<Alias> Objects_ConstLocal, Object_ConstGlobal;
-    	//Classes to store enums, consts, alias for global and local use
-    	public Class Objects_ConstClassLocal, Objects_ConstClassGlobal;
-    	public List<Include> Objects_UsesInterface, Objects_UsesImplementation, Objects_UsesCombined;
-    	public List<Class> Objects_Classes;
-
         
-        //Indexing
-    	//Bookmarks for sections
-    	private int HeaderStart, HeaderEnd, InterfaceStart, InterfaceEnd, VarStart, VarEnd, ImplementationStart, ImplementationEnd, InterfaceUsesStart, InterfaceUsesEnd;    	
-    	//Bookmarks for subsections
-    	private List<int> UsesStarts, UsesEnds, ClassInterfaceStarts, ClassInterfaceEnds, ClassImplementStarts, ClassImplementEnds, ConstStarts, ConstEnds, EnumGlobalStarts, EnumEnds, AliasStarts, AliasEnds, SubSection_Bookmarks;
+    	//Enums, consts, types
+    	public Class classLocals, classGlobals;
+        public List<Constant> localConsts, globalConsts;
+    	public List<Enum> localEnums, globalEnums;
+    	public List<Type> localTypes, globalTypes;
+    	
+    	public List<string> interfaceUses, implementationUses;
+        
+        //Bookmarks
+    	//Sections
+    	private int startHeader, endHeader, startInterface, endInterface, startVar, endVar, startImplementation, endImplementation, startInterface, endInterface;    	
+    	//Subsections
+    	private List<int> startUses, endUses, startClassInterface, endClassInterface, startClassImplementation, endClassImplementation, startConsts, endConsts, startEnums, endEnums, startTypes, endTypes;
     	
     	
-    	//String data
-    	//Text for header, list of class names, list of SubSection names as they occur in file, Uses in interface, implementation, text for consts, Enums, Alias and Vars (Global and Local)
-    	private List<string> Header, Class_Names, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, AliasGlobal, VarsGlobal, ConstsLocal, EnumsLocal, AliasLocal, VarsLocal;
+    	//Raw strings
+    	//Header, class names, SubSection names, Uses interface, Uses implementation, (Global and Local): consts, enums, types and vars 
+    	private List<string> Header, classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, AliasGlobal, VarsGlobal, ConstsLocal, EnumsLocal, AliasLocal, VarsLocal;
     	//Raw text for the classes
-    	private List<List<string>> Class_Definitions, Class_Implementations;
+    	private List<List<string>> classDefinitions, classImplementations;
 
     	
     	//Keywords
-        //Broadly dividing the script into sections
-    	public string[] Section_Keywords = { "var", "implementation", "interface"};
-    	//Dividing each section into subsections
-    	public string[] SubSection_Keywords = { "type", "const", "uses", "class", "record", "procedure", "function", "class function", "class procedure"};
-    	//Divide methods into commands
-    	public string[] Method_Keywords = { "var", "begin", "label", "end", "try", "catch", "finally"};
+        //Divide script sections
+    	public string[] sectionKeys = { "var", "implementation", "interface"};
+    	//Divide section subsections
+    	public string[] subsectionKeys = { "type", "const", "uses", "class", "record", "procedure", "function", "class function", "class procedure"};
+    	//Divide method commands
+    	public string[] methodKeys = { "var", "begin", "label", "end", "try", "catch", "finally"};
     	
     	
     	//ireadheader is a flag if header is to be read. iheaderstart is normally "{ --" in Zinsser Delphi units, and iheaderend is "-- }" 
@@ -49,18 +49,17 @@ namespace DelphiToCSTranslator
         	//Initialise
             script = new Script();
             
-            Unit_Name = "";
+            name = "";
             Header = new List<string>();
             
-            Class_Names = new List<string>();
-            Class_Definitions = new List<List<string>>();
-            Class_Implementations = new List<List<string>>();
+            classNames = new List<string>();
+            classDefinitions = new List<List<string>>();
+            classImplementations = new List<List<string>>();
             
             ConstsGlobal = new List<string>();
             EnumsGlobal = new List<string>();
             AliasGlobal = new List<string>();
-            VarsGlobal = new List<string>();
-            
+            VarsGlobal = new List<string>();            
             ConstsLocal = new List<string>();
             EnumsLocal = new List<string>();
             AliasLocal = new List<string>();
@@ -69,63 +68,59 @@ namespace DelphiToCSTranslator
             SubSection_Names = new List<string>();
             Section_Bookmarks = new List<int>();
              	
-            ClassInterfaceStarts = new List<int>();
-            ClassInterfaceEnds = new List<int>(); 
-            ClassImplementStarts = new List<int>(); 
-            ClassImplementEnds = new List<int>(); 
-            
-            UsesStarts = new List<int>();
-            UsesEnds = new List<int>();
-            
-            ConstStarts = new List<int>();
-            ConstEnds = new List<int>(); 
-            
+            startClassInterface = new List<int>();
+            endClassInterface = new List<int>(); 
+            startClassImplementation = new List<int>(); 
+            endClassImplementation = new List<int>();            
+            startUses = new List<int>();
+            endUses = new List<int>();            
+            startConsts = new List<int>();
+            endConsts = new List<int>();             
             EnumLocalStarts = new List<int>();
-            EnumLocalEnds = new List<int>(); 
-            
-            EnumGlobalStarts = new List<int>();
-            EnumGlobalEnds = new List<int>(); 
-            
-            AliasStarts = new List<int>();
-            AliasEnds = new List<int>();
+            EnumLocalEnds = new List<int>();           
+            startEnums = new List<int>();
+            EnumGlobalEnds = new List<int>();           
+            startTypes = new List<int>();
+            endTypes = new List<int>();
 
-            HeaderStart =  HeaderEnd =  InterfaceStart =  InterfaceEnd =  ImplementationStart =  ImplementationEnd =  InterfaceUsesStart =  InterfaceUsesEnd = -1;
+            startHeader =  endHeader =  startInterface =  endInterface =  startImplementation =  endImplementation =  startInterface =  endInterface = -1;
             
             //Read unit name
-            Unit_Name = ((istrings[FindStringInList("unit", ref istrings, 0)].Replace(' ', ';')).Split(';'))[1];
+            name = ((istrings[FindStringInList("unit", ref istrings, 0)].Replace(' ', ';')).Split(';'))[1];
 
             //Bookmark sections
            Indexing:
-            IndexStructure();
+            IndexStructure(ref istrings);
 
             //Break up the text into Lists of strings for different parts
            Processing:
             if (ireadheader)
     			ParseHeader(ref istrings, ref Header, ireadheader, iheaderstart, iheaderend);
 
-			//Convert comments
+			//Convert comments from --{ to /*
 			ParseComments(ref istrings);
-            ParseInterface(ref istrings, ref Uses_Interface, ref Class_Names, ref Class_Definitions, ref ConstsGlobal, ref EnumsGlobal, ref AliasGlobal);
+            ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref EnumsGlobal, ref AliasGlobal);
             ParseVar(ref istrings, ref VarsGlobal);
-            ParseImplementation(ref istrings, ref Uses_Implementation, ref Class_Names, ref Class_Implementations, ref ConstsLocal, ref EnumsLocal, ref AliasLocal);
+            ParseImplementation(ref istrings, ref Uses_Implementation, ref classNames, ref classImplementations, ref ConstsLocal, ref EnumsLocal, ref AliasLocal);
             
             //Generate the text pieces into class objects
            Generation:
-            GenerateClasses(ref Objects_Classes, ref Class_Names, ref Class_Definitions, ref Class_Implementations);
-            GenerateConst(ref Objects_ConstClassGlobal, ref ConstsGlobal, ref EnumsGlobal, ref AliasGlobal, ref VarsGlobal);
-            GenerateConst(ref Objects_ConstClassLocal, ref ConstsLocal, ref EnumsLocal, ref AliasLocal, new List<string>());
-            GenerateIncludes(ref Objects_UsesInterface, ref Uses_Interface);
-            GenerateIncludes(ref Objects_UsesImplementation, ref Uses_Implementation);
+            GenerateClasses(ref classes, ref classNames, ref classDefinitions, ref classImplementations);
+            GenerateConst(ref classGlobals, ref ConstsGlobal, ref EnumsGlobal, ref AliasGlobal, ref VarsGlobal);
+            GenerateConst(ref classLocals, ref ConstsLocal, ref EnumsLocal, ref AliasLocal, new List<string>());
+            GenerateIncludes(ref interfaceUses, ref Uses_Interface);
+            GenerateIncludes(ref implementationUses, ref Uses_Implementation);
             
             //Add both uses into one
-            Objects_UsesCombined.AddRange(Objects_UsesInterface);
-            Objects_UsesCombined.AddRange(Objects_UsesImplementation);
+            Objects_UsesCombined.AddRange(interfaceUses);
+            Objects_UsesCombined.AddRange(implementationUses);
             
-            GenerateScript(ref Script, ref Usref Class Objects_Classes, ref Objects_ConstClassGlobal, ref Objects_ConstClassLocal);
+            GenerateScript(ref Script, ref Usref Class classes, ref classGlobals, ref classLocals);
         }
                 
         GenerateClasses(ref List<Class> oclasses, ref List<string> inames, ref List<List<string>> idefinitions, ref List<List<string>> iimplementations)
         {
+        	//For each class discovered
         	for (int i=0; i< inames.Count(); i++)
         	{
         		Class tclass;
@@ -168,59 +163,17 @@ namespace DelphiToCSTranslator
         			}
         		}
         		
-        		//Add Method implementation data from implementations        		
+        		//Add Method implementation        		
         		for(int j=0; j < timplementation.Count(); j++)
         		{
-        			j = FindNextFunctionImplementation(ref timplementation, j);
-        			List<string> tfunctiontext = GetFunctionText(ref timplementation, j);
+        			int k = FindNextFunctionImplementation(ref timplementation, j);
+        			List<string> tfunctiontext = GetFunctionText(ref timplementation, j, k);
         			Function tfunction = FunctionFromText(ref tfunctiontext);
-        			tclass.functions.
-        			
-        			
-        			switch (RecognizeInterfaceSubSection(istrings[tcurr_string_count]))
-	            	{
-	        			case "Class": 	oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-	        			case "Const": 	oconst.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-	        			case "Enum": 	oenums.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-	        			case "Alias": 	oalias.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-						default: 		break;
-	            	}
-        			
-        			//Contains all the parameters for each 
-        			List<string> timplementation_parts = RecognizeClassDefinition(timplementation[i]);
-        			
-        			//Check for Var
-        			//Check for Begin
-        			//
-        			switch(tdefintion_parts[0])
-        			{
-    					case "Variable":	//name, type
-        									Variable tvar = new Variable(tdefinition_parts[1], tdefinition_parts[2]);
-    										tclass.variables.Add(tvar);
-    										break;
-    										
-						case "Property":	//name, type, read, write
-    										Property tprop = new Property(tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition_parts[4]);
-    										tclass.properties.Add(tprop);
-    										break;
-    					
-						//This is for both functions and procedures. Difference is that type is returned "" for procedures    										
-						case "Function":	//Get list of variables
-    										List<Variable> tvars = new List<Variable>();
-    										for (int ii=5; ii< tdefintion_parts.Count; )
-    										{
-    											Variable tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii+1]);
-    											tvars.Add(tvar);
-												ii += 2;    											
-    										}
-    										//name, type, IsVirtual, IsAbstract, IsStatic, Parameters
-    										Function tfunc = new Function(tdefinition_parts[1], tdefinition_parts[2], ToBool(tdefinition_parts[3]), ToBool(tdefinition_parts[4]), ToBool(tdefinition_parts[5]), tvars);
-    										tclass.functions.Add(tfunc);
-    										break;
-    										
-						case default:		Log(tdefinition[j]);
-											break;
-        			}
+        			int l = FindFunctionInList(ref tclass.functions, tfunction);
+
+        			//Add the function body and variables
+    				tclass.functions[l].commands = tfunction.commands;
+    				tclass.functions[l].classVariables = tfunction.classVariables;
         		}
         	}
         }
@@ -237,9 +190,9 @@ namespace DelphiToCSTranslator
         {
 			 //Read Header
             if (ireadheader)
-            	if (HeaderStart != -1)
-	            	if (HeaderEnd != -1)
-	            		for (int i = HeaderStart; i < HeaderEnd; i++)
+            	if (startHeader != -1)
+	            	if (endHeader != -1)
+	            		for (int i = startHeader; i < endHeader; i++)
 	            			oheader.Add(istrings[i]);
 	            	else
 		            {
@@ -259,7 +212,7 @@ namespace DelphiToCSTranslator
         //oclassdefinitions is a list of class variables, properties, function and procedure definitions 
         private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconst, ref List<string> oenums, ref List<string> oalias )
         {                        
-        	int tcurr_string_count = InterfaceStart;
+        	int tcurr_string_count = startInterface;
         	int tnext_subsection_pos = -1;
         	
             //uses
@@ -269,7 +222,7 @@ namespace DelphiToCSTranslator
 	            tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
 	            
 	            if (tnext_subsection_pos == -1)
-	            	tnext_subsection_pos = InterfaceEnd;
+	            	tnext_subsection_pos = endInterface;
 	            
 	            for (tcurr_string_count; tcurr_string_count < tnext_subsection_pos; tcurr_string_count++)
 	            {
@@ -278,7 +231,7 @@ namespace DelphiToCSTranslator
             }
             
             //The rest
-            while (tcurr_string_count < InterfaceEnd)
+            while (tcurr_string_count < endInterface)
             {
             	tcurr_string_count = FindNextSubSection(ref istrings, tcurr_string_count);
             	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
@@ -295,15 +248,15 @@ namespace DelphiToCSTranslator
         
         private void ParseVar(ref List<string> istrings, ref List<string> ovars)
         {
-        	if (VarStart != -1)
-        		for (int i = VarStart + 1; i < ImplementationStart; i++)
+        	if (startVar != -1)
+        		for (int i = startVar + 1; i < startImplementation; i++)
         			ovars.Add(istrings[i]);
         }
 
         //oclassimplementations is a list of class functions and procedures
         private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassimplementations, ref List<List<string>> oconst, ref List<List<string>> oenum, ref List<List<string>> oalias )
         {
-        	int tcurr_string_count = ImplementationStart;
+        	int tcurr_string_count = startImplementation;
         	int tnext_subsection_pos = -1;
         	
             //uses
@@ -313,7 +266,7 @@ namespace DelphiToCSTranslator
 	            tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
 	            
 	            if (tnext_subsection_pos == -1)
-	            	tnext_subsection_pos = ImplementationEnd;
+	            	tnext_subsection_pos = endImplementation;
 	            
 	            for (tcurr_string_count; tcurr_string_count < tnext_subsection_pos; tcurr_string_count++)
 	            {
@@ -322,7 +275,7 @@ namespace DelphiToCSTranslator
             }
             
             //The rest
-            while (tcurr_string_count < InterfaceEnd)
+            while (tcurr_string_count < endInterface)
             {
             	tcurr_string_count = FindNextSubSection(ref istrings, tcurr_string_count);
             	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
@@ -338,63 +291,63 @@ namespace DelphiToCSTranslator
             }
         }
   
-    	private void IndexStructure()
+    	private void IndexStructure(ref List<string> istrings, string iheaderstart, bool ireadheader)
         {
             if (ireadheader)
             {
-            	HeaderStart = FindStringInList(iheaderstart, ref istrings, 0, true);
-            	if (HeaderStart != -1)
+            	startHeader = FindStringInList(iheaderstart, ref istrings, 0, true);
+            	if (startHeader != -1)
             	{
-            		HeaderEnd = FindStringInList(iheaderend, ref istrings, HeaderStart, true);
-            		if (HeaderEnd == -1)
+            		endHeader = FindStringInList(iheaderend, ref istrings, startHeader, true);
+            		if (endHeader == -1)
 		        		throw new Exception("Header end not found");
 
 		        	Section_Names.Add("Header");
-	        		Section_Bookmarks.Add(HeaderStart);
+	        		Section_Bookmarks.Add(startHeader);
         		}
             }
             
-            InterfaceStart = FindStringInList("interface", ref istrings, 0, true);
-        	if (InterfaceStart == -1)
+            startInterface = FindStringInList("interface", ref istrings, 0, true);
+        	if (startInterface == -1)
 	    		throw new Exception("Interface not found");
 
         	Section_Names.Add("Interface");
-    		Section_Bookmarks.Add(InterfaceStart);
+    		Section_Bookmarks.Add(startInterface);
 
     		//If there is no other section, process
-        	InterfaceEnd = FindNextSection(InterfaceStart);
-    		if (InterfaceEnd == -1)
+        	endInterface = FindNextSection(startInterface);
+    		if (endInterface == -1)
         		goto Processing;
     		
-            ImplementationStart = FindStringInList("implementation", ref istrings, InterfaceEnd, true);
-    		if (ImplementationStart != -1)
+            startImplementation = FindStringInList("implementation", ref istrings, endInterface, true);
+    		if (startImplementation != -1)
     		{
     			//Look for a Var section in between interface and implementation
-    			if (InterfaceEnd != ImplementationStart)
+    			if (endInterface != startImplementation)
     			{
-    				VarStart = InterfaceEnd;
-    				VarEnd = ImplementationStart;
+    				startVar = endInterface;
+    				endVar = startImplementation;
     				
 					Section_Names.Add("Var");
-					Section_Bookmarks.Add(VarStart);
+					Section_Bookmarks.Add(startVar);
     			}
 
     			Section_Names.Add("Implementation");
-	    		Section_Bookmarks.Add(ImplementationStart);
+	    		Section_Bookmarks.Add(startImplementation);
 
 	    		//If there is no other section after "implementation", then process
-	    		ImplementationEnd = FindNextSection(ImplementationStart);
-	    		if (ImplementationEnd == -1)
+	    		endImplementation = FindNextSection(startImplementation);
+	    		if (endImplementation == -1)
 	    		{
 	        		goto Processing;
 	    		}
     		}
     		else{
-	            VarStart = FindStringInList("var", ref istrings, 0, true);
-	            if (VarStart != -1)
+	            startVar = FindStringInList("var", ref istrings, 0, true);
+	            if (startVar != -1)
 	            {
 					Section_Names.Add("Var");
-					Section_Bookmarks.Add(VarStart);
+					Section_Bookmarks.Add(startVar);
 	            }
     		}
         }
@@ -419,10 +372,10 @@ namespace DelphiToCSTranslator
 	    		else
 	    			tstring = istrings[i];
 	    		
-	    		if (tstring.IndexOf(ifind))
+	    		if (tstring.IndexOf(ifind) != -1)
 	    			return i;
 	    	}
 	    	return -1;
 		}
-  c    }    
- }
+	}    
+}

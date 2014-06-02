@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DelphiToCSTranslator
+namespace ConvertToCS
 {
     struct Translate
     {
@@ -12,7 +12,7 @@ namespace DelphiToCSTranslator
         {
             string[] tdelphitext = Utilities.TextFileReader(iPath);
             Script tunit = new Script();
-            tunit = DelphiParser.ExtractStructure(tdelphitext);
+            tunit = Delphi.ExtractStructure(tdelphitext);
         }
 
         public static void DPK2Vcproj(string iPath)

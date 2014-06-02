@@ -1,4 +1,4 @@
-﻿namespace DelphiToCSTranslator
+﻿namespace ConvertToCS
 {
     partial class GUI
     {

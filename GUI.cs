@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace DelphiToCSTranslator
+namespace ConvertToCS
 {
     public partial class GUI : Form
     {

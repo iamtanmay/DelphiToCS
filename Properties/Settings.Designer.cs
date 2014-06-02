@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace DelphiToCSTranslator.Properties
+namespace ConvertToCS.Properties
 {
 
 
