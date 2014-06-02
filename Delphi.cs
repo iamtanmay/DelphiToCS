@@ -234,17 +234,42 @@ namespace ConvertToCS
             else
         		tcurr_string_count = FindNextSubSection(ref istrings, 0);
             
-            
+
+            //Interface sub sections
+            while (tcurr_string_count != -1)
+            {
+            	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
+            	
+            	switch (RecognizeKey(istrings[tcurr_string_count]))
+            	{
+        			case "const": 	oconsts.Add(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
+        			case "type": 	ParseInterfaceType(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count); break;
+        			
+        			//Log unrecognized sub section
+        			default: 		List<string> tlogmessages = new List<string>();
+        							tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
+        							tlogmessages.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+        							log(tlogmessages);
+        							break;
+            	}
+            	tcurr_string_count = FindNextSubSection(ref istrings, tnext_subsection_pos);
+            }        
+        }
+        
+        private void ParseInterfaceType(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int tcurr_string_count)
+        {
             //Interface sub sections
             while (tcurr_string_count < endInterface)
             {
             	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
             	switch (RecognizeKey(istrings[tcurr_string_count]))
             	{
-        			case "Class": 	oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Const": 	oconsts.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Enum": 	oenums.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Type": 	otypes.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+            			
+            			 //{ "type", "const", "uses", "class", "record", "class function", "class procedure", "procedure", "function"};
+            			
+        			case "class": 	oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+        			case "enum": 	oenums.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+        			case "type": 	otypes.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
         			
         			//Log unrecognized sub section
         			default: 		List<string> tlogmessages = new List<string>();
