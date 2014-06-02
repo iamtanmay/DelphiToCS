@@ -20,6 +20,10 @@ namespace ConvertToCS
     	
     	public List<string> interfaceUses, implementationUses;
         
+    	//Log
+    	delegate delegate_log(List<string> imessages);
+    	delegate_log log; 
+    	
         //Bookmarks
     	//Sections
     	private int startHeader, endHeader, startInterface, endInterface, startVar, endVar, startImplementation, endImplementation, startInterface, endInterface;    	
@@ -38,7 +42,7 @@ namespace ConvertToCS
         //Divide script sections
     	public string[] sectionKeys = { "var", "implementation", "interface"};
     	//Divide section subsections
-    	public string[] subsectionKeys = { "type", "const", "uses", "class", "record", "procedure", "function", "class function", "class procedure"};
+    	public string[] subsectionKeys = { "type", "const", "uses", "class", "record", "class function", "class procedure", "procedure", "function"};
     	//Divide method commands
     	public string[] methodKeys = { "var", "begin", "label", "end", "try", "catch", "finally"};
     	
@@ -97,7 +101,7 @@ namespace ConvertToCS
             if (ireadheader)
     			ParseHeader(ref istrings, ref Header, ireadheader, iheaderstart, iheaderend);
 
-			//Convert comments from --{ to /*
+			//Convert comments from {-- to /*
 			ParseComments(ref istrings);
             ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref EnumsGlobal, ref AliasGlobal);
             ParseVar(ref istrings, ref VarsGlobal);
@@ -195,9 +199,7 @@ namespace ConvertToCS
 	            		for (int i = startHeader; i < endHeader; i++)
 	            			oheader.Add(istrings[i]);
 	            	else
-		            {
-		            	//Throw exception -> header end not found
-		            }       			
+		            	throw new Exception("Header end not found");
         }
     	
         private void ParseComments(ref List<string> istrings)
@@ -210,7 +212,7 @@ namespace ConvertToCS
         }
         
         //oclassdefinitions is a list of class variables, properties, function and procedure definitions 
-        private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconst, ref List<string> oenums, ref List<string> oalias )
+        private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes )
         {                        
         	int tcurr_string_count = startInterface;
         	int tnext_subsection_pos = -1;
@@ -229,20 +231,29 @@ namespace ConvertToCS
 	            	ouses.Add(istrings[tcurr_string_count]);
 	            }
             }
+            else
+        		tcurr_string_count = FindNextSubSection(ref istrings, 0);
             
-            //The rest
+            
+            //Interface sub sections
             while (tcurr_string_count < endInterface)
             {
-            	tcurr_string_count = FindNextSubSection(ref istrings, tcurr_string_count);
             	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
-            	switch (RecognizeInterfaceSubSection(istrings[tcurr_string_count]))
+            	switch (RecognizeKey(istrings[tcurr_string_count]))
             	{
         			case "Class": 	oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Const": 	oconst.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+        			case "Const": 	oconsts.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
         			case "Enum": 	oenums.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Alias": 	oalias.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-					default: 		break;
+        			case "Type": 	otypes.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+        			
+        			//Log unrecognized sub section
+        			default: 		List<string> tlogmessages = new List<string>();
+        							tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
+        							tlogmessages.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+        							log(tlogmessages);
+        							break;
             	}
+            	tcurr_string_count = FindNextSubSection(ref istrings, tcurr_string_count);
             }
         }
         
@@ -317,7 +328,7 @@ namespace ConvertToCS
     		//If there is no other section, process
         	endInterface = FindNextSection(startInterface);
     		if (endInterface == -1)
-        		goto Processing;
+        		return;
     		
             startImplementation = FindStringInList("implementation", ref istrings, endInterface, true);
     		if (startImplementation != -1)
@@ -339,11 +350,12 @@ namespace ConvertToCS
 	    		endImplementation = FindNextSection(startImplementation);
 	    		if (endImplementation == -1)
 	    		{
-	        		goto Processing;
+	        		return;
 	    		}
     		}
-    		else{
-	            startVar = FindStringInList("var", ref istrings, 0, true);
+    		else
+    		{
+	            startVar = FindStringInList("var", ref istrings, endInterface, true);
 	            if (startVar != -1)
 	            {
 					Section_Names.Add("Var");
@@ -352,30 +364,70 @@ namespace ConvertToCS
     		}
         }
         
-        static public List<Class> StringsToClass(string[] istrings)
+        static private List<Class> StringsToClass(string[] istrings)
         {
         }      
 
-        static public int GoToNextKeyword( string ifind, ref List<string> iarray, int iindex, bool imatchCase)
+        static private int GoToNextKeyword(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
 		{
 			
 		}
+        
+        static private int FindNextSubSection(ref List<string> istrings, int istartpos)
+        {
+        	for (int i = istartpos; i < istrings.Count; i++)
+        	{
+        		if (CheckStringListElementsInString(istrings[i], ref subsectionKeys) != -1)
+        			return i;
+        	}
+        	return -1;
+        }
 
-	    static public int FindStringInList( string ifind, ref List<string> iarray, int iindex, bool imatchCase)
+        static private string RecognizeKey(string istring, ref string[] ikeys)
 		{
-	    	for (int i = tindex; i < tarray.GetLength(0); i++)
+           	for (int i=0; int < ikeys.GetLength(0); i++)
+           	{
+           		if (istring.IndexOf(ikeys[i]) != -1)
+           			return ikeys[i];
+           	}
+           	return "";
+		}
+        
+        static private int CheckStringListElementsInString(string istring, ref string[] ielements)
+		{
+        	for (int i=0; int < ielements.GetLength(0); i++)
+           	{
+           		if (istring.IndexOf(ielements[i]) != -1)
+           			return i;
+           	}
+           	return -1;
+		}
+                                                           
+	    static private int FindStringInList(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
+		{
+	    	for (int i = iindex; i < iarray.GetLength(0); i++)
 	    	{
 	    		string tstring;
 	    		
 	    		if (!imatchcase)
-	    			tstring = istrings[i].ToLower();
+	    			tstring = iarray[i].ToLower();
 	    		else
-	    			tstring = istrings[i];
+	    			tstring = iarray[i];
 	    		
 	    		if (tstring.IndexOf(ifind) != -1)
 	    			return i;
 	    	}
 	    	return -1;
 		}
+	    
+	    static private List<string> GetStringSubList(ref List<string> istrings, int istart, int iend)
+	    {
+	    	List<string> toutput = new List<string>();
+	    	
+	    	for (int i=istart; i < iend; i++)
+	    		toutput.Add(istrings[i]);
+	    	
+	    	return toutput;
+	    }
 	}    
 }
