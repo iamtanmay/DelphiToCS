@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ConvertToCS
+namespace Translator
 {
     public partial class GUI : Form
     {

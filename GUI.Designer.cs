@@ -1,4 +1,4 @@
-﻿namespace ConvertToCS
+﻿namespace Translator
 {
     partial class GUI
     {

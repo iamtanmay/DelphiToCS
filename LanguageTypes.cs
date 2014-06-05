@@ -1,11 +1,13 @@
-﻿namespace LanguageTypes
+﻿using System.Collections.Generic;
+
+namespace Translator
 {
     public class Variable
     {
         public string name, type;
     }
 
-    public class Type: Variable;
+    public class Type: Variable
     {
     }
 
@@ -47,6 +49,7 @@
 
     public class Script
     {
+        public List<string> header;
     	public List<string> includes;
         public List<Class> classes;
         public List<Interface> interfaces;

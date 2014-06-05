@@ -48,6 +48,7 @@
     <None Include="Properties\Settings.settings" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CSharp.cs" />
     <Compile Include="Delphi.cs" />
     <Compile Include="DelphiConverter.cs" />
     <Compile Include="DelphiTokenizer.cs" />

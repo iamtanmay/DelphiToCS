@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace ConvertToCS
+namespace Translator
 {
-    public class DelphiParser
+    public class Delphi
     {
     	//Output
         public string name;        
@@ -21,7 +18,7 @@ namespace ConvertToCS
     	public List<string> interfaceUses, implementationUses;
         
     	//Log
-    	delegate delegate_log(List<string> imessages);
+    	delegate void delegate_log(List<string> imessages);
     	delegate_log log; 
     	
         //Bookmarks
@@ -33,7 +30,7 @@ namespace ConvertToCS
     	
     	//Raw strings
     	//Header, class names, SubSection names, Uses interface, Uses implementation, (Global and Local): consts, enums, types and vars 
-    	private List<string> Header, classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, AliasGlobal, VarsGlobal, ConstsLocal, EnumsLocal, AliasLocal, VarsLocal;
+    	private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, AliasGlobal, VarsGlobal, ConstsLocal, EnumsLocal, AliasLocal, VarsLocal;
     	//Raw text for the classes
     	private List<List<string>> classDefinitions, classImplementations;
 
@@ -48,13 +45,12 @@ namespace ConvertToCS
     	
     	
     	//ireadheader is a flag if header is to be read. iheaderstart is normally "{ --" in Zinsser Delphi units, and iheaderend is "-- }" 
-        public void ExtractStructure(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
+        public void Read(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
         {
         	//Initialise
             script = new Script();
             
             name = "";
-            Header = new List<string>();
             
             classNames = new List<string>();
             classDefinitions = new List<List<string>>();
@@ -197,7 +193,7 @@ namespace ConvertToCS
             	if (startHeader != -1)
 	            	if (endHeader != -1)
 	            		for (int i = startHeader; i < endHeader; i++)
-	            			oheader.Add(istrings[i]);
+	            			script.header.Add(istrings[i]);
 	            	else
 		            	throw new Exception("Header end not found");
         }
