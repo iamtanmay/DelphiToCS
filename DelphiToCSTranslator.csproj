@@ -50,8 +50,6 @@
   <ItemGroup>
     <Compile Include="CSharp.cs" />
     <Compile Include="Delphi.cs" />
-    <Compile Include="DelphiConverter.cs" />
-    <Compile Include="DelphiTokenizer.cs" />
     <Compile Include="GUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -64,6 +62,7 @@
     <Compile Include="Properties\Resources.Designer.cs" />
     <Compile Include="Properties\Settings.Designer.cs" />
     <Compile Include="Translate.cs" />
+    <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="GUI.resx">

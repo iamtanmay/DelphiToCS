@@ -23,27 +23,30 @@ namespace Translator
     	
         //Bookmarks
     	//Sections
-    	private int startHeader, endHeader, startInterface, endInterface, startVar, endVar, startImplementation, endImplementation, startInterface, endInterface;    	
+    	private int startHeader, endHeader, startInterface, endInterface, startVar, endVar, startImplementation, endImplementation;    	
     	//Subsections
     	private List<int> startUses, endUses, startClassInterface, endClassInterface, startClassImplementation, endClassImplementation, startConsts, endConsts, startEnums, endEnums, startTypes, endTypes;
     	
     	
     	//Raw strings
     	//Header, class names, SubSection names, Uses interface, Uses implementation, (Global and Local): consts, enums, types and vars 
-    	private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, AliasGlobal, VarsGlobal, ConstsLocal, EnumsLocal, AliasLocal, VarsLocal;
+    	private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal;
     	//Raw text for the classes
     	private List<List<string>> classDefinitions, classImplementations;
 
     	
     	//Keywords
         //Divide script sections
-    	public string[] sectionKeys = { "var", "implementation", "interface"};
+        public static string[] sectionKeys = { "var", "implementation", "interface" };
     	//Divide section subsections
-    	public string[] subsectionKeys = { "type", "const", "uses", "class", "record", "class function", "class procedure", "procedure", "function"};
+    	public static string[] subsectionKeys = { "type", "const", "uses", "class", "record", "class function", "class procedure", "procedure", "function"};
     	//Divide method commands
-    	public string[] methodKeys = { "var", "begin", "label", "end", "try", "catch", "finally"};
+        public static string[] methodKeys = { "var", "begin", "label", "end", "try", "catch", "finally" };
     	
-    	
+
+        List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
+        List<string> Section_Names;
+
     	//ireadheader is a flag if header is to be read. iheaderstart is normally "{ --" in Zinsser Delphi units, and iheaderend is "-- }" 
         public void Read(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
         {
@@ -58,16 +61,17 @@ namespace Translator
             
             ConstsGlobal = new List<string>();
             EnumsGlobal = new List<string>();
-            AliasGlobal = new List<string>();
+            TypesGlobal = new List<string>();
             VarsGlobal = new List<string>();            
             ConstsLocal = new List<string>();
             EnumsLocal = new List<string>();
-            AliasLocal = new List<string>();
+            TypesLocal = new List<string>();
             VarsLocal = new List<string>();
             
             SubSection_Names = new List<string>();
             Section_Bookmarks = new List<int>();
-             	
+            Section_Names = new List<string>();
+ 	
             startClassInterface = new List<int>();
             endClassInterface = new List<int>(); 
             startClassImplementation = new List<int>(); 
@@ -86,57 +90,57 @@ namespace Translator
             startHeader =  endHeader =  startInterface =  endInterface =  startImplementation =  endImplementation =  startInterface =  endInterface = -1;
             
             //Read unit name
-            name = ((istrings[FindStringInList("unit", ref istrings, 0)].Replace(' ', ';')).Split(';'))[1];
+            name = ((istrings[FindStringInList("unit", ref istrings, 0, true)].Replace(' ', ';')).Split(';'))[1];
 
             //Bookmark sections
-           Indexing:
-            IndexStructure(ref istrings);
+            IndexStructure(ref istrings, ireadheader, iheaderstart, iheaderend);
 
             //Break up the text into Lists of strings for different parts
-           Processing:
             if (ireadheader)
-    			ParseHeader(ref istrings, ref Header, ireadheader, iheaderstart, iheaderend);
+    			ParseHeader(ref istrings, ireadheader, iheaderstart, iheaderend);
 
-			//Convert comments from {-- to /*
-			ParseComments(ref istrings);
-            ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref EnumsGlobal, ref AliasGlobal);
+			//Convert Delphi symbols to C# symbols
+			Beautify(ref istrings);
+
+            ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal);
             ParseVar(ref istrings, ref VarsGlobal);
-            ParseImplementation(ref istrings, ref Uses_Implementation, ref classNames, ref classImplementations, ref ConstsLocal, ref EnumsLocal, ref AliasLocal);
-            
+            ParseImplementation(ref istrings, ref Uses_Implementation, ref classNames, ref classImplementations, ref ConstsLocal, ref EnumsLocal, ref TypesLocal);
+
             //Generate the text pieces into class objects
-           Generation:
-            GenerateClasses(ref classes, ref classNames, ref classDefinitions, ref classImplementations);
-            GenerateConst(ref classGlobals, ref ConstsGlobal, ref EnumsGlobal, ref AliasGlobal, ref VarsGlobal);
-            GenerateConst(ref classLocals, ref ConstsLocal, ref EnumsLocal, ref AliasLocal, new List<string>());
+            GenerateGlobalClass(ref classGlobals, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal, ref VarsGlobal);
+            script.classes.Add(classGlobals);
+            VarsGlobal.Clear();
+            GenerateGlobalClass(ref classLocals, ref ConstsLocal, ref EnumsLocal, ref TypesLocal, ref VarsGlobal);
+            script.classes.Add(classLocals);
+            GenerateClasses(ref script.classes, ref classNames, ref classDefinitions, ref classImplementations);
             GenerateIncludes(ref interfaceUses, ref Uses_Interface);
             GenerateIncludes(ref implementationUses, ref Uses_Implementation);
             
             //Add both uses into one
-            Objects_UsesCombined.AddRange(interfaceUses);
-            Objects_UsesCombined.AddRange(implementationUses);
-            
-            GenerateScript(ref Script, ref Usref Class classes, ref classGlobals, ref classLocals);
+            script.includes.AddRange(interfaceUses);
+            script.includes.AddRange(implementationUses);
         }
                 
-        GenerateClasses(ref List<Class> oclasses, ref List<string> inames, ref List<List<string>> idefinitions, ref List<List<string>> iimplementations)
+        private void GenerateClasses(ref List<Class> oclasses, ref List<string> inames, ref List<List<string>> idefinitions, ref List<List<string>> iimplementations)
         {
         	//For each class discovered
-        	for (int i=0; i< inames.Count(); i++)
+        	for (int i=0; i< inames.Count; i++)
         	{
         		Class tclass;
         		List<string> tdefinition = idefinitions[i];
         		List<string> timplementation = iimplementations[i];
         		tclass.name = inames[i];
+                Variable tvar;
 
         		//Add Variables, Properties and method names from definitions
-        		for(int j=0; j < tdefinition.Count(); j++)
+        		for(int j=0; j < tdefinition.Count; j++)
         		{
         			//Contains all the parameters for each 
         			List<string> tdefintion_parts = RecognizeClassDefinition(tdefinition[i]);
         			switch(tdefintion_parts[0])
         			{
     					case "Variable":	//name, type
-        									Variable tvar = new Variable(tdefinition_parts[1], tdefinition_parts[2]);
+        									tvar = new Variable(tdefinition_parts[1], tdefinition_parts[2]);
     										tclass.variables.Add(tvar);
     										break;
     										
@@ -149,7 +153,7 @@ namespace Translator
 						case "Function":	List<Variable> tvars = new List<Variable>();
     										for (int ii=5; ii< tdefintion_parts.Count; )
     										{
-    											Variable tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii+1]);
+    											tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii+1]);
     											tvars.Add(tvar);
 												ii += 2;    											
     										}
@@ -158,13 +162,13 @@ namespace Translator
     										tclass.functions.Add(tfunc);
     										break;
     										
-						case default:		Log(tdefinition[j]);
+						default:		    Log(tdefinition[j]);
 											break;
         			}
         		}
         		
         		//Add Method implementation        		
-        		for(int j=0; j < timplementation.Count(); j++)
+        		for(int j=0; j < timplementation.Count; j++)
         		{
         			int k = FindNextFunctionImplementation(ref timplementation, j);
         			List<string> tfunctiontext = GetFunctionText(ref timplementation, j, k);
@@ -173,20 +177,20 @@ namespace Translator
 
         			//Add the function body and variables
     				tclass.functions[l].commands = tfunction.commands;
-    				tclass.functions[l].classVariables = tfunction.classVariables;
+    				tclass.functions[l].variables = tfunction.variables;
         		}
         	}
         }
         
-        GenerateConst(ref Objects_ConstClassGlobal, ref ConstsGlobal, ref EnumsGlobal, ref AliasGlobal, ref VarsGlobal)
+        private void GenerateGlobalClass(ref Class oclassGlobals, ref List<string> iconstsGlobal, ref List<string> ienumsGlobal, ref List<string> itypesGlobal, ref List<string> ivarsGlobal)
         {
         }
-        
-        GenerateIncludes(ref Objects_UsesInterface, ref Uses_Interface)
+
+        private void GenerateIncludes(ref List<string> Objects_UsesInterface, ref List<string> Uses_Interface)
         {        
         }
         
-        private void ParseHeader(ref List<string> istrings, ref List<string> oheader, bool ireadheader, string iheaderstart, string iheaderend)
+        private void ParseHeader(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
         {
 			 //Read Header
             if (ireadheader)
@@ -198,12 +202,11 @@ namespace Translator
 		            	throw new Exception("Header end not found");
         }
     	
-        private void ParseComments(ref List<string> istrings)
+        private void Beautify(ref List<string> istrings)
         {
-        	for (int i = 0; i < istrings.Count(); i++)
+        	for (int i = 0; i < istrings.Count; i++)
         	{
-        		istrings[i].Replace("{", "/*");
-        		istrings[i].Replace("}", "*/");
+                Utilities.Beautify(istrings[i]);
         	}
         }
         
@@ -214,7 +217,7 @@ namespace Translator
         	int tnext_subsection_pos = -1;
         	
             //uses
-            tcurr_string_count = FindStringInList("uses", ref istrings, tcurr_string_count);
+            tcurr_string_count = FindStringInList("uses", ref istrings, tcurr_string_count, true);
             if (tcurr_string_count != -1)
             {
 	            tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
@@ -222,7 +225,7 @@ namespace Translator
 	            if (tnext_subsection_pos == -1)
 	            	tnext_subsection_pos = endInterface;
 	            
-	            for (tcurr_string_count; tcurr_string_count < tnext_subsection_pos; tcurr_string_count++)
+	            for (; tcurr_string_count < tnext_subsection_pos; tcurr_string_count++)
 	            {
 	            	ouses.Add(istrings[tcurr_string_count]);
 	            }
@@ -236,15 +239,15 @@ namespace Translator
             {
             	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
             	
-            	switch (RecognizeKey(istrings[tcurr_string_count]))
+            	switch (RecognizeKey(istrings[tcurr_string_count], ref subsectionKeys))
             	{
-        			case "const": 	oconsts.Add(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
+                    case "const":   oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
         			case "type": 	ParseInterfaceType(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count); break;
         			
         			//Log unrecognized sub section
         			default: 		List<string> tlogmessages = new List<string>();
         							tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
-        							tlogmessages.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+        							tlogmessages.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
         							log(tlogmessages);
         							break;
             	}
@@ -254,23 +257,24 @@ namespace Translator
         
         private void ParseInterfaceType(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int tcurr_string_count)
         {
+            int tnext_subsection_pos;
             //Interface sub sections
             while (tcurr_string_count < endInterface)
             {
             	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
-            	switch (RecognizeKey(istrings[tcurr_string_count]))
+            	switch (RecognizeKey(istrings[tcurr_string_count], ref subsectionKeys))
             	{
             			
             			 //{ "type", "const", "uses", "class", "record", "class function", "class procedure", "procedure", "function"};
             			
         			case "class": 	oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "enum": 	oenums.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "type": 	otypes.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+                    case "enum":    oenums.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+                    case "type":    otypes.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
         			
         			//Log unrecognized sub section
         			default: 		List<string> tlogmessages = new List<string>();
         							tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
-        							tlogmessages.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+                                    tlogmessages.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
         							log(tlogmessages);
         							break;
             	}
@@ -286,13 +290,13 @@ namespace Translator
         }
 
         //oclassimplementations is a list of class functions and procedures
-        private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassimplementations, ref List<List<string>> oconst, ref List<List<string>> oenum, ref List<List<string>> oalias )
+        private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassimplementations, ref List<string> oconst, ref List<string> oenum, ref List<string> oalias )
         {
         	int tcurr_string_count = startImplementation;
         	int tnext_subsection_pos = -1;
         	
             //uses
-            tcurr_string_count = FindStringInList("uses", ref istrings, tcurr_string_count);
+            tcurr_string_count = FindStringInList("uses", ref istrings, tcurr_string_count, true);
             if (tcurr_string_count != -1)
             {
 	            tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
@@ -300,7 +304,7 @@ namespace Translator
 	            if (tnext_subsection_pos == -1)
 	            	tnext_subsection_pos = endImplementation;
 	            
-	            for (tcurr_string_count; tcurr_string_count < tnext_subsection_pos; tcurr_string_count++)
+	            for (; tcurr_string_count < tnext_subsection_pos; tcurr_string_count++)
 	            {
 	            	ouses.Add(istrings[tcurr_string_count]);
 	            }
@@ -311,19 +315,19 @@ namespace Translator
             {
             	tcurr_string_count = FindNextSubSection(ref istrings, tcurr_string_count);
             	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
-            	switch (RecognizeInterfaceSubSection(istrings[tcurr_string_count]))
+                switch (RecognizeKey(istrings[tcurr_string_count], ref sectionKeys))
             	{
-        			case "Function": 	oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Procedure": 	oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Const": 		oconst.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Enum": 		oenum.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Alias": 		oalias.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+                    case "Function":    oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+                    case "Procedure":   oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+        			case "Const": 		oconst.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+                    case "Enum":        oenum.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
+                    case "Alias":       oalias.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
 					default: 			break;
             	}
             }
         }
   
-    	private void IndexStructure(ref List<string> istrings, string iheaderstart, bool ireadheader)
+    	private void IndexStructure(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
         {
             if (ireadheader)
             {
@@ -347,7 +351,7 @@ namespace Translator
     		Section_Bookmarks.Add(startInterface);
 
     		//If there is no other section, process
-        	endInterface = FindNextSection(startInterface);
+        	endInterface = FindNextSection(ref istrings, startInterface);
     		if (endInterface == -1)
         		return;
     		
@@ -368,7 +372,7 @@ namespace Translator
 	    		Section_Bookmarks.Add(startImplementation);
 
 	    		//If there is no other section after "implementation", then process
-	    		endImplementation = FindNextSection(startImplementation);
+	    		endImplementation = FindNextSection(ref istrings, startImplementation);
 	    		if (endImplementation == -1)
 	    		{
 	        		return;
@@ -387,13 +391,24 @@ namespace Translator
         
         static private List<Class> StringsToClass(string[] istrings)
         {
+            return new List<Class>();
         }      
 
         static private int GoToNextKeyword(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
 		{
-			
+            return 0;
 		}
-        
+
+        static private int FindNextSection(ref List<string> istrings, int istartpos)
+        {
+            for (int i = istartpos; i < istrings.Count; i++)
+            {
+                if (CheckStringListElementsInString(istrings[i], ref sectionKeys) != -1)
+                    return i;
+            }
+            return -1;
+        }
+
         static private int FindNextSubSection(ref List<string> istrings, int istartpos)
         {
         	for (int i = istartpos; i < istrings.Count; i++)
@@ -406,7 +421,7 @@ namespace Translator
 
         static private string RecognizeKey(string istring, ref string[] ikeys)
 		{
-           	for (int i=0; int < ikeys.GetLength(0); i++)
+           	for (int i=0; i < ikeys.GetLength(0); i++)
            	{
            		if (istring.IndexOf(ikeys[i]) != -1)
            			return ikeys[i];
@@ -416,7 +431,7 @@ namespace Translator
         
         static private int CheckStringListElementsInString(string istring, ref string[] ielements)
 		{
-        	for (int i=0; int < ielements.GetLength(0); i++)
+        	for (int i=0; i < ielements.GetLength(0); i++)
            	{
            		if (istring.IndexOf(ielements[i]) != -1)
            			return i;
@@ -426,11 +441,11 @@ namespace Translator
                                                            
 	    static private int FindStringInList(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
 		{
-	    	for (int i = iindex; i < iarray.GetLength(0); i++)
+	    	for (int i = iindex; i < iarray.Count; i++)
 	    	{
 	    		string tstring;
-	    		
-	    		if (!imatchcase)
+
+                if (!imatchCase)
 	    			tstring = iarray[i].ToLower();
 	    		else
 	    			tstring = iarray[i];
