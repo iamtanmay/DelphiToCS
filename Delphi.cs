@@ -126,7 +126,7 @@ namespace Translator
         	//For each class discovered
         	for (int i=0; i< inames.Count; i++)
         	{
-        		Class tclass;
+        		Class tclass = new Class();
         		List<string> tdefinition = idefinitions[i];
         		List<string> timplementation = iimplementations[i];
         		tclass.name = inames[i];
@@ -136,33 +136,42 @@ namespace Translator
         		for(int j=0; j < tdefinition.Count; j++)
         		{
         			//Contains all the parameters for each 
-        			List<string> tdefintion_parts = RecognizeClassDefinition(tdefinition[i]);
-        			switch(tdefintion_parts[0])
+        			List<string> tdefinition_parts = RecognizeClassDefinition(tdefinition[j]);
+        			switch(tdefinition_parts[0])
         			{
     					case "Variable":	//name, type
-        									tvar = new Variable(tdefinition_parts[1], tdefinition_parts[2]);
+                                            tvar = new Variable(tdefinition_parts[1], tdefinition_parts[2]);
     										tclass.variables.Add(tvar);
     										break;
     										
 						case "Property":	//name, type, read, write
-    										Property tprop = new Property(tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition_parts[4]);
+                                            Property tprop = new Property(tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition_parts[4]);
     										tclass.properties.Add(tprop);
     										break;
     					
 						//This is for both functions and procedures. Difference is that type is returned "" for procedures    										
-						case "Function":	List<Variable> tvars = new List<Variable>();
-    										for (int ii=5; ii< tdefintion_parts.Count; )
+                        case "Function":    string tname = tdefinition_parts[1];
+                                            string ttype = tdefinition_parts[2];
+                                            string tIsAbstract = tdefinition_parts[3];
+                                            string tIsStatic = tdefinition_parts[4];
+                                            string tIsVirtual = tdefinition_parts[5];
+
+                                            List<Variable> tparams = new List<Variable>();
+
+                                            int ii = 6;
+    										for (; ii< tdefinition_parts.Count; )
     										{
-    											tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii+1]);
-    											tvars.Add(tvar);
+                                                tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii + 1]);
+                                                tparams.Add(tvar);
 												ii += 2;    											
     										}
-    										//name, type, IsVirtual, IsAbstract, IsStatic, Parameters
-    										Function tfunc = new Function(tdefinition_parts[1], tdefinition_parts[2], ToBool(tdefinition_parts[3]), ToBool(tdefinition_parts[4]), ToBool(tdefinition_parts[5]), tvars);
+
+    										//name, parameters, type, IsVirtual, IsAbstract, IsStatic, variables, commands
+                                            Function tfunc = new Function(tname, tparams, ttype, Convert.ToBoolean(tIsVirtual), Convert.ToBoolean(tIsAbstract), Convert.ToBoolean(tIsStatic), new List<Variable>(), new List<string>());
     										tclass.functions.Add(tfunc);
     										break;
     										
-						default:		    Log(tdefinition[j]);
+						default:		    log(tdefinition);
 											break;
         			}
         		}
@@ -171,15 +180,52 @@ namespace Translator
         		for(int j=0; j < timplementation.Count; j++)
         		{
         			int k = FindNextFunctionImplementation(ref timplementation, j);
-        			List<string> tfunctiontext = GetFunctionText(ref timplementation, j, k);
-        			Function tfunction = FunctionFromText(ref tfunctiontext);
-        			int l = FindFunctionInList(ref tclass.functions, tfunction);
+                    List<string> tfunctiontext = GetStringSubList(ref timplementation, j, k);
 
-        			//Add the function body and variables
-    				tclass.functions[l].commands = tfunction.commands;
-    				tclass.functions[l].variables = tfunction.variables;
+                    List<string> tdefinition_parts = RecognizeClassImplementation(tfunctiontext[0]);
+
+                    if (tdefinition_parts[0] == "Function")
+                    {
+                        string tname = tdefinition_parts[1];
+                        string ttype = tdefinition_parts[2];
+
+                        List<Variable> tvars = new List<Variable>();
+                        List<Variable> tparams = new List<Variable>();
+                        List<string> tcommands = new List<string>();
+
+                        int ii = 3;
+                        for (; (tdefinition_parts[ii] != "Variables") && (ii < tdefinition_parts.Count); )
+                        {
+                            tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii + 1]);
+                            tparams.Add(tvar);
+                            ii += 2;
+                        }
+
+                        for (; (tdefinition_parts[ii] != "Commands") && (ii < tdefinition_parts.Count); )
+                        {
+                            tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii + 1]);
+                            tvars.Add(tvar);
+                            ii += 2;
+                        }
+
+                        tcommands = GenerateCommands(ref tdefinition_parts, ii);
+
+                        //Search for the right function in declarations
+
+                        //Add the variables and commands
+                    }
+                    else
+                    {
+                        log(tdefinition);
+                        throw new Exception("Bad Function implementation found");
+                    }
         		}
         	}
+        }
+        
+        private List<string> GenerateCommands(ref List<string> iDelphiCommands, int istartpos)
+        {
+            return new List<string>();
         }
         
         private void GenerateGlobalClass(ref Class oclassGlobals, ref List<string> iconstsGlobal, ref List<string> ienumsGlobal, ref List<string> itypesGlobal, ref List<string> ivarsGlobal)
@@ -399,6 +445,15 @@ namespace Translator
             return 0;
 		}
 
+        static private int FindNextFunctionImplementation(ref List<string> iarray, int istartpoint)
+        {
+            for (int i = istartpoint; i < iarray.Count; i++)
+            {
+                return i;
+            }
+            return -1;
+        }
+
         static private int FindNextSection(ref List<string> istrings, int istartpos)
         {
             for (int i = istartpos; i < istrings.Count; i++)
@@ -428,6 +483,16 @@ namespace Translator
            	}
            	return "";
 		}
+
+        static private List<string> RecognizeClassImplementation(string iline)
+        {
+            return new List<string>();
+        }
+
+        static private List<string> RecognizeClassDefinition(string iline)
+        {
+            return new List<string>();
+        }
         
         static private int CheckStringListElementsInString(string istring, ref string[] ielements)
 		{

@@ -5,6 +5,12 @@ namespace Translator
     public class Variable
     {
         public string name, type;
+        public Variable()
+        {
+        }
+        public Variable(string name, string type)
+        {
+        }
     }
 
     public class Type: Variable
@@ -19,6 +25,9 @@ namespace Translator
     public class Property : Variable
     {
         public string read, write;
+        public Property(string name, string type, string read, string write)
+        {
+        }
     }
 
     public class Enum
@@ -29,10 +38,19 @@ namespace Translator
 
     public class Function
     {
+        public string name;
         public bool isVirtual, isAbstract, isStatic;
         public List<Variable> parameters, variables;
         public List<string> commands; 
         public string returnType;
+
+        public Function()
+        {
+        }
+
+        public Function(string name, List<Variable> parameters, string returnType, bool isVirtual, bool isAbstract, bool isStatic, List<Variable> variables, List<string> commands)
+        {
+        }
     }
     
     public class Class
