@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Text;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Translator
 {
@@ -39,8 +41,11 @@ namespace Translator
         //Divide script sections
         public static string[] sectionKeys = { "var", "implementation", "interface" };
     	//Divide section subsections
-    	public static string[] subsectionKeys = { "type", "const", "uses", "class", "record", "class function", "class procedure", "procedure", "function"};
-    	//Divide method commands
+    	public static string[] subsectionKeys = { "type", "const", "uses"};
+        //Divide subsection kinds
+        public static string[] interfaceKindKeys = { "class", "record", "procedure", "function" };
+        public static string[] implementKindKeys = { "const", "constructor", "procedure", "function", "uses" };
+        //Divide method commands
         public static string[] methodKeys = { "var", "begin", "label", "end", "try", "catch", "finally" };
     	
 
@@ -259,37 +264,24 @@ namespace Translator
         //oclassdefinitions is a list of class variables, properties, function and procedure definitions 
         private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes )
         {                        
-        	int tcurr_string_count = startInterface;
-        	int tnext_subsection_pos = -1;
-        	
-            //uses
-            tcurr_string_count = FindStringInList("uses", ref istrings, tcurr_string_count, true);
-            if (tcurr_string_count != -1)
-            {
-	            tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
-	            
-	            if (tnext_subsection_pos == -1)
-	            	tnext_subsection_pos = endInterface;
-	            
-	            for (; tcurr_string_count < tnext_subsection_pos; tcurr_string_count++)
-	            {
-	            	ouses.Add(istrings[tcurr_string_count]);
-	            }
-            }
-            else
-        		tcurr_string_count = FindNextSubSection(ref istrings, 0);
-            
+        	int tcurr_string_count = startInterface, tnext_subsection_pos = -1;
 
             //Interface sub sections
             while (tcurr_string_count != -1)
             {
-            	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
-            	
+            	tnext_subsection_pos = FindNextInterfaceSubSection(ref istrings, tcurr_string_count);
+
+                if (tnext_subsection_pos == -1)
+                    tnext_subsection_pos = endInterface;
+
             	switch (RecognizeKey(istrings[tcurr_string_count], ref subsectionKeys))
             	{
                     case "const":   oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
-        			case "type": 	ParseInterfaceType(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count); break;
-        			
+
+        			case "type": 	ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count); break;
+
+                    case "uses":    ouses.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
+
         			//Log unrecognized sub section
         			default: 		List<string> tlogmessages = new List<string>();
         							tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
@@ -297,34 +289,87 @@ namespace Translator
         							log(tlogmessages);
         							break;
             	}
-            	tcurr_string_count = FindNextSubSection(ref istrings, tnext_subsection_pos);
+                tcurr_string_count = tnext_subsection_pos + 1;
             }        
         }
         
-        private void ParseInterfaceType(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int tcurr_string_count)
+        private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int istartpos)
         {
-            int tnext_subsection_pos;
-            //Interface sub sections
+            int tnext_subsection_pos = -1, tcurr_string_count = istartpos;
+            string tclassname = "";
+
+            //Interface sub sectionsm
             while (tcurr_string_count < endInterface)
             {
-            	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
-            	switch (RecognizeKey(istrings[tcurr_string_count], ref subsectionKeys))
-            	{
-            			
-            			 //{ "type", "const", "uses", "class", "record", "class function", "class procedure", "procedure", "function"};
-            			
-        			case "class": 	oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-                    case "enum":    oenums.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-                    case "type":    otypes.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			
-        			//Log unrecognized sub section
-        			default: 		List<string> tlogmessages = new List<string>();
-        							tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
-                                    tlogmessages.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
-        							log(tlogmessages);
-        							break;
-            	}
-            	tcurr_string_count = FindNextSubSection(ref istrings, tcurr_string_count);
+                //Ignore comments and empty lines
+                if (!(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
+                {
+                    switch (RecognizeKey(istrings[tcurr_string_count], ref subsectionKeys))
+                    {
+                        case "class": tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+                            oclassnames.Add(tclassname);
+
+                            if (tnext_subsection_pos == -1)
+                                throw new Exception("Incomplete class definition");
+
+                            oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+                            tcurr_string_count = tnext_subsection_pos + 1;
+                            break;
+
+                        case "record": tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+                            oclassnames.Add(tclassname);
+
+                            if (tnext_subsection_pos == -1)
+                                throw new Exception("Incomplete record definition");
+
+                            oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+                            tcurr_string_count = tnext_subsection_pos + 1;
+                            break;
+
+                        //Check if Enum or Type Alias, else Log unrecognized sub section
+                        default:
+                            //Enum start
+                            if (istrings[tcurr_string_count].IndexOf('(') != -1)
+                            {
+                                tnext_subsection_pos = FindNextSymbol(ref istrings, ");", tcurr_string_count);
+
+                                if (tnext_subsection_pos == -1)
+                                    throw new Exception("Incomplete Enum definition");
+
+                                oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos).ToArray())));
+                                tcurr_string_count = tnext_subsection_pos + 1;
+                            }
+                            //Type Alias start
+                            else if ((istrings[tcurr_string_count].IndexOf('=') != -1) && (istrings[tcurr_string_count].IndexOf(';') != -1))
+                            {
+                                //tnext_subsection_pos = FindNextSymbol(ref istrings, ";", tcurr_string_count);
+
+                                //if (tnext_subsection_pos == -1)
+                                //    throw new Exception("Incomplete Type Alias definition");
+
+                                otypes.Add(istrings[tcurr_string_count]);
+                                tcurr_string_count++;
+                            }
+                            //Unrecognized line logged
+                            else
+                            {
+                                List<string> tlogmessages = new List<string>();
+                                tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
+                                tlogmessages.Add(istrings[tcurr_string_count]);
+                                log(tlogmessages);
+
+                                throw new Exception("Unknown definition found");
+                            }
+                            break;
+                    }
+                    tcurr_string_count = FindNextInterfaceSubSection(ref istrings, tcurr_string_count);
+                }
+                else
+                {
+                    tcurr_string_count++;
+                }
             }
         }
         
@@ -336,41 +381,44 @@ namespace Translator
         }
 
         //oclassimplementations is a list of class functions and procedures
-        private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassimplementations, ref List<string> oconst, ref List<string> oenum, ref List<string> oalias )
+        private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassimplementations, ref List<string> oconsts, ref List<string> oenum, ref List<string> oalias )
         {
-        	int tcurr_string_count = startImplementation;
-        	int tnext_subsection_pos = -1;
-        	
-            //uses
-            tcurr_string_count = FindStringInList("uses", ref istrings, tcurr_string_count, true);
-            if (tcurr_string_count != -1)
+            int tcurr_string_count = startImplementation, tnext_subsection_pos = -1;
+
+            //mplementation sub sections
+            while (tcurr_string_count != -1)
             {
-	            tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
-	            
-	            if (tnext_subsection_pos == -1)
-	            	tnext_subsection_pos = endImplementation;
-	            
-	            for (; tcurr_string_count < tnext_subsection_pos; tcurr_string_count++)
-	            {
-	            	ouses.Add(istrings[tcurr_string_count]);
-	            }
-            }
-            
-            //The rest
-            while (tcurr_string_count < endInterface)
-            {
-            	tcurr_string_count = FindNextSubSection(ref istrings, tcurr_string_count);
-            	tnext_subsection_pos = FindNextSubSection(ref istrings, tcurr_string_count);
-                switch (RecognizeKey(istrings[tcurr_string_count], ref sectionKeys))
+                tnext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tcurr_string_count);
+
+                if (tnext_subsection_pos == -1)
+                    tnext_subsection_pos = endImplementation;
+
+                switch (RecognizeKey(istrings[tcurr_string_count], ref implementKindKeys))
             	{
-                    case "Function":    oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-                    case "Procedure":   oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-        			case "Const": 		oconst.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-                    case "Enum":        oenum.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-                    case "Alias":       oalias.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); break;
-					default: 			break;
-            	}
-            }
+                    case "function":    oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); 
+                                        break;
+
+                    case "procedure":   oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); 
+                                        break;
+
+                    case "constructor": oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); 
+                                        break;
+
+                    case "const":       oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
+                                        break;
+
+                    case "uses":        ouses.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
+                                        break;
+                    
+                    //Log unrecognized sub section
+                    default:            List<string> tlogmessages = new List<string>();
+                                        tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
+                                        tlogmessages.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+                                        log(tlogmessages);
+                                        break;
+                }
+                tcurr_string_count = tnext_subsection_pos + 1;
+            }     
         }
   
     	private void IndexStructure(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
@@ -454,6 +502,29 @@ namespace Translator
             return -1;
         }
 
+        static private int FindNextSymbol(ref List<string> istrings, string isymbol, int istartpos)
+        {
+            string[] tEnd = new string[1];
+            tEnd[0] = isymbol;
+
+            for (int i = istartpos; i < istrings.Count; i++)
+            {
+                if (CheckStringListElementsInString(istrings[i], ref tEnd) != -1)
+                    return i;
+            }
+            return -1;
+        }
+
+        static private int FindNextKey(ref List<string> istrings, ref string[] ikeys, int istartpos)
+        {
+            for (int i = istartpos; i < istrings.Count; i++)
+            {
+                if (CheckStringListElementsInString(istrings[i], ref ikeys) != -1)
+                    return i;
+            }
+            return -1;
+        }
+        
         static private int FindNextSection(ref List<string> istrings, int istartpos)
         {
             for (int i = istartpos; i < istrings.Count; i++)
@@ -464,7 +535,7 @@ namespace Translator
             return -1;
         }
 
-        static private int FindNextSubSection(ref List<string> istrings, int istartpos)
+        static private int FindNextInterfaceSubSection(ref List<string> istrings, int istartpos)
         {
         	for (int i = istartpos; i < istrings.Count; i++)
         	{
@@ -483,6 +554,29 @@ namespace Translator
            	}
            	return "";
 		}
+
+        static private bool RecognizeComment(string istring)
+        {
+            //Remove all white spaces
+            istring = Regex.Replace(istring, @"\s+", "");
+
+            //If first character is '/', then it is a comment
+            if (istring[0] == '/')
+                return true;
+
+            return false;
+        }
+
+        static private bool RecognizeEmptyLine(string istring)
+        {
+            //Remove all white spaces
+            istring = Regex.Replace(istring, @"\s+", "");
+
+            if (istring.Length == 0)
+                return true;
+
+            return false;
+        }
 
         static private List<string> RecognizeClassImplementation(string iline)
         {
