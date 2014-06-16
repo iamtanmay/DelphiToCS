@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" GroupingSetting="Access" MembersFormat="FullSignature">
+  <Class Name="Translator.CSharp">
+    <Position X="15" Y="9.25" Width="3.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>CSharp.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Delphi">
+    <Position X="0.5" Y="9.25" Width="14.25" />
+    <NestedTypes>
+      <Delegate Name="Translator.Delphi.delegate_log" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Delphi.cs</NewMemberFileName>
+        </TypeIdentifier>
+      </Delegate>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>BWkOBEAAogEQGIJBBAlCiIEkNA4nAwtAQGwiJpAAYAQ=</HashCode>
+      <FileName>Delphi.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.GUI">
+    <Position X="11" Y="0.5" Width="5.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAIAAAECAAAAAAAACAAAACAAAAAAAAAAAAAIAAAAA=</HashCode>
+      <FileName>GUI.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Variable">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Type">
+    <Position X="3" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Constant">
+    <Position X="5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Property">
+    <Position X="7" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAQAAAAAAAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Enum">
+    <Position X="0.5" Y="2.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAgEAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Function">
+    <Position X="0.5" Y="4" Width="9.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAIABAAQAAAAAAAAAAAECgAAAAAAAACEAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Class">
+    <Position X="0.5" Y="7" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAIAAAAAAAAAAAAAAgAAAAAAAAAEAAAAAAAAAgAEAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Interface">
+    <Position X="3.5" Y="7" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Translator.Script">
+    <Position X="6.25" Y="7" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAQAAABAAAABCAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>LanguageTypes.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Struct Name="Translator.Translate">
+    <Position X="14.25" Y="3.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAACAAAAAAAAAAAAAgAAAAAAAAAAAAAQAAAA=</HashCode>
+      <FileName>Translate.cs</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="Translator.Utilities">
+    <Position X="11" Y="3.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAIAA=</HashCode>
+      <FileName>Utilities.cs</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
