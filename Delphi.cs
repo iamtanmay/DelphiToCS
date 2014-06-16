@@ -19,7 +19,7 @@ namespace Translator
     	
     	public List<string> interfaceUses, implementationUses;
         
-    	//Log
+    	//Log 
     	delegate void delegate_log(List<string> imessages);
     	delegate_log log; 
     	
@@ -44,10 +44,12 @@ namespace Translator
     	public static string[] subsectionKeys = { "type", "const", "uses"};
         //Divide subsection kinds
         public static string[] interfaceKindKeys = { "class", "record", "procedure", "function" };
-        public static string[] implementKindKeys = { "const", "constructor", "procedure", "function", "uses" };
+        public static string[] implementKindKeys = { "const", "constructor", "class function", "class procedure", "procedure", "function", "uses" };
         //Divide method commands
         public static string[] methodKeys = { "var", "begin", "label", "end", "try", "catch", "finally" };
     	
+        //Divide class defintion
+        public static string[] classKeys = { "public", "private", "const", "constructor", "class function", "class procedure", "procedure", "function", "property"};
 
         List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
         List<string> Section_Names;
@@ -292,7 +294,90 @@ namespace Translator
                 tcurr_string_count = tnext_subsection_pos + 1;
             }        
         }
-        
+
+        //Check if a line in class definition is a variable, if it has only two words, divided by ' ' or ':' and if its first character is 'f' or 'F'
+        private bool CheckVariable(string istring)
+        {
+            string[] tarray = istring.Split(' ');
+
+            if ((tarray.GetLength(0) == 2) && ((tarray[0][0] == 'f') || (tarray[0][0] == 'F')) && (istring.Split(':').GetLength(0) == 2))
+                return true;
+            return false;
+        }
+
+        private List<string> ParseClassMethods(ref List<string> istrings, string iclassname, int icurr_string_count, int inext_subsection_pos)
+        {
+            List<string> tstrings = new List<string>(), tout = new List<string>(), tfunctions = new List<string>(), tvars = new List<string>(), tproperties = new List<string>();
+
+            tstrings = GetStringSubList(ref istrings, icurr_string_count, inext_subsection_pos);
+
+            //Variable filter
+            int i = 0;
+
+            while (i < tstrings.Count)
+            {
+                if (CheckVariable(tstrings[i]))
+                {
+                    tvars.Add(tstrings[i]);
+                    tstrings.RemoveAt(i);
+                }
+                else
+                    i++;
+            }
+
+            for (i = icurr_string_count; i < inext_subsection_pos; i++)
+            {
+                int tnext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, icurr_string_count);
+
+                if (tnext_subsection_pos == -1)
+                    tnext_subsection_pos = endImplementation;
+
+                switch (RecognizeKey(istrings[icurr_string_count], ref classKeys))
+                { 
+                    //{ "public", "private", "const", "constructor", "class function", "class procedure", "procedure", "function", "property"};
+                    case "public":  //ignore
+                                    break;
+                    
+                    case "private": //ignore
+                                    break;
+
+                    case "const":   break;
+
+                    case "constructor": //Break down function elements
+                                    string tclassname, tmethodtype = "class_function";
+                                    string[] tclassnamearray = istrings[tcurr_string_count].Split('.');
+                                    tclassname = tclassnamearray[0].Split(' ')[1];
+
+                                    //oclassimplementations looks like: List<List<string>>[i] = classes, List<List<string>>[i][0] = class name, List<List<string>>[i][j + 0] = method string, 
+                                    //List<List<string>>[i][j + 1] = method keywords (virtual, abstract, overload), List<List<string>>[i][j+1+n] = method commands 
+                                    for (int i = 0; i < oclassimplementations.Count; i++)
+                                    {
+                                        //Find the class
+                                        if (oclassimplementations[i][0] == tclassname)
+                                        {
+                                            oclassimplementations[i].AddRange(ParseMethod(ref istrings, ref tclassnamearray, tclassname, tmethodtype, tcurr_string_count, tnext_subsection_pos));
+                                            break;
+                                        }
+                                    }
+                                    break;
+                    
+                    case "class function": break;
+                    
+                    case "class procedure": break;
+                    
+                    case "procedure": break;
+                    
+                    case "function": break;
+                    
+                    case "property": break;
+                    
+                    default: break;
+                }
+            }
+
+            return tout;
+        }
+
         private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<List<string>> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int istartpos)
         {
             int tnext_subsection_pos = -1, tcurr_string_count = istartpos;
@@ -306,63 +391,66 @@ namespace Translator
                 {
                     switch (RecognizeKey(istrings[tcurr_string_count], ref subsectionKeys))
                     {
-                        case "class": tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
-                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
-                            oclassnames.Add(tclassname);
+                        case "class":   tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                                        tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+                                        oclassnames.Add(tclassname);
 
-                            if (tnext_subsection_pos == -1)
-                                throw new Exception("Incomplete class definition");
+                                        if (tnext_subsection_pos == -1)
+                                            throw new Exception("Incomplete class definition");
 
-                            oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
-                            tcurr_string_count = tnext_subsection_pos + 1;
-                            break;
+                                        List<string> tclassmethods = ParseClassMethods(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                                        List<string> tclassvars = ParseClassVars(ref istrings, tcurr_string_count, tnext_subsection_pos);
+                                        List<string> tclassproperties = ParseClassProperties(ref istrings, tcurr_string_count, tnext_subsection_pos);
 
-                        case "record": tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
-                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
-                            oclassnames.Add(tclassname);
+                                        oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+                                        tcurr_string_count = tnext_subsection_pos + 1;
+                                        break;
 
-                            if (tnext_subsection_pos == -1)
-                                throw new Exception("Incomplete record definition");
+                        case "record":  tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                                        tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+                                        oclassnames.Add(tclassname);
 
-                            oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
-                            tcurr_string_count = tnext_subsection_pos + 1;
-                            break;
+                                        if (tnext_subsection_pos == -1)
+                                            throw new Exception("Incomplete record definition");
+
+                                        oclassdefinitions.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+                                        tcurr_string_count = tnext_subsection_pos + 1;
+                                        break;
 
                         //Check if Enum or Type Alias, else Log unrecognized sub section
-                        default:
-                            //Enum start
-                            if (istrings[tcurr_string_count].IndexOf('(') != -1)
-                            {
-                                tnext_subsection_pos = FindNextSymbol(ref istrings, ");", tcurr_string_count);
+                        default:        //Enum start
+                                        if (istrings[tcurr_string_count].IndexOf('(') != -1)
+                                        {
+                                            tnext_subsection_pos = FindNextSymbol(ref istrings, ");", tcurr_string_count);
 
-                                if (tnext_subsection_pos == -1)
-                                    throw new Exception("Incomplete Enum definition");
+                                            if (tnext_subsection_pos == -1)
+                                                throw new Exception("Incomplete Enum definition");
 
-                                oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos).ToArray())));
-                                tcurr_string_count = tnext_subsection_pos + 1;
-                            }
-                            //Type Alias start
-                            else if ((istrings[tcurr_string_count].IndexOf('=') != -1) && (istrings[tcurr_string_count].IndexOf(';') != -1))
-                            {
-                                //tnext_subsection_pos = FindNextSymbol(ref istrings, ";", tcurr_string_count);
+                                            oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos).ToArray())));
+                                            tcurr_string_count = tnext_subsection_pos + 1;
+                                        }
+                                        //Type Alias start
+                                        else if ((istrings[tcurr_string_count].IndexOf('=') != -1) && (istrings[tcurr_string_count].IndexOf(';') != -1))
+                                        {
+                                            //tnext_subsection_pos = FindNextSymbol(ref istrings, ";", tcurr_string_count);
 
-                                //if (tnext_subsection_pos == -1)
-                                //    throw new Exception("Incomplete Type Alias definition");
+                                            //if (tnext_subsection_pos == -1)
+                                            //    throw new Exception("Incomplete Type Alias definition");
 
-                                otypes.Add(istrings[tcurr_string_count]);
-                                tcurr_string_count++;
-                            }
-                            //Unrecognized line logged
-                            else
-                            {
-                                List<string> tlogmessages = new List<string>();
-                                tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
-                                tlogmessages.Add(istrings[tcurr_string_count]);
-                                log(tlogmessages);
+                                            otypes.Add(istrings[tcurr_string_count]);
+                                            tcurr_string_count++;
+                                        }
+                                        //Unrecognized line logged
+                                        else
+                                        {
+                                            List<string> tlogmessages = new List<string>();
+                                            tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
+                                            tlogmessages.Add(istrings[tcurr_string_count]);
+                                            log(tlogmessages);
 
-                                throw new Exception("Unknown definition found");
-                            }
-                            break;
+                                            throw new Exception("Unknown definition found");
+                                        }
+                                        break;
                     }
                     tcurr_string_count = FindNextInterfaceSubSection(ref istrings, tcurr_string_count);
                 }
@@ -395,13 +483,94 @@ namespace Translator
 
                 switch (RecognizeKey(istrings[tcurr_string_count], ref implementKindKeys))
             	{
-                    case "function":    oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); 
+                    case "class function":  //Break down function elements
+                                            string tclassname, tmethodtype = "class_function";
+                                            string[] tclassnamearray = istrings[tcurr_string_count].Split('.');
+                                            tclassname = tclassnamearray[0].Split(' ')[1];
+
+                                            //oclassimplementations looks like: List<List<string>>[i] = classes, List<List<string>>[i][0] = class name, List<List<string>>[i][j + 0] = method string, 
+                                            //List<List<string>>[i][j + 1] = method keywords (virtual, abstract, overload), List<List<string>>[i][j+1+n] = method commands 
+                                            for (int i = 0; i < oclassimplementations.Count; i++)
+                                            {
+                                                //Find the class
+                                                if (oclassimplementations[i][0] == tclassname)
+                                                {
+                                                    oclassimplementations[i].AddRange(ParseMethod(ref istrings, ref tclassnamearray, tclassname, tmethodtype, tcurr_string_count, tnext_subsection_pos));
+                                                    break;
+                                                }
+                                            }
+                                            break;
+
+                    case "class procedure": //Break down function elements
+                                            tmethodtype = "class_procedure";
+                                            tclassnamearray = istrings[tcurr_string_count].Split('.');
+                                            tclassname = tclassnamearray[0].Split(' ')[1];
+
+                                            //oclassimplementations looks like: List<List<string>>[i] = classes, List<List<string>>[i][0] = class name, List<List<string>>[i][j + 0] = method string, 
+                                            //List<List<string>>[i][j + 1] = method keywords (virtual, abstract, overload), List<List<string>>[i][j+1+n] = method commands 
+                                            for (int i = 0; i < oclassimplementations.Count; i++)
+                                            {
+                                                //Find the class
+                                                if (oclassimplementations[i][0] == tclassname)
+                                                {
+                                                    oclassimplementations[i].AddRange(ParseMethod(ref istrings, ref tclassnamearray, tclassname, tmethodtype, tcurr_string_count, tnext_subsection_pos));
+                                                    break;
+                                                }
+                                            }
+                                            break;
+
+                    case "function":    //Break down function elements
+                                        tmethodtype = "function";
+                                        tclassnamearray = istrings[tcurr_string_count].Split('.');
+                                        tclassname = tclassnamearray[0].Split(' ')[1];
+
+                                        //oclassimplementations looks like: List<List<string>>[i] = classes, List<List<string>>[i][0] = class name, List<List<string>>[i][j + 0] = method string, 
+                                        //List<List<string>>[i][j + 1] = method keywords (virtual, abstract, overload), List<List<string>>[i][j+1+n] = method commands 
+                                        for (int i = 0; i < oclassimplementations.Count; i++)
+                                        {
+                                            //Find the class
+                                            if (oclassimplementations[i][0] == tclassname)
+                                            {
+                                                oclassimplementations[i].AddRange(ParseMethod(ref istrings, ref tclassnamearray, tclassname, tmethodtype, tcurr_string_count, tnext_subsection_pos));
+                                                break;
+                                            }
+                                        }
                                         break;
 
-                    case "procedure":   oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); 
+                    case "procedure":   //Break down function elements
+                                        tmethodtype = "procedure";
+                                        tclassnamearray = istrings[tcurr_string_count].Split('.');
+                                        tclassname = tclassnamearray[0].Split(' ')[1];
+
+                                        //oclassimplementations looks like: List<List<string>>[i] = classes, List<List<string>>[i][0] = class name, List<List<string>>[i][j + 0] = method string, 
+                                        //List<List<string>>[i][j + 1] = method keywords (virtual, abstract, overload), List<List<string>>[i][j+1+n] = method commands 
+                                        for (int i = 0; i < oclassimplementations.Count; i++)
+                                        {
+                                            //Find the class
+                                            if (oclassimplementations[i][0] == tclassname)
+                                            {
+                                                oclassimplementations[i].AddRange(ParseMethod(ref istrings, ref tclassnamearray, tclassname, tmethodtype, tcurr_string_count, tnext_subsection_pos));
+                                                break;
+                                            }
+                                        }
                                         break;
 
-                    case "constructor": oclassimplementations.Add(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos)); 
+                    case "constructor": //Break down function elements
+                                        tmethodtype = "constructor";
+                                        tclassnamearray = istrings[tcurr_string_count].Split('.');
+                                        tclassname = tclassnamearray[0].Split(' ')[1];
+
+                                        //oclassimplementations looks like: List<List<string>>[i] = classes, List<List<string>>[i][0] = class name, List<List<string>>[i][j + 0] = method string, 
+                                        //List<List<string>>[i][j + 1] = method keywords (virtual, abstract, overload), List<List<string>>[i][j+1+n] = method commands 
+                                        for (int i = 0; i < oclassimplementations.Count; i++)
+                                        {
+                                            //Find the class
+                                            if (oclassimplementations[i][0] == tclassname)
+                                            {
+                                                oclassimplementations[i].AddRange(ParseMethod(ref istrings, ref tclassnamearray, tclassname, tmethodtype, tcurr_string_count, tnext_subsection_pos));
+                                                break;
+                                            }
+                                        }
                                         break;
 
                     case "const":       oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
@@ -420,7 +589,41 @@ namespace Translator
                 tcurr_string_count = tnext_subsection_pos + 1;
             }     
         }
-  
+        
+        private List<string> ParseMethod(ref List<string> istrings, ref string[] iclassnamearray, string iclassname, string itype, int ipos, int inextpos)
+        {
+            //Break down function elements
+            string treturntype, tparameters, tmethodname;
+            string[] treturntypearray = iclassnamearray[1].Split(')');
+
+            iclassname = iclassnamearray[0].Split(' ')[1];
+
+            //If there are no parameters
+            if (treturntypearray.GetLength(0) == 1)
+            {
+                treturntypearray = treturntypearray[0].Split(':');
+                treturntype = treturntypearray[1].Split(';')[0];
+                tmethodname = treturntypearray[0];
+                tparameters = "";
+            }
+            //If there are parameters
+            else
+            {
+                treturntype = treturntypearray[1].Split(';')[0];
+                treturntypearray = treturntypearray[0].Split('(');
+                treturntype = treturntype.Split(':')[1];
+                tmethodname = treturntypearray[0];
+                tparameters = treturntypearray[1];
+            }
+
+            string tfunctionstring = iclassname + "_" + tmethodname + "_" + itype + "_" + tparameters + "_" + treturntype;
+            List<string> tout = new List<string>();
+            tout.Add(tfunctionstring);
+            tout.AddRange(GetStringSubList(ref istrings, ipos, inextpos));
+
+            return tout;
+        }
+
     	private void IndexStructure(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
         {
             if (ireadheader)
