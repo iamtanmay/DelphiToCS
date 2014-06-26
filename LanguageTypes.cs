@@ -20,6 +20,15 @@ namespace Translator
     public class Constant: Variable
     {
         public string value;
+        public Constant()
+        {
+        }
+        public Constant(string value)
+        {
+        }
+        public Constant(string name, string type, string value)
+        {
+        }
     }
 
     public class Property : Variable
@@ -57,6 +66,9 @@ namespace Translator
     {
     	public string name, baseclass;
         public List<Variable> variables;
+        public List<Constant> constants;
+        public List<Enum> enums;
+        public List<Type> types;
         public List<Property> properties;
         public List<Function> functions;
     }
