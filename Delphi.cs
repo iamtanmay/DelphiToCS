@@ -616,7 +616,7 @@ namespace Translator
                 tparameters = treturntypearray[1];
             }
 
-            string tfunctionstring = iclassname + "_" + tmethodname + "_" + itype + "_" + tparameters + "_" + treturntype;
+            string tfunctionstring = "func_" + iclassname + "_" + tmethodname + "_" + itype + "_" + tparameters + "_" + treturntype;
             List<string> tout = new List<string>();
             tout.Add(tfunctionstring);
             tout.AddRange(GetStringSubList(ref istrings, ipos, inextpos));
