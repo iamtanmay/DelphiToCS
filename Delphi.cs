@@ -1020,6 +1020,7 @@ namespace Translator
 
         static private List<string> RecognizeClassDefinition(string iline)
         {
+
             return new List<string>();
         }
         
@@ -1175,13 +1176,42 @@ namespace Translator
 
         private Enum StringToEnum(string istring)
         {
-            Enum tout = new Enum();
+            Enum tout;
+            List<Constant> tconsts = new List<Constant>();
+
+            //Split into arguments
+            string[] tenum_arguments = istring.Split('(');
+            //Get name
+            string tname = tenum_arguments[0].Split('=')[0].Trim();
+            
+            //Remove trailing ')' and ';'
+            tenum_arguments[1].Replace(')', ' ');
+            tenum_arguments[1].Replace(';', ' ');
+
+            string[] tconstants = tenum_arguments[1].Split(',');
+            tconstants[tconstants.GetLength(0) - 1].Trim();
+
+            //Loop and add all constants
+            for (int i = 0; i < tconstants.GetLength(0); i++)
+            {
+                Constant tconst = StringToConstant(tconstants[i]);
+                tconsts.Add(tconst);
+            }
+
+            tout = new Enum(tname, tconsts);
             return tout;
         }
 
         private Type StringToType(string istring)
         {
-            Type tout = new Type();
+            Type tout;
+            string tname, ttype;
+
+            string[] tarr = istring.Split(':');
+            tname = tarr[0];
+            ttype = tarr[1];
+
+            tout = new Type(tname, ttype);
             return tout;
         }
 

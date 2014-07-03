@@ -15,6 +15,12 @@ namespace Translator
 
     public class Type: Variable
     {
+        public Type()
+        {
+        }
+        public Type(string name, string type)
+        {
+        }
     }
 
     public class Constant: Variable
@@ -43,6 +49,13 @@ namespace Translator
     {
         public string name;
         public List<Constant> enums;
+        public Enum()
+        {
+        }
+
+        public Enum(string name, List<Constant> enums)
+        {
+        }
     }
 
     public class Function
