@@ -65,8 +65,7 @@ namespace Translator
     	public List<string> interfaceUses, implementationUses;
         
     	//Log 
-    	delegate void delegate_log(List<string> imessages);
-    	delegate_log log; 
+        public LogDelegate logsingle;
     	
         //Bookmarks
     	//Sections
@@ -101,11 +100,12 @@ namespace Translator
         List<string> Section_Names;
 
     	//ireadheader is a flag if header is to be read. iheaderstart is normally "{ --" in Zinsser Delphi units, and iheaderend is "-- }" 
-        public void Read(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
+        public void Read(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend, LogDelegate ilog)
         {
         	//Initialise
             script = new Script();
-            
+            logsingle = ilog;
+
             name = "";
             
             classNames = new List<string>();
@@ -1018,10 +1018,78 @@ namespace Translator
             return new List<string>();
         }
 
+        //Differentiate and return segments for Variables and Properties
         static private List<string> RecognizeClassDefinition(string iline)
         {
+            List<string> tout = new List<string>();
+            string[] tstr_arr;
 
-            return new List<string>();
+            int isproperty = iline.IndexOf("property");
+
+            if (isproperty != -1)
+            {
+                string tstr = iline.Replace("property", "").Replace(";", "").Trim();
+                tstr_arr = tstr.Split(':');
+                
+                //Add name
+                tout.Add(tstr_arr[0]);
+
+                //Check if read
+                int tread = tstr_arr[1].IndexOf("read");
+                int twrite = tstr_arr[1].IndexOf("write");
+
+                if ((tread == -1) && (twrite == -1))
+                {
+                    tout.Add(tstr_arr[1].Trim());
+                }
+                else if (tread == -1)
+                {
+                    tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                    tstr_arr = tstr_arr[1].Split(';');
+                    
+                    //Add type and read
+                    tout.Add(tstr_arr[0].Trim());
+                    tout.Add(tstr_arr[1].Trim());
+                }
+                else if (twrite == -1)
+                {
+                    tstr_arr[1] = tstr_arr[1].Replace("write", ";");
+                    tstr_arr = tstr_arr[1].Split(';');
+
+                    //Add type and write
+                    tout.Add(tstr_arr[0].Trim());
+                    tout.Add(tstr_arr[1].Trim());
+                }
+                else if (tread > twrite)
+                {
+                    tstr_arr[1] = tstr_arr[1].Replace("write", ";");
+                    tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                    tstr_arr = tstr_arr[1].Split(';');
+
+                    //Add type, read and write
+                    tout.Add(tstr_arr[0].Trim());
+                    tout.Add(tstr_arr[2].Trim());
+                    tout.Add(tstr_arr[1].Trim());
+                }
+                else
+                {
+                    tstr_arr[1] = tstr_arr[1].Replace("write", ";");
+                    tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                    tstr_arr = tstr_arr[1].Split(';');
+
+                    //Add type, read and write
+                    tout.Add(tstr_arr[0].Trim());
+                    tout.Add(tstr_arr[1].Trim());
+                    tout.Add(tstr_arr[2].Trim());
+                }
+            }
+            else
+            {
+                tstr_arr = iline.Split(':');
+                tout.Add(tstr_arr[0].Trim());
+                tout.Add(tstr_arr[1].Replace(";", ""));
+            }
+            return tout;
         }
         
         static private int CheckStringListElementsInString(string istring, ref string[] ielements)
@@ -1255,6 +1323,12 @@ namespace Translator
 
         private void GenerateIncludes(ref List<string> Objects_UsesInterface, ref List<string> Uses_Interface)
         {
+        }
+
+        public void log(List<string> imessages)
+        {
+            for (int i = 0; i < imessages.Count; i++)
+                logsingle(imessages[i]);
         }
     }    
 }

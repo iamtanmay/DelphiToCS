@@ -51,6 +51,7 @@ namespace Translator
         public List<Constant> enums;
         public Enum()
         {
+            enums = new List<Constant>();
         }
 
         public Enum(string name, List<Constant> enums)
@@ -68,6 +69,9 @@ namespace Translator
 
         public Function()
         {
+            parameters = new List<Variable>();
+            variables = new List<Variable>();
+            commands = new List<string>();
         }
 
         public Function(string name, List<Variable> parameters, string returnType, bool isVirtual, bool isAbstract, bool isStatic, List<Variable> variables, List<string> commands)
@@ -84,10 +88,23 @@ namespace Translator
         public List<Type> types;
         public List<Property> properties;
         public List<Function> functions;
+
+        public Class()
+        {
+            variables = new List<Variable>();
+            constants = new List<Constant>();
+            enums = new List<Enum>();
+            types = new List<Type>();
+            properties = new List<Property>();
+            functions = new List<Function>();
+        }
     }
     
     public class Interface:Class
     {
+        public Interface() : base()
+        {
+        }
     }
 
     public class Script
@@ -96,5 +113,13 @@ namespace Translator
     	public List<string> includes;
         public List<Class> classes;
         public List<Interface> interfaces;
+
+        public Script()
+        {
+            header = new List<string>();
+            includes = new List<string>();
+            classes = new List<Class>();
+            interfaces = new List<Interface>();
+        }
     }
 }
