@@ -15,6 +15,13 @@ namespace Translator
         public int Index { get; set; }
 
         public string Message { get; set; }
+
+        public LogEntry()
+        { }
+
+        public LogEntry(DateTime DateTime, int Index, string Message)
+        {
+        }
     }
 
     public class CollapsibleLogEntry : LogEntry

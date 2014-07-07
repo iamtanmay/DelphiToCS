@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,12 +30,7 @@ namespace Translator
         {
             //Dispatcher is needed because Threads cannot change Main UI data. 
             //Dispatcher transfers data to main thread to apply to UI
-            Dispatcher.CurrentDispatcher.BeginInvoke((Action)(() => LogEntries.Add(new LogEntry()
-            {
-                Index = index++,
-                DateTime = DateTime.Now,
-                Message = imessage,
-            })));
+            Dispatcher.CurrentDispatcher.BeginInvoke((Action)(() => LogEntries.Add(new LogEntry(DateTime.Now, index++, imessage))));
         } 
 
         private void GUI_Load(object sender, EventArgs e)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -84,17 +85,17 @@ namespace Translator
     	
     	//Keywords
         //Divide script sections
-        public static string[] sectionKeys = { "var", "implementation", "interface" };
+        public static string[] sectionKeys = {"var","implementation","interface" };
     	//Divide section subsections
-    	public static string[] subsectionKeys = { "type", "const", "uses"};
+    	public static string[] subsectionKeys = {"type","const","uses"};
         //Divide subsection kinds
-        public static string[] interfaceKindKeys = { "class", "record", "procedure", "function" };
-        public static string[] implementKindKeys = { "const", "constructor", "class function", "class procedure", "procedure", "function", "uses" };
+        public static string[] interfaceKindKeys = {"class","record","procedure","function" };
+        public static string[] implementKindKeys = {"const","constructor","class function","class procedure","procedure","function","uses" };
         //Divide method commands
-        public static string[] methodKeys = { "var", "begin", "label", "end", "try", "catch", "finally" };
+        public static string[] methodKeys = {"var","begin","label","end","try","catch","finally" };
     	
         //Divide class defintion
-        public static string[] classKeys = { "public", "private", "const", "constructor", "class function", "class procedure", "procedure", "function", "property"};
+        public static string[] classKeys = {"public","private","const","constructor","class function","class procedure","procedure","function","property"};
 
         List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
         List<string> Section_Names;
@@ -111,7 +112,11 @@ namespace Translator
             classNames = new List<string>();
             classDefinitions = new List<DelphiClassStrings>();
             classImplementations = new List<List<string>>();
-            
+
+            SubSection_Names = new List<string>();
+            Uses_Interface = new List<string>();
+            Uses_Implementation = new List<string>();
+
             ConstsGlobal = new List<string>();
             EnumsGlobal = new List<string>();
             TypesGlobal = new List<string>();
@@ -198,13 +203,13 @@ namespace Translator
         
         //oclassdefinitions is a list of class variables, properties, function and procedure definitions 
         private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes)
-        {                        
-        	int tcurr_string_count = startInterface, tnext_subsection_pos = -1;
+        {
+            int tcurr_string_count = FindNextInterfaceSubSection(ref istrings, startInterface), tnext_subsection_pos = -1;
 
             //Interface sub sections
             while (tcurr_string_count != -1)
             {
-            	tnext_subsection_pos = FindNextInterfaceSubSection(ref istrings, tcurr_string_count);
+            	tnext_subsection_pos = FindNextInterfaceSubSection(ref istrings, tcurr_string_count + 1);
 
                 if (tnext_subsection_pos == -1)
                     tnext_subsection_pos = endInterface;
@@ -224,14 +229,14 @@ namespace Translator
         							log(tlogmessages);
         							break;
             	}
-                tcurr_string_count = tnext_subsection_pos + 1;
+                tcurr_string_count = tnext_subsection_pos;
             }        
         }
 
         //Check if a line in class definition is a variable, if it has only two words, divided by ' ' or ':' and if its first character is 'f' or 'F'
         private bool CheckVariable(string istring)
         {
-            string[] tarray = istring.Split(' ');
+            string[] tarray = istring.Trim().Split(' ');
 
             if ((tarray.GetLength(0) == 2) && ((tarray[0][0] == 'f') || (tarray[0][0] == 'F')) && (istring.Split(':').GetLength(0) == 2))
                 return true;
@@ -249,7 +254,7 @@ namespace Translator
                 //Ignore comments and empty lines
                 if (!(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
                 {
-                    switch (RecognizeKey(istrings[tcurr_string_count], ref subsectionKeys))
+                    switch (RecognizeKey(istrings[tcurr_string_count], ref interfaceKindKeys))
                     {
                         case "class":   tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
                                         tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
@@ -260,7 +265,7 @@ namespace Translator
 
                                         DelphiClassStrings tclassdef = new DelphiClassStrings();
                                         tclassdef.name = tclassname;
-                                        tclassdef = ParseInterfaceMethod(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                                        tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
                                         oclassdefinitions.Add(tclassdef);
                                         tcurr_string_count = tnext_subsection_pos + 1;
@@ -275,7 +280,7 @@ namespace Translator
 
                                         tclassdef = new DelphiClassStrings();
                                         tclassdef.name = tclassname;
-                                        tclassdef = ParseInterfaceMethod(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                                        tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
                                         oclassdefinitions.Add(tclassdef);
                                         tcurr_string_count = tnext_subsection_pos + 1;
@@ -311,12 +316,10 @@ namespace Translator
                                             tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
                                             tlogmessages.Add(istrings[tcurr_string_count]);
                                             log(tlogmessages);
-
-                                            throw new Exception("Unknown definition found");
                                         }
                                         break;
                     }
-                    tcurr_string_count = FindNextInterfaceSubSection(ref istrings, tcurr_string_count);
+                    tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                 }
                 else
                 {
@@ -324,37 +327,103 @@ namespace Translator
                 }
             }
         }
-        
-        private DelphiClassStrings ParseInterfaceMethod(ref List<string> istrings, string iclassname, int icurr_string_count, int inext_subsection_pos)
+
+        private DelphiMethodStrings ParseInterfaceMethod(string imethodtype, ref List<string> iFiltered_strings, int icurr_string_count)
+        {
+            bool toverload = false, tvirtual = false, tabstract = false;
+            int tnext_pos = FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count + 1);
+            string tfuncstring = "";
+
+            //Add all the indented lines in function title
+            for (int i = icurr_string_count; i < tnext_pos; i++)
+            {
+                tfuncstring = tfuncstring + iFiltered_strings[i].Trim();
+            }
+
+            //Check and strip out overload, virtual, abstract
+            if (tfuncstring.IndexOf("overload;") != -1)
+            {
+                toverload = true;
+                tfuncstring.Replace("overload;", "");
+            }
+            if (tfuncstring.IndexOf("virtual;") != -1)
+            {
+                tvirtual = true;
+                tfuncstring.Replace("virtual;", "");
+            }
+            if (tfuncstring.IndexOf("abstract;") != -1)
+            {
+                tabstract = true;
+                tfuncstring.Replace("abstract;", "");
+            }
+
+            string[] tclassnamearray = tfuncstring.Split('.');
+
+            //Break down function elements
+            string treturntype, tparameters, tmethodname;
+            string[] treturntypearray = tclassnamearray[1].Split(')');
+
+            //If there are no parameters
+            if (treturntypearray.GetLength(0) == 1)
+            {
+                treturntypearray = treturntypearray[0].Split(':');
+                treturntype = treturntypearray[1].Split(';')[0];
+                tmethodname = treturntypearray[0];
+                tparameters = "";
+            }
+            //If there are parameters
+            else
+            {
+                treturntype = treturntypearray[1].Split(';')[0];
+                treturntypearray = treturntypearray[0].Split('(');
+                treturntype = treturntype.Split(':')[1];
+                tmethodname = treturntypearray[0];
+                tparameters = treturntypearray[1];
+            }
+
+            string tfunctionstring = treturntype + "_" + imethodtype + "_" + tmethodname + "_" + tparameters;
+            DelphiMethodStrings tfunction = new DelphiMethodStrings(tfunctionstring, null);
+
+            tfunction.isAbstract = tabstract;
+            tfunction.isVirtual = tvirtual;
+            tfunction.isOverloaded = toverload;
+
+            return tfunction;
+        }
+
+        private DelphiClassStrings ParseInterfaceClass(ref List<string> istrings, string iclassname, int icurr_string_count, int inext_subsection_pos)
         {
             DelphiClassStrings tout = new DelphiClassStrings();
             List<string> tstrings = new List<string>(), tvars = new List<string>(), tproperties = new List<string>();
             List<DelphiMethodStrings> tmethods = new List<DelphiMethodStrings>();
 
-            tstrings = istrings; // GetStringSubList(ref istrings, icurr_string_count, inext_subsection_pos);
+            int tcurr_string_count = icurr_string_count;
 
             //Variable filter. Variables are removed so that functions can be read without confusion
             int i = icurr_string_count;
+            int new_next_subsection_pos;
 
             while (i < inext_subsection_pos)
             {
-                if (CheckVariable(tstrings[i]))
-                {
-                    tvars.Add(tstrings[i]);
-                    tstrings.RemoveAt(i);
-                }
+                if (CheckVariable(istrings[i]))
+                    tvars.Add(istrings[i]);
                 else
-                    i++;
+                    tstrings.Add(istrings[i]);
+
+                i++;
             }
 
-            for (i = icurr_string_count; i < inext_subsection_pos; i++)
+            new_next_subsection_pos = icurr_string_count + tstrings.Count;
+            tcurr_string_count = 0;
+
+            while ((tcurr_string_count != -1) && (tcurr_string_count < new_next_subsection_pos))
             {
-                int tnext_subsection_pos = FindNextKey(ref tstrings, ref implementKindKeys, icurr_string_count);
+                int tnext_subsection_pos = FindNextKey(ref tstrings, ref implementKindKeys, tcurr_string_count);
 
                 if (tnext_subsection_pos == -1)
-                    tnext_subsection_pos = endImplementation;
+                    tnext_subsection_pos = endInterface;
 
-                switch (RecognizeKey(tstrings[icurr_string_count], ref classKeys))
+                switch (RecognizeKey(tstrings[tcurr_string_count], ref classKeys))
                 {
                     //{ "public", "private", "const", "constructor", "class function", "class procedure", "procedure", "function", "property"};
                     case "public":  //ignore
@@ -365,359 +434,32 @@ namespace Translator
 
                     case "const": break;
 
-                    case "constructor": //Break down function elements
-                        string tclassname;
-                        string tmethodtype = "constructor";
-
-                        bool toverload = false, tvirtual = false, tabstract = false;
-                        int tnext_pos = FindNextKey(ref tstrings, ref classKeys, icurr_string_count);
-                        string tfuncstring = "";
-
-                        //Add all the indented lines in function title
-                        for (i = icurr_string_count; i < tnext_pos; i++)
-                        {
-                            tfuncstring = tfuncstring + istrings[i].Trim();
-                        }
-
-                        //Check and strip out overload, virtual, abstract
-                        if (tfuncstring.IndexOf("overload;") != -1)
-                        {
-                            toverload = true;
-                            tfuncstring.Replace("overload;", "");
-                        }
-                        if (tfuncstring.IndexOf("virtual;") != -1)
-                        {
-                            tvirtual = true;
-                            tfuncstring.Replace("virtual;", "");
-                        }
-                        if (tfuncstring.IndexOf("abstract;") != -1)
-                        {
-                            tabstract = true;
-                            tfuncstring.Replace("abstract;", "");
-                        }
-
-                        string[] tclassnamearray = tfuncstring.Split('.');
-                        tclassname = tclassnamearray[0].Split(' ')[1];
-
-                        //Break down function elements
-                        string treturntype, tparameters, tmethodname;
-                        string[] treturntypearray = tclassnamearray[1].Split(')');
-
-                        iclassname = tclassnamearray[0].Split(' ')[1];
-
-                        //If there are no parameters
-                        if (treturntypearray.GetLength(0) == 1)
-                        {
-                            treturntypearray = treturntypearray[0].Split(':');
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            tmethodname = treturntypearray[0];
-                            tparameters = "";
-                        }
-                        //If there are parameters
-                        else
-                        {
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            treturntypearray = treturntypearray[0].Split('(');
-                            treturntype = treturntype.Split(':')[1];
-                            tmethodname = treturntypearray[0];
-                            tparameters = treturntypearray[1];
-                        }
-
-                        string tfunctionstring = treturntype + "_" + tmethodtype + "_" + tmethodname + "_" + tparameters;
-                        DelphiMethodStrings tfunction = new DelphiMethodStrings(tfunctionstring, null);
-
-                        tfunction.isAbstract = tabstract;
-                        tfunction.isVirtual = tvirtual;
-                        tfunction.isOverloaded = toverload;
-
-                        tmethods.Add(tfunction);
+                    case "constructor":
+                        tmethods.Add(ParseInterfaceMethod("constructor", ref tstrings, tcurr_string_count));
                         break;
 
-                    case "class function": //Break down function elements
-                        tclassname = "";
-                        tmethodtype = "class_function";
-
-                        toverload = false;
-                        tvirtual = false;
-                        tabstract = false;
-                        tnext_pos = FindNextKey(ref tstrings, ref classKeys, icurr_string_count);
-                        tfuncstring = "";
-
-                        //Add all the indented lines in function title
-                        for (i = icurr_string_count; i < tnext_pos; i++)
-                        {
-                            tfuncstring = tfuncstring + istrings[i].Trim();
-                        }
-
-                        //Check and strip out overload, virtual, abstract
-                        if (tfuncstring.IndexOf("overload;") != -1)
-                        {
-                            toverload = true;
-                            tfuncstring.Replace("overload;", "");
-                        }
-                        if (tfuncstring.IndexOf("virtual;") != -1)
-                        {
-                            tvirtual = true;
-                            tfuncstring.Replace("virtual;", "");
-                        }
-                        if (tfuncstring.IndexOf("abstract;") != -1)
-                        {
-                            tabstract = true;
-                            tfuncstring.Replace("abstract;", "");
-                        }
-
-                        tclassnamearray = tfuncstring.Split('.');
-                        tclassname = tclassnamearray[0].Split(' ')[1];
-
-
-                        //Break down function elements
-                        treturntypearray = tclassnamearray[1].Split(')');
-
-                        iclassname = tclassnamearray[0].Split(' ')[1];
-
-                        //If there are no parameters
-                        if (treturntypearray.GetLength(0) == 1)
-                        {
-                            treturntypearray = treturntypearray[0].Split(':');
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            tmethodname = treturntypearray[0];
-                            tparameters = "";
-                        }
-                        //If there are parameters
-                        else
-                        {
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            treturntypearray = treturntypearray[0].Split('(');
-                            treturntype = treturntype.Split(':')[1];
-                            tmethodname = treturntypearray[0];
-                            tparameters = treturntypearray[1];
-                        }
-
-                        tfunctionstring = treturntype + "_" + tmethodtype + "_" + tmethodname + "_" + tparameters;
-                        tfunction = new DelphiMethodStrings(tfunctionstring, null);
-
-                        tfunction.isAbstract = tabstract;
-                        tfunction.isVirtual = tvirtual;
-                        tfunction.isOverloaded = toverload;
-
-                        tmethods.Add(tfunction);
+                    case "class function":
+                        tmethods.Add(ParseInterfaceMethod("class_function", ref tstrings, tcurr_string_count));
                         break;
 
-                    case "class procedure":  //Break down function elements
-                        tclassname = "";
-                        tmethodtype = "class_procedure";
-
-                        toverload = false;
-                        tvirtual = false;
-                        tabstract = false;
-                        tnext_pos = FindNextKey(ref tstrings, ref classKeys, icurr_string_count);
-                        tfuncstring = "";
-
-                        //Add all the indented lines in function title
-                        for (i = icurr_string_count; i < tnext_pos; i++)
-                        {
-                            tfuncstring = tfuncstring + istrings[i].Trim();
-                        }
-
-                        //Check and strip out overload, virtual, abstract
-                        if (tfuncstring.IndexOf("overload;") != -1)
-                        {
-                            toverload = true;
-                            tfuncstring.Replace("overload;", "");
-                        }
-                        if (tfuncstring.IndexOf("virtual;") != -1)
-                        {
-                            tvirtual = true;
-                            tfuncstring.Replace("virtual;", "");
-                        }
-                        if (tfuncstring.IndexOf("abstract;") != -1)
-                        {
-                            tabstract = true;
-                            tfuncstring.Replace("abstract;", "");
-                        }
-
-                        tclassnamearray = tfuncstring.Split('.');
-                        tclassname = tclassnamearray[0].Split(' ')[1];
-
-
-                        //Break down function elements
-                        treturntypearray = tclassnamearray[1].Split(')');
-
-                        iclassname = tclassnamearray[0].Split(' ')[1];
-
-                        //If there are no parameters
-                        if (treturntypearray.GetLength(0) == 1)
-                        {
-                            treturntypearray = treturntypearray[0].Split(':');
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            tmethodname = treturntypearray[0];
-                            tparameters = "";
-                        }
-                        //If there are parameters
-                        else
-                        {
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            treturntypearray = treturntypearray[0].Split('(');
-                            treturntype = treturntype.Split(':')[1];
-                            tmethodname = treturntypearray[0];
-                            tparameters = treturntypearray[1];
-                        }
-
-                        tfunctionstring = treturntype + "_" + tmethodtype + "_" + tmethodname + "_" + tparameters;
-                        tfunction = new DelphiMethodStrings(tfunctionstring, null);
-
-                        tfunction.isAbstract = tabstract;
-                        tfunction.isVirtual = tvirtual;
-                        tfunction.isOverloaded = toverload;
-
-                        tmethods.Add(tfunction);
+                    case "class procedure":
+                        tmethods.Add(ParseInterfaceMethod("class_procedure", ref tstrings, tcurr_string_count));
                         break;
 
-                    case "procedure":  //Break down function elements
-                        tclassname = "";
-                        tmethodtype = "procedure";
-
-                        toverload = false;
-                        tvirtual = false;
-                        tabstract = false;
-                        tnext_pos = FindNextKey(ref tstrings, ref classKeys, icurr_string_count);
-                        tfuncstring = "";
-
-                        //Add all the indented lines in function title
-                        for (i = icurr_string_count; i < tnext_pos; i++)
-                        {
-                            tfuncstring = tfuncstring + istrings[i].Trim();
-                        }
-
-                        //Check and strip out overload, virtual, abstract
-                        if (tfuncstring.IndexOf("overload;") != -1)
-                        {
-                            toverload = true;
-                            tfuncstring.Replace("overload;", "");
-                        }
-                        if (tfuncstring.IndexOf("virtual;") != -1)
-                        {
-                            tvirtual = true;
-                            tfuncstring.Replace("virtual;", "");
-                        }
-                        if (tfuncstring.IndexOf("abstract;") != -1)
-                        {
-                            tabstract = true;
-                            tfuncstring.Replace("abstract;", "");
-                        }
-
-                        tclassnamearray = tfuncstring.Split('.');
-                        tclassname = tclassnamearray[0].Split(' ')[1];
-
-
-                        //Break down function elements
-                        treturntypearray = tclassnamearray[1].Split(')');
-
-                        iclassname = tclassnamearray[0].Split(' ')[1];
-
-                        //If there are no parameters
-                        if (treturntypearray.GetLength(0) == 1)
-                        {
-                            treturntypearray = treturntypearray[0].Split(':');
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            tmethodname = treturntypearray[0];
-                            tparameters = "";
-                        }
-                        //If there are parameters
-                        else
-                        {
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            treturntypearray = treturntypearray[0].Split('(');
-                            treturntype = treturntype.Split(':')[1];
-                            tmethodname = treturntypearray[0];
-                            tparameters = treturntypearray[1];
-                        }
-
-                        tfunctionstring = treturntype + "_" + tmethodtype + "_" + tmethodname + "_" + tparameters;
-                        tfunction = new DelphiMethodStrings(tfunctionstring, null);
-
-                        tfunction.isAbstract = tabstract;
-                        tfunction.isVirtual = tvirtual;
-                        tfunction.isOverloaded = toverload;
-
-                        tmethods.Add(tfunction);
+                    case "procedure":
+                        tmethods.Add(ParseInterfaceMethod("procedure", ref tstrings, tcurr_string_count));
                         break;
 
-                    case "function":  //Break down function elements
-                        tclassname = "";
-                        tmethodtype = "function";
-
-                        toverload = false;
-                        tvirtual = false;
-                        tabstract = false;
-                        tnext_pos = FindNextKey(ref tstrings, ref classKeys, icurr_string_count);
-                        tfuncstring = "";
-
-                        //Add all the indented lines in function title
-                        for (i = icurr_string_count; i < tnext_pos; i++)
-                        {
-                            tfuncstring = tfuncstring + istrings[i].Trim();
-                        }
-
-                        //Check and strip out overload, virtual, abstract
-                        if (tfuncstring.IndexOf("overload;") != -1)
-                        {
-                            toverload = true;
-                            tfuncstring.Replace("overload;", "");
-                        }
-                        if (tfuncstring.IndexOf("virtual;") != -1)
-                        {
-                            tvirtual = true;
-                            tfuncstring.Replace("virtual;", "");
-                        }
-                        if (tfuncstring.IndexOf("abstract;") != -1)
-                        {
-                            tabstract = true;
-                            tfuncstring.Replace("abstract;", "");
-                        }
-
-                        tclassnamearray = tfuncstring.Split('.');
-                        tclassname = tclassnamearray[0].Split(' ')[1];
-
-
-                        //Break down function elements
-                        treturntypearray = tclassnamearray[1].Split(')');
-
-                        iclassname = tclassnamearray[0].Split(' ')[1];
-
-                        //If there are no parameters
-                        if (treturntypearray.GetLength(0) == 1)
-                        {
-                            treturntypearray = treturntypearray[0].Split(':');
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            tmethodname = treturntypearray[0];
-                            tparameters = "";
-                        }
-                        //If there are parameters
-                        else
-                        {
-                            treturntype = treturntypearray[1].Split(';')[0];
-                            treturntypearray = treturntypearray[0].Split('(');
-                            treturntype = treturntype.Split(':')[1];
-                            tmethodname = treturntypearray[0];
-                            tparameters = treturntypearray[1];
-                        }
-
-                        tfunctionstring = treturntype + "_" + tmethodtype + "_" + tmethodname + "_" + tparameters;
-                        tfunction = new DelphiMethodStrings(tfunctionstring, null);
-
-                        tfunction.isAbstract = tabstract;
-                        tfunction.isVirtual = tvirtual;
-                        tfunction.isOverloaded = toverload;
-
-                        tmethods.Add(tfunction);
+                    case "function":
+                        tmethods.Add(ParseInterfaceMethod("function", ref tstrings, tcurr_string_count));
                         break;
 
-                    case "property": tproperties.Add(istrings[icurr_string_count]);
+                    case "property": tproperties.Add(istrings[tcurr_string_count]);
                         break;
 
                     default: break;
                 }
+                tcurr_string_count = tnext_subsection_pos;
             }
 
             tout.name = iclassname;
@@ -871,8 +613,8 @@ namespace Translator
 	        		Section_Bookmarks.Add(startHeader);
         		}
             }
-            
-            startInterface = FindStringInList("interface", ref istrings, 0, true);
+
+            startInterface = FindStringInList("interface", ref istrings, 0, true) + 1;
         	if (startInterface == -1)
 	    		throw new Exception("Interface not found");
 
@@ -883,8 +625,8 @@ namespace Translator
         	endInterface = FindNextSection(ref istrings, startInterface);
     		if (endInterface == -1)
         		return;
-    		
-            startImplementation = FindStringInList("implementation", ref istrings, endInterface, true);
+
+            startImplementation = FindStringInList("implementation", ref istrings, endInterface, true) + 1;
     		if (startImplementation != -1)
     		{
     			//Look for a Var section in between interface and implementation
@@ -909,7 +651,7 @@ namespace Translator
     		}
     		else
     		{
-	            startVar = FindStringInList("var", ref istrings, endInterface, true);
+                startVar = FindStringInList("var", ref istrings, endInterface, true) + 1;
 	            if (startVar != -1)
 	            {
 					Section_Names.Add("Var");
@@ -923,12 +665,12 @@ namespace Translator
             return new List<Class>();
         }      
 
-        static private int GoToNextKeyword(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
+        private int GoToNextKeyword(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
 		{
             return 0;
 		}
 
-        static private int FindNextFunctionImplementation(ref List<string> iarray, int istartpoint)
+        private int FindNextFunctionImplementation(ref List<string> iarray, int istartpoint)
         {
             for (int i = istartpoint; i < iarray.Count; i++)
             {
@@ -960,7 +702,7 @@ namespace Translator
             return -1;
         }
         
-        static private int FindNextSection(ref List<string> istrings, int istartpos)
+        private int FindNextSection(ref List<string> istrings, int istartpos)
         {
             for (int i = istartpos; i < istrings.Count; i++)
             {
@@ -970,9 +712,9 @@ namespace Translator
             return -1;
         }
 
-        static private int FindNextInterfaceSubSection(ref List<string> istrings, int istartpos)
+        private int FindNextInterfaceSubSection(ref List<string> istrings, int istartpos)
         {
-        	for (int i = istartpos; i < istrings.Count; i++)
+        	for (int i = istartpos; i < endInterface; i++)
         	{
         		if (CheckStringListElementsInString(istrings[i], ref subsectionKeys) != -1)
         			return i;
@@ -980,12 +722,22 @@ namespace Translator
         	return -1;
         }
 
+        private int FindNextInterfaceSubType(ref List<string> istrings, int istartpos)
+        {
+            for (int i = istartpos; i < endInterface; i++)
+            {
+                if (CheckStringListElementsInString(istrings[i], ref interfaceKindKeys) != -1)
+                    return i;
+            }
+            return -1;
+        }
+
         static private string RecognizeKey(string istring, ref string[] ikeys)
 		{
            	for (int i=0; i < ikeys.GetLength(0); i++)
            	{
            		if (istring.IndexOf(ikeys[i]) != -1)
-           			return ikeys[i];
+           			return ikeys[i].Trim();
            	}
            	return "";
 		}
@@ -1094,9 +846,11 @@ namespace Translator
         
         static private int CheckStringListElementsInString(string istring, ref string[] ielements)
 		{
-        	for (int i=0; i < ielements.GetLength(0); i++)
+            string[] tarray = istring.Split(' ');
+            for (int i = 0; i < ielements.GetLength(0); i++)
            	{
-           		if (istring.IndexOf(ielements[i]) != -1)
+                string s = ielements[i];
+                if(tarray.FirstOrDefault(e => e == s) != null)
            			return i;
            	}
            	return -1;
@@ -1328,7 +1082,7 @@ namespace Translator
         public void log(List<string> imessages)
         {
             for (int i = 0; i < imessages.Count; i++)
-                logsingle(imessages[i]);
+                Console.WriteLine(imessages[i]);
         }
     }    
 }
