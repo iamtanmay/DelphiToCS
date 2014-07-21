@@ -70,7 +70,7 @@ namespace Translator
     	
         //Bookmarks
     	//Sections
-    	private int startHeader, endHeader, startInterface, endInterface, startVar, endVar, startImplementation, endImplementation;    	
+        private int startHeader = -1, endHeader = -1, startInterface = -1, endInterface = -1, startVar = -1, endVar = -1, startImplementation = -1, endImplementation = -1;    	
     	//Subsections
     	private List<int> startUses, endUses, startClassInterface, endClassInterface, startClassImplementation, endClassImplementation, startConsts, endConsts, startEnums, endEnums, startTypes, endTypes;
     	
@@ -90,12 +90,12 @@ namespace Translator
     	public static string[] subsectionKeys = {"type","const","uses"};
         //Divide subsection kinds
         public static string[] interfaceKindKeys = {"class","record","procedure","function" };
-        public static string[] implementKindKeys = {"const","constructor","class function","class procedure","procedure","function","uses" };
+        public static string[] implementKindKeys = { "const", "constructor", "class var", "class function", "class procedure", "procedure", "function", "uses" };
         //Divide method commands
         public static string[] methodKeys = {"var","begin","label","end","try","catch","finally" };
     	
         //Divide class defintion
-        public static string[] classKeys = {"public","private","const","constructor","class function","class procedure","procedure","function","property"};
+        public static string[] classKeys = {"public","private","const","constructor","class var","class function","class procedure","procedure","function","property"};
 
         List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
         List<string> Section_Names;
@@ -158,7 +158,7 @@ namespace Translator
     			ParseHeader(ref istrings, ireadheader, iheaderstart, iheaderend);
 
 			//Convert Delphi symbols to C# symbols
-			Beautify(ref istrings);
+			//Beautify(ref istrings);
 
             ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal);
             ParseVar(ref istrings, ref VarsGlobal);
@@ -196,9 +196,7 @@ namespace Translator
         private void Beautify(ref List<string> istrings)
         {
         	for (int i = 0; i < istrings.Count; i++)
-        	{
-                Utilities.Beautify(istrings[i]);
-        	}
+                istrings[i] = Utilities.Beautify(istrings[i]);
         }
         
         //oclassdefinitions is a list of class variables, properties, function and procedure definitions 
@@ -329,7 +327,7 @@ namespace Translator
         }
 
         private DelphiMethodStrings ParseInterfaceMethod(string imethodtype, ref List<string> iFiltered_strings, int icurr_string_count)
-        {
+       {
             bool toverload = false, tvirtual = false, tabstract = false;
             int tnext_pos = FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count + 1);
             string tfuncstring = "";
@@ -357,11 +355,11 @@ namespace Translator
                 tfuncstring.Replace("abstract;", "");
             }
 
-            string[] tclassnamearray = tfuncstring.Split('.');
+            //string[] tclassnamearray = tfuncstring.Split('.');
 
             //Break down function elements
             string treturntype, tparameters, tmethodname;
-            string[] treturntypearray = tclassnamearray[1].Split(')');
+            string[] treturntypearray = tfuncstring.Split(')');
 
             //If there are no parameters
             if (treturntypearray.GetLength(0) == 1)
@@ -433,6 +431,9 @@ namespace Translator
                         break;
 
                     case "const": break;
+
+                    case "class var": tvars.Add(istrings[tcurr_string_count]);
+                        break;
 
                     case "constructor":
                         tmethods.Add(ParseInterfaceMethod("constructor", ref tstrings, tcurr_string_count));
@@ -630,7 +631,7 @@ namespace Translator
     		if (startImplementation != -1)
     		{
     			//Look for a Var section in between interface and implementation
-    			if (endInterface != startImplementation)
+    			if ((endInterface+1) != startImplementation)
     			{
     				startVar = endInterface;
     				endVar = startImplementation;
@@ -686,7 +687,7 @@ namespace Translator
 
             for (int i = istartpos; i < istrings.Count; i++)
             {
-                if (CheckStringListElementsInString(istrings[i], ref tEnd) != -1)
+                if (Check_If_StringList_Elements_Exist_In_String(istrings[i], ref tEnd) != -1)
                     return i;
             }
             return -1;
@@ -696,7 +697,7 @@ namespace Translator
         {
             for (int i = istartpos; i < istrings.Count; i++)
             {
-                if (CheckStringListElementsInString(istrings[i], ref ikeys) != -1)
+                if (Check_If_StringList_Elements_Exist_In_String(istrings[i], ref ikeys) != -1)
                     return i;
             }
             return -1;
@@ -706,7 +707,7 @@ namespace Translator
         {
             for (int i = istartpos; i < istrings.Count; i++)
             {
-                if (CheckStringListElementsInString(istrings[i], ref sectionKeys) != -1)
+                if (Match_StringList_Elements_To_String(istrings[i], ref sectionKeys) != -1)
                     return i;
             }
             return -1;
@@ -716,7 +717,7 @@ namespace Translator
         {
         	for (int i = istartpos; i < endInterface; i++)
         	{
-        		if (CheckStringListElementsInString(istrings[i], ref subsectionKeys) != -1)
+                if (Match_StringList_Elements_To_String(istrings[i], ref subsectionKeys) != -1)
         			return i;
         	}
         	return -1;
@@ -726,7 +727,7 @@ namespace Translator
         {
             for (int i = istartpos; i < endInterface; i++)
             {
-                if (CheckStringListElementsInString(istrings[i], ref interfaceKindKeys) != -1)
+                if (Check_If_StringList_Elements_Exist_In_String(istrings[i], ref interfaceKindKeys) != -1)
                     return i;
             }
             return -1;
@@ -843,15 +844,45 @@ namespace Translator
             }
             return tout;
         }
-        
-        static private int CheckStringListElementsInString(string istring, ref string[] ielements)
+
+
+        static private int Match_StringList_Elements_To_String(string istring, ref string[] ielements)
+        {
+            for (int i = 0; i < ielements.GetLength(0); i++)
+            {
+                if (istring == ielements[i])
+                    return i;
+            }
+            return -1;
+        }
+
+        //Check if any of the elements in a array ielements is found inside a string istring.
+        static private int Check_If_StringList_Elements_Exist_In_String(string istring, ref string[] ielements)
 		{
-            string[] tarray = istring.Split(' ');
+            //Split string to check in, and element to check against, according to spaces. 
+            //If the first element word is found, check for the rest in order. Otherwise return false.
+
+            //Split string into words
+            string[] tstring_words = istring.Split(' ');
+
+            //Loop through the elements array and check each one
             for (int i = 0; i < ielements.GetLength(0); i++)
            	{
-                string s = ielements[i];
-                if(tarray.FirstOrDefault(e => e == s) != null)
-           			return i;
+                //Split the current element into words
+                string[] telement_words = ielements[i].Split(' ');
+
+                //Find the first word. If not found return -1
+                if (tstring_words.FirstOrDefault(e => e == telement_words[j]) != null)
+                {
+                    int tcounter = telement_words.GetLength(0);
+                    for (int j = 0; j < telement_words.GetLength(0); j++)
+                    {
+                        if (tstring_words.FirstOrDefault(e => e == telement_words[j]) != null)
+                            tcounter--;
+                    }
+
+                }
+
            	}
            	return -1;
 		}
