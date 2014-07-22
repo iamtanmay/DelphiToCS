@@ -6,18 +6,29 @@ using System.Text.RegularExpressions;
 
 namespace Translator
 {
+    public class DelphiVarStrings
+    {
+        public string value;
+        public bool isStatic;
+
+        public DelphiVarStrings(string value, bool isStatic)
+        {
+        }
+    }
+
     public class DelphiClassStrings
     {
         public string name;
         public List<DelphiMethodStrings> methods;
-        public List<string> properties;
-        public List<string> variables;
+        public List<DelphiVarStrings> properties;
+        public List<DelphiVarStrings> variables;
+        public List<DelphiVarStrings> consts;
 
         public DelphiClassStrings()
         {
             methods = new List<DelphiMethodStrings>();
-            properties = new List<string>();
-            variables = new List<string>();
+            properties = new List<DelphiVarStrings>();
+            variables = new List<DelphiVarStrings>();
         }
 
         public void AddMethodDefinition(string iheader, bool iAbstract, bool iVirtual, bool iOverloaded)
@@ -71,6 +82,7 @@ namespace Translator
         //Bookmarks
     	//Sections
         private int startHeader = -1, endHeader = -1, startInterface = -1, endInterface = -1, startVar = -1, endVar = -1, startImplementation = -1, endImplementation = -1;    	
+
     	//Subsections
     	private List<int> startUses, endUses, startClassInterface, endClassInterface, startClassImplementation, endClassImplementation, startConsts, endConsts, startEnums, endEnums, startTypes, endTypes;
     	
@@ -78,6 +90,7 @@ namespace Translator
     	//Raw strings
     	//Header, class names, SubSection names, Uses interface, Uses implementation, (Global and Local): consts, enums, types and vars 
     	private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal;
+
     	//Raw text for the classes
     	private List<DelphiClassStrings> classDefinitions;
         private List<List<string>> classImplementations;
@@ -86,16 +99,19 @@ namespace Translator
     	//Keywords
         //Divide script sections
         public static string[] sectionKeys = {"var","implementation","interface" };
+
     	//Divide section subsections
     	public static string[] subsectionKeys = {"type","const","uses"};
+
         //Divide subsection kinds
         public static string[] interfaceKindKeys = {"class","record","procedure","function" };
-        public static string[] implementKindKeys = { "const", "constructor", "class var", "class function", "class procedure", "procedure", "function", "uses" };
+        public static string[] implementKindKeys = { "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "uses", "property", "const" };
+
         //Divide method commands
         public static string[] methodKeys = {"var","begin","label","end","try","catch","finally" };
     	
         //Divide class defintion
-        public static string[] classKeys = {"public","private","const","constructor","class var","class function","class procedure","procedure","function","property"};
+        public static string[] classKeys = { "public", "private", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
 
         List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
         List<string> Section_Names;
@@ -326,14 +342,42 @@ namespace Translator
             }
         }
 
-        private DelphiMethodStrings ParseInterfaceMethod(string imethodtype, ref List<string> iFiltered_strings, int icurr_string_count)
+        private int FindEndOfFunctionTitle(ref List<string>  iFiltered_strings, int icurr_string_count)
+        {
+            bool end_found = false;
+            int i = icurr_string_count;
+            int bracket_closed = -1;
+            while (!end_found)
+            {
+                bracket_closed = iFiltered_strings[i].IndexOf(')');
+
+                //If closing bracket is found
+                if (bracket_closed != -1)
+                {
+                    string tsubstring_after_bracket = iFiltered_strings[i].Substring(bracket_closed);
+
+                    //Check if there is a ; in this substring. If yes, then the function ends here, otherwise ; is on next line
+                    int semicolon = tsubstring_after_bracket.IndexOf(';');
+
+                    if (semicolon != -1)
+                        return i;
+                    else
+                        return i + 1;
+                }
+                i++;
+            }
+            return -1;
+        }
+
+        private DelphiMethodStrings ParseInterfaceMethod(string imethodtype, ref List<string> iFiltered_strings, int icurr_string_count, out int oend_pos)
        {
             bool toverload = false, tvirtual = false, tabstract = false;
-            int tnext_pos = FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count + 1);
+            int tnext_pos = FindEndOfFunctionTitle(ref iFiltered_strings, icurr_string_count);//FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count);
+            oend_pos = tnext_pos;
             string tfuncstring = "";
 
             //Add all the indented lines in function title
-            for (int i = icurr_string_count; i < tnext_pos; i++)
+            for (int i = icurr_string_count; i < tnext_pos + 1; i++)
             {
                 tfuncstring = tfuncstring + iFiltered_strings[i].Trim();
             }
@@ -366,7 +410,8 @@ namespace Translator
             {
                 treturntypearray = treturntypearray[0].Split(':');
                 treturntype = treturntypearray[1].Split(';')[0];
-                tmethodname = treturntypearray[0];
+                string[] tnamearray = treturntypearray[0].Split(' ');
+                tmethodname = tnamearray[tnamearray.GetLength(0)-1];
                 tparameters = "";
             }
             //If there are parameters
@@ -374,12 +419,16 @@ namespace Translator
             {
                 treturntype = treturntypearray[1].Split(';')[0];
                 treturntypearray = treturntypearray[0].Split('(');
-                treturntype = treturntype.Split(':')[1];
-                tmethodname = treturntypearray[0];
+
+                if (treturntype != "")
+                    treturntype = treturntype.Split(':')[1];
+
+                string[] tnamearray = treturntypearray[0].Split(' ');
+                tmethodname = tnamearray[tnamearray.GetLength(0)-1];
                 tparameters = treturntypearray[1];
             }
 
-            string tfunctionstring = treturntype + "_" + imethodtype + "_" + tmethodname + "_" + tparameters;
+            string tfunctionstring = treturntype + "/" + imethodtype + "/" + tmethodname + "/" + tparameters;
             DelphiMethodStrings tfunction = new DelphiMethodStrings(tfunctionstring, null);
 
             tfunction.isAbstract = tabstract;
@@ -392,7 +441,8 @@ namespace Translator
         private DelphiClassStrings ParseInterfaceClass(ref List<string> istrings, string iclassname, int icurr_string_count, int inext_subsection_pos)
         {
             DelphiClassStrings tout = new DelphiClassStrings();
-            List<string> tstrings = new List<string>(), tvars = new List<string>(), tproperties = new List<string>();
+            List<string> tstrings = new List<string>();
+            List<DelphiVarStrings> tvars = new List<DelphiVarStrings>(), tproperties = new List<DelphiVarStrings>(), tconsts = new List<DelphiVarStrings>();
             List<DelphiMethodStrings> tmethods = new List<DelphiMethodStrings>();
 
             int tcurr_string_count = icurr_string_count;
@@ -404,7 +454,7 @@ namespace Translator
             while (i < inext_subsection_pos)
             {
                 if (CheckVariable(istrings[i]))
-                    tvars.Add(istrings[i]);
+                    tvars.Add(new DelphiVarStrings(istrings[i], false));
                 else
                     tstrings.Add(istrings[i]);
 
@@ -423,50 +473,64 @@ namespace Translator
 
                 switch (RecognizeKey(tstrings[tcurr_string_count], ref classKeys))
                 {
-                    //{ "public", "private", "const", "constructor", "class function", "class procedure", "procedure", "function", "property"};
+                    //{ "public", "private", "var", "class var", "const", "class const", "constructor", 
+                    //"class function", "class procedure", "procedure", "function", "property", "class property"};
                     case "public":  //ignore
                         break;
 
                     case "private": //ignore
                         break;
 
-                    case "const": break;
+                    case "class const": tconsts.Add(new DelphiVarStrings(istrings[tcurr_string_count], true));
+                        tnext_subsection_pos = tcurr_string_count;
+                        break;
+                    
+                    case "const": tconsts.Add(new DelphiVarStrings(istrings[tcurr_string_count], false));
+                        tnext_subsection_pos = tcurr_string_count;
+                        break;
 
-                    case "class var": tvars.Add(istrings[tcurr_string_count]);
+                    case "class var": tvars.Add(new DelphiVarStrings(istrings[tcurr_string_count], true));
+                        tnext_subsection_pos = tcurr_string_count;
                         break;
 
                     case "constructor":
-                        tmethods.Add(ParseInterfaceMethod("constructor", ref tstrings, tcurr_string_count));
+                        tmethods.Add(ParseInterfaceMethod("constructor", ref tstrings, tcurr_string_count, out tnext_subsection_pos));
                         break;
 
                     case "class function":
-                        tmethods.Add(ParseInterfaceMethod("class_function", ref tstrings, tcurr_string_count));
+                        tmethods.Add(ParseInterfaceMethod("classfunction", ref tstrings, tcurr_string_count, out tnext_subsection_pos));
                         break;
 
                     case "class procedure":
-                        tmethods.Add(ParseInterfaceMethod("class_procedure", ref tstrings, tcurr_string_count));
+                        tmethods.Add(ParseInterfaceMethod("classprocedure", ref tstrings, tcurr_string_count, out tnext_subsection_pos));
                         break;
 
                     case "procedure":
-                        tmethods.Add(ParseInterfaceMethod("procedure", ref tstrings, tcurr_string_count));
+                        tmethods.Add(ParseInterfaceMethod("procedure", ref tstrings, tcurr_string_count, out tnext_subsection_pos));
                         break;
 
                     case "function":
-                        tmethods.Add(ParseInterfaceMethod("function", ref tstrings, tcurr_string_count));
+                        tmethods.Add(ParseInterfaceMethod("function", ref tstrings, tcurr_string_count, out tnext_subsection_pos));
                         break;
 
-                    case "property": tproperties.Add(istrings[tcurr_string_count]);
+                    case "class property": tproperties.Add(new DelphiVarStrings(istrings[tcurr_string_count], true));
+                        tnext_subsection_pos = tcurr_string_count;
+                        break;
+
+                    case "property": tproperties.Add(new DelphiVarStrings(istrings[tcurr_string_count], false));
+                        tnext_subsection_pos = tcurr_string_count;
                         break;
 
                     default: break;
                 }
-                tcurr_string_count = tnext_subsection_pos;
+                tcurr_string_count = FindNextKey(ref tstrings, ref implementKindKeys, tnext_subsection_pos);;
             }
 
             tout.name = iclassname;
             tout.methods = tmethods;
             tout.variables = tvars;
             tout.properties = tproperties;
+            tout.consts = tconsts;
 
             return tout;
         }
@@ -494,12 +558,12 @@ namespace Translator
                 switch (RecognizeKey(istrings[tcurr_string_count], ref implementKindKeys))
             	{
                     case "class function":  //Break down function elements
-                                        string tmethodtype = "class_function";
+                                        string tmethodtype = "classfunction";
                                         ParseImplementationMethod(tmethodtype, tcurr_string_count, tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
                                         break;
 
                     case "class procedure": //Break down function elements
-                                        tmethodtype = "class_procedure";
+                                        tmethodtype = "classprocedure";
                                         ParseImplementationMethod(tmethodtype, tcurr_string_count, tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
                                         break;
 
@@ -591,7 +655,7 @@ namespace Translator
                 tparameters = treturntypearray[1];
             }
 
-            string tfunctionstring = treturntype + "_" + itype + "_" + tmethodname + "_" + tparameters;
+            string tfunctionstring = treturntype + "/" + itype + "/" + tmethodname + "/" + tparameters;
             List<string> tout = new List<string>();
             tout.Add(tfunctionstring);
             tout.AddRange(GetStringSubList(ref istrings, ipos, inextpos));
@@ -673,7 +737,7 @@ namespace Translator
 
         private int FindNextFunctionImplementation(ref List<string> iarray, int istartpoint)
         {
-            for (int i = istartpoint; i < iarray.Count; i++)
+            for (int i = istartpoint; i < iarray.Count;)
             {
                 return i;
             }
@@ -695,7 +759,7 @@ namespace Translator
 
         static private int FindNextKey(ref List<string> istrings, ref string[] ikeys, int istartpos)
         {
-            for (int i = istartpos; i < istrings.Count; i++)
+            for (int i = istartpos + 1; i < istrings.Count; i++)
             {
                 if (Check_If_StringList_Elements_Exist_In_String(istrings[i], ref ikeys) != -1)
                     return i;
@@ -856,9 +920,9 @@ namespace Translator
             return -1;
         }
 
-        //Check if any of the elements in a array ielements is found inside a string istring.
+        //Check if any of the elements in a array ielements is found inside a string istring.    
         static private int Check_If_StringList_Elements_Exist_In_String(string istring, ref string[] ielements)
-		{
+        {
             //Split string to check in, and element to check against, according to spaces. 
             //If the first element word is found, check for the rest in order. Otherwise return false.
 
@@ -867,22 +931,66 @@ namespace Translator
 
             //Loop through the elements array and check each one
             for (int i = 0; i < ielements.GetLength(0); i++)
-           	{
+            {
                 //Split the current element into words
                 string[] telement_words = ielements[i].Split(' ');
 
-                //Find the first word. If not found return -1
-                if (tstring_words.FirstOrDefault(e => e == telement_words[j]) != null)
-                {
-                    int tcounter = telement_words.GetLength(0);
-                    for (int j = 0; j < telement_words.GetLength(0); j++)
-                    {
-                        if (tstring_words.FirstOrDefault(e => e == telement_words[j]) != null)
-                            tcounter--;
-                    }
+                int first_word_found = 0;
+                int prev_word_found = 0;
+                int curr_word_found = 0;
 
+                //Loop through the words in the element. Find the first word. If not found then element does not exist in string
+                for (int j = 0; j < telement_words.GetLength(0); j++)
+                {
+                    //Loop through the contents of the string to look for the word. 
+                    for(int k=0; k < tstring_words.GetLength(0); k++)
+                    {
+                        if (telement_words[j] == tstring_words[k])
+                        {
+                            curr_word_found = k;
+                            goto check_order_of_words;
+                        }
+                    }
+                    //The elementword was not found in the string array, the element is not present in the string
+                    goto element_not_found;
+
+                check_order_of_words:
+
+                    //Words should follow in sequence
+                    if(curr_word_found >= prev_word_found)
+                    {
+                        prev_word_found = curr_word_found;
+                        if(curr_word_found == 0)
+                            first_word_found = curr_word_found;
+                    }
+                    else
+                        goto element_not_found;
                 }
 
+                //If reached this point, that means the element has been found in the string in the correct order of words.
+                //Calculate the index till the first occurence in the string and return it.
+                int index = 0;
+                for (int j = 0; j < first_word_found; j++)
+                    index = index + telement_words[j].Length;
+
+                return index;
+
+            element_not_found:
+                prev_word_found = 0;//Dummy statement needed for label
+                //Go to next element
+            }
+            return -1;
+        }
+ 
+
+        static private int CheckStringListElementsInString(string istring, ref string[] ielements)
+		{
+            string[] tarray = istring.Split(' ');
+            for (int i = 0; i < ielements.GetLength(0); i++)
+           	{
+                string s = ielements[i];
+                if(tarray.FirstOrDefault(e => e == s) != null)
+           			return i;
            	}
            	return -1;
 		}
@@ -929,15 +1037,15 @@ namespace Translator
                 //Add Variables, Properties and method names from definitions
                 for (int j = 0; j < tdefinition.variables.Count; j++)
                 {
-                    tdefinition_parts = RecognizeClassDefinition(tdefinition.variables[j]);
-                    tvar = new Variable(tdefinition_parts[1], tdefinition_parts[2]);
+                    tdefinition_parts = RecognizeClassDefinition(tdefinition.variables[j].value);
+                    tvar = new Variable(tdefinition_parts[1], tdefinition_parts[2], tdefinition.variables[j].isStatic);
                     tclass.variables.Add(tvar);
                 }
 
                 for (int j = 0; j < tdefinition.properties.Count; j++)
                 {
-                    tdefinition_parts = RecognizeClassDefinition(tdefinition.properties[j]);
-                    Property tprop = new Property(tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition_parts[4]);
+                    tdefinition_parts = RecognizeClassDefinition(tdefinition.properties[j].value);
+                    Property tprop = new Property(tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition_parts[4], tdefinition.properties[j].isStatic);
                     tclass.properties.Add(tprop);
                 }
 
@@ -957,7 +1065,8 @@ namespace Translator
                     int ii = 6;
                     for (; ii < tdefinition_parts.Count; )
                     {
-                        tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii + 1]);
+                        //Variables in method parameter. They are not static, so false in Variable Constructor
+                        tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii + 1], false);
                         tparams.Add(tvar);
                         ii += 2;
                     }
@@ -1023,7 +1132,7 @@ namespace Translator
             tname = tarr[0];
             ttype = tarr[1];
 
-            tout = new Variable(tname, ttype);
+            tout = new Variable(tname, ttype, false);
             return tout;
         }
 

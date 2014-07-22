@@ -5,10 +5,12 @@ namespace Translator
     public class Variable
     {
         public string name, type;
+        public bool isStatic;
+
         public Variable()
         {
         }
-        public Variable(string name, string type)
+        public Variable(string name, string type, bool isStatic)
         {
         }
     }
@@ -40,7 +42,7 @@ namespace Translator
     public class Property : Variable
     {
         public string read, write;
-        public Property(string name, string type, string read, string write)
+        public Property(string name, string type, string read, string write, bool isStatic)
         {
         }
     }
