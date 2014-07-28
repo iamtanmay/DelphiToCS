@@ -10,8 +10,11 @@ namespace Translator
         public Variable()
         {
         }
-        public Variable(string name, string type, bool isStatic)
+        public Variable(string iname, string itype, bool iisStatic)
         {
+            name = iname;
+            type = itype;
+            isStatic = iisStatic;
         }
     }
 
@@ -20,8 +23,10 @@ namespace Translator
         public Type()
         {
         }
-        public Type(string name, string type)
+        public Type(string iname, string itype)
         {
+            name = iname;
+            type = itype;
         }
     }
 
@@ -31,19 +36,27 @@ namespace Translator
         public Constant()
         {
         }
-        public Constant(string value)
+        public Constant(string ivalue)
         {
         }
-        public Constant(string name, string type, string value)
+        public Constant(string iname, string itype, string ivalue)
         {
+            name = iname;
+            type = itype;
+            value = ivalue;
         }
     }
 
     public class Property : Variable
     {
         public string read, write;
-        public Property(string name, string type, string read, string write, bool isStatic)
+        public Property(string iname, string itype, string iread, string iwrite, bool iisStatic)
         {
+            name = iname;
+            type = itype;
+            read = iread;
+            write = iwrite;
+            isStatic = iisStatic;
         }
     }
 
@@ -56,8 +69,11 @@ namespace Translator
             enums = new List<Constant>();
         }
 
-        public Enum(string name, List<Constant> enums)
+        public Enum(string iname, List<Constant> ienums)
         {
+            name = iname;
+            enums = new List<Constant>();
+            enums = ienums;
         }
     }
 
@@ -76,8 +92,20 @@ namespace Translator
             commands = new List<string>();
         }
 
-        public Function(string name, List<Variable> parameters, string returnType, bool isVirtual, bool isAbstract, bool isStatic, List<Variable> variables, List<string> commands)
+        public Function(string iname, List<Variable> iparameters, string ireturnType, bool iisVirtual, bool iisAbstract, bool iisStatic, List<Variable> ivariables, List<string> icommands)
         {
+            parameters = new List<Variable>();
+            variables = new List<Variable>();
+            commands = new List<string>();
+
+            name = iname;
+            parameters = iparameters;
+            returnType = ireturnType;
+            isVirtual = iisVirtual;
+            isStatic = iisStatic;
+            isAbstract = iisAbstract;
+            variables = ivariables;
+            commands = icommands;
         }
     }
     
