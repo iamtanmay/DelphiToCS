@@ -562,27 +562,27 @@ namespace Translator
             	{
                     case "class function":  //Break down function elements
                                         string tmethodtype = "classfunction";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
+                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
                                         break;
 
                     case "class procedure": //Break down function elements
                                         tmethodtype = "classprocedure";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
+                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
                                         break;
 
                     case "function":    //Break down function elements
                                         tmethodtype = "function";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
+                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
                                         break;
 
                     case "procedure":   //Break down function elements
                                         tmethodtype = "procedure";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
+                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
                                         break;
 
                     case "constructor": //Break down function elements
-                                        tmethodtype = "constructor";                                        
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
+                                        tmethodtype = "constructor";
+                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
                                         break;
 
                     case "const":       oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
@@ -602,13 +602,30 @@ namespace Translator
             }     
         }
         
-        private void ParseImplementationMethod(string imethodtype, int icurr_string_count, int inext_subsection_pos, ref List<string> istrings, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations)
+        private void ParseImplementationMethod(string imethodtype, int icurr_string_count, ref int inext_subsection_pos, ref List<string> istrings, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations)
         {
             string tclassname;
 
             //Check for parameters
 
             int tnext_pos = FindNextSymbol(ref istrings, "begin", icurr_string_count);
+            int tvar_pos = FindNextSymbol(ref istrings, "var", icurr_string_count);
+            int tconst_pos = FindNextSymbol(ref istrings, "const", icurr_string_count);
+            int tclosebracket_pos = FindNextSymbol(ref istrings, ")", icurr_string_count-1);
+            int tbegin_pos = tnext_pos;
+
+            //If there is a var section
+            if (tvar_pos != -1)
+                //If the var comes before the begin, then this belongs to our current function. 
+                if (tvar_pos < tnext_pos)
+                    tnext_pos = tvar_pos;
+
+            //If there is a var section
+            if (tconst_pos != -1)
+                //If the const comes before, then this belongs to our current function. 
+                if ((tconst_pos < tnext_pos) && (tconst_pos > tclosebracket_pos))
+                    tnext_pos = tconst_pos;
+
             string tfuncstring = "";
 
             //Add all the indented lines in function title
@@ -622,12 +639,14 @@ namespace Translator
             tclassnamearray = tclassnamearray[0].Split(' ');
             tclassname = tclassnamearray[tclassnamearray.GetLength(0)-1];
 
+            inext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tnext_pos);
+
             for (int i = 0; i < oclassimplementations.Count; i++)
             {
                 //Find the class
                 if (oclassimplementations[i].name == tclassname)
                 {
-                    List<string> tlist = ParseImplementationMethodBody(tclassname, ref istrings, ref treturnarray, imethodtype, icurr_string_count, inext_subsection_pos);
+                    List<string> tlist = ParseImplementationMethodBody(tclassname, ref istrings, ref treturnarray, tfuncstring, imethodtype, tnext_pos, inext_subsection_pos);
                     string theader = tlist[0];
                     tlist.RemoveAt(0);
                     oclassimplementations[i].AddMethodBody(theader, tlist);
@@ -636,23 +655,26 @@ namespace Translator
             }
         }
 
-        private List<string> ParseImplementationMethodBody(string iclassname, ref List<string> istrings, ref string[] iclassnamearray, string itype, int ipos, int inextpos)
+        private List<string> ParseImplementationMethodBody(string iclassname, ref List<string> istrings, ref string[] iclassnamearray, string ifuncstring, string itype, int ipos, int inextpos)
         {
-            int tnext_pos = FindEndOfFunctionTitle(ref istrings, ipos);//FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count);
-            int oend_pos = tnext_pos;
-            string tfuncstring = "";
+            //int tnext_pos = FindEndOfFunctionTitle(ref istrings, ipos);//FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count);
+            //int oend_pos = tnext_pos;
+            //string tfuncstring = "";
 
-            //Add all the indented lines in function title
-            for (int i = ipos; i < tnext_pos + 1; i++)
-            {
-                tfuncstring = tfuncstring + istrings[i].Trim();
-            }
+            ////Add all the indented lines in function title
+            //for (int i = ipos; i < tnext_pos + 1; i++)
+            //{
+            //    tfuncstring = tfuncstring + istrings[i].Trim();
+            //}
+
+            string imethodtype = RecognizeKey(ifuncstring, ref classKeys);
+            imethodtype = imethodtype.Replace(" ", "");
 
             //string[] tclassnamearray = tfuncstring.Split('.');
 
             //Break down function elements
             string treturntype, tparameters, tmethodname;
-            string[] treturntypearray = tfuncstring.Split(')');
+            string[] treturntypearray = ifuncstring.Split(')');
 
             //If there are no parameters
             if (treturntypearray.GetLength(0) == 1)
@@ -677,42 +699,11 @@ namespace Translator
                 tparameters = treturntypearray[1];
             }
 
+            tmethodname = tmethodname.Split('.')[1];
+
             string tfunctionstring = treturntype + "/" + imethodtype + "/" + tmethodname + "/" + tparameters;
             DelphiMethodStrings tfunction = new DelphiMethodStrings(tfunctionstring, null);
 
-
-
-
-
-
-
-
-
-
-
-            //Break down function elements
-            string treturntype, tparameters, tmethodname;
-            string[] treturntypearray = iclassnamearray[1].Split(')');
-
-            //If there are no parameters
-            if (treturntypearray.GetLength(0) == 1)
-            {
-                treturntypearray = treturntypearray[0].Split(':');
-                treturntype = treturntypearray[1].Split(';')[0];
-                tmethodname = treturntypearray[0];
-                tparameters = "";
-            }
-            //If there are parameters
-            else
-            {
-                treturntype = treturntypearray[1].Split(';')[0];
-                treturntypearray = treturntypearray[0].Split('(');
-                treturntype = treturntype.Split(':')[1];
-                tmethodname = treturntypearray[0];
-                tparameters = treturntypearray[1];
-            }
-
-            string tfunctionstring = treturntype + "/" + itype + "/" + tmethodname + "/" + tparameters;
             List<string> tout = new List<string>();
             tout.Add(tfunctionstring);
             tout.AddRange(GetStringSubList(ref istrings, ipos, inextpos));
