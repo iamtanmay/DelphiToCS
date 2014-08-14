@@ -26,6 +26,8 @@ namespace Translator
         public List<DelphiVarStrings> variables;
         public List<DelphiVarStrings> consts;
 
+
+
         public DelphiClassStrings()
         {
             methods = new List<DelphiMethodStrings>();
@@ -41,11 +43,15 @@ namespace Translator
             tmethod.isOverloaded = iOverloaded;
         }
 
-        public void AddMethodBody(string iheader, List<string> ibody)
+        public void AddMethodBody(string iheader, List<string> ibody, int ivar_start, int iconst_start)
         {
             for (int i = 0; i < methods.Count; i++)
                 if (methods[i].header == iheader)
+                {
                     methods[i].body = ibody;
+                    methods[i].const_start = iconst_start;
+                    methods[i].var_start = ivar_start;
+                }
         }
     }
 
@@ -55,12 +61,16 @@ namespace Translator
         public bool isAbstract = false, isVirtual = false, isOverloaded = false, isStatic = false;
 
         public List<string> body;
+        public int const_start, var_start;
 
         public DelphiMethodStrings(string iheader, List<string> ibody)
         {
             header = iheader;
             body = new List<string>();
             body = ibody;
+            
+            const_start = -1;
+            var_start = -1;
         }
     }
 
@@ -107,13 +117,13 @@ namespace Translator
 
         //Divide subsection kinds
         public static string[] interfaceKindKeys = {"class","record","procedure","function" };
-        public static string[] implementKindKeys = { "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "uses", "property", "const" };
+        public static string[] implementKindKeys = { "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "uses", "property", "const" };
 
         //Divide method commands
         public static string[] methodKeys = {"var","begin","label","end","try","catch","finally" };
     	
         //Divide class defintion
-        public static string[] classKeys = { "public", "private", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
+        public static string[] classKeys = { "public", "private", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
 
         List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
         List<string> Section_Names;
@@ -435,6 +445,23 @@ namespace Translator
                 tparameters = treturntypearray[1];
             }
 
+            string[] tparameter_array = tparameters.Split(';');
+            tparameters = "";
+            //Trim the parameters and stitch them back
+            for (int i = 0; i < tparameter_array.GetLength(0); i++)
+            {
+                string[] tparameter = tparameter_array[i].Split(' ');
+                string tformatted_param = "";
+                for (int j = 0; j < tparameter.GetLength(0); j++)
+                {
+                    if ((tparameter[j] != "") && (tparameter[j] != " "))
+                        tformatted_param = tformatted_param + "_" +tparameter[j];
+                }
+
+                //Separate parameters with '|' and remove trailing and beginning spaces
+                tparameters = tparameters + "|" + tformatted_param.Trim();
+            }
+
             string tfunctionstring = treturntype + "/" + imethodtype + "/" + tmethodname + "/" + tparameters;
             DelphiMethodStrings tfunction = new DelphiMethodStrings(tfunctionstring, null);
 
@@ -611,7 +638,9 @@ namespace Translator
             int tnext_pos = FindNextSymbol(ref istrings, "begin", icurr_string_count);
             int tvar_pos = FindNextSymbol(ref istrings, "var", icurr_string_count);
             int tconst_pos = FindNextSymbol(ref istrings, "const", icurr_string_count);
+
             int tclosebracket_pos = FindNextSymbol(ref istrings, ")", icurr_string_count-1);
+            int topenbracket_pos = FindNextSymbol(ref istrings, "(", icurr_string_count - 1);
             int tbegin_pos = tnext_pos;
 
             //If there is a var section
@@ -619,12 +648,29 @@ namespace Translator
                 //If the var comes before the begin, then this belongs to our current function. 
                 if (tvar_pos < tnext_pos)
                     tnext_pos = tvar_pos;
+                else
+                    tvar_pos = -1;
 
-            //If there is a var section
-            if (tconst_pos != -1)
-                //If the const comes before, then this belongs to our current function. 
-                if ((tconst_pos < tnext_pos) && (tconst_pos > tclosebracket_pos))
+            //If there is a const sections
+            if ((tconst_pos != -1) && (tconst_pos < tbegin_pos))
+            {
+                int i = 0;
+                //Check if const is a parameter
+                while ((tconst_pos <= tclosebracket_pos) && (tconst_pos >= topenbracket_pos))
+                {
+                    //Look for more consts
+                    tconst_pos = FindNextSymbol(ref istrings, "const", icurr_string_count + i);
+                    i++;
+                }
+
+                //Check if this const comes before "begin". If yes, then this is a sub-section declaration. Otherwise ignore.
+                if ((tconst_pos != -1) && (tconst_pos < tnext_pos))
                     tnext_pos = tconst_pos;
+                else
+                    tconst_pos = -1;
+            }
+            else
+                tconst_pos = -1;
 
             string tfuncstring = "";
 
@@ -649,7 +695,7 @@ namespace Translator
                     List<string> tlist = ParseImplementationMethodBody(tclassname, ref istrings, ref treturnarray, tfuncstring, imethodtype, tnext_pos, inext_subsection_pos);
                     string theader = tlist[0];
                     tlist.RemoveAt(0);
-                    oclassimplementations[i].AddMethodBody(theader, tlist);
+                    oclassimplementations[i].AddMethodBody(theader, tlist, tvar_pos, tconst_pos);
                     break;
                 }
             }
@@ -680,7 +726,16 @@ namespace Translator
             if (treturntypearray.GetLength(0) == 1)
             {
                 treturntypearray = treturntypearray[0].Split(':');
-                treturntype = treturntypearray[1].Split(';')[0];
+
+                //There is no return type
+                if (treturntypearray.GetLength(0) == 1)
+                {
+                    treturntype = "";
+                }
+                else
+                {
+                    treturntype = treturntypearray[1].Split(';')[0];
+                }
                 string[] tnamearray = treturntypearray[0].Split(' ');
                 tmethodname = tnamearray[tnamearray.GetLength(0) - 1];
                 tparameters = "";
@@ -699,13 +754,35 @@ namespace Translator
                 tparameters = treturntypearray[1];
             }
 
+            string[] tparameter_array = tparameters.Split(';');
+            tparameters = "";
+            //Trim the parameters and stitch them back
+            for (int i = 0; i < tparameter_array.GetLength(0); i++)
+            {
+                string[] tparameter = tparameter_array[i].Split(' ');
+                string tformatted_param = "";
+                for (int j = 0; j < tparameter.GetLength(0); j++)
+                {
+                    if ((tparameter[j] != "") && (tparameter[j] != " "))
+                        tformatted_param = tformatted_param + "_" +tparameter[j];
+                }
+
+                //Separate parameters with '|' and remove trailing and beginning spaces
+                tparameters = tparameters + "|" + tformatted_param.Trim();
+            }
+
             tmethodname = tmethodname.Split('.')[1];
+            tmethodname = tmethodname.Replace(";","");
 
             string tfunctionstring = treturntype + "/" + imethodtype + "/" + tmethodname + "/" + tparameters;
             DelphiMethodStrings tfunction = new DelphiMethodStrings(tfunctionstring, null);
 
             List<string> tout = new List<string>();
             tout.Add(tfunctionstring);
+
+            if (inextpos == -1)
+                inextpos = istrings.Count;
+
             tout.AddRange(GetStringSubList(ref istrings, ipos, inextpos));
 
             return tout;
@@ -893,7 +970,7 @@ namespace Translator
 
             if (isproperty != -1)
             {
-                string tstr = iline.Replace("property", "").Replace(";", "").Trim();
+                string tstr = iline.Replace("property", "").Replace("class", "").Replace(";", "").Trim();
                 tstr_arr = tstr.Split(':');
                 
                 //Add name
@@ -906,24 +983,31 @@ namespace Translator
                 if ((tread == -1) && (twrite == -1))
                 {
                     tout.Add(tstr_arr[1].Trim());
+                    tout.Add("null");
+                    tout.Add("null");
                 }
                 else if (tread == -1)
                 {
-                    tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                    tstr_arr[1] = tstr_arr[1].Replace("write", ";");
                     tstr_arr = tstr_arr[1].Split(';');
                     
                     //Add type and read
+                    //tout.Add(tstr_arr[0].Trim());
+                    //tout.Add(tstr_arr[1].Trim());
+                    
                     tout.Add(tstr_arr[0].Trim());
+                    tout.Add("null");
                     tout.Add(tstr_arr[1].Trim());
                 }
                 else if (twrite == -1)
                 {
-                    tstr_arr[1] = tstr_arr[1].Replace("write", ";");
+                    tstr_arr[1] = tstr_arr[1].Replace("read", ";");
                     tstr_arr = tstr_arr[1].Split(';');
 
                     //Add type and write
                     tout.Add(tstr_arr[0].Trim());
                     tout.Add(tstr_arr[1].Trim());
+                    tout.Add("null");//tstr_arr[1].Trim());
                 }
                 else if (tread > twrite)
                 {
@@ -951,8 +1035,9 @@ namespace Translator
             else
             {
                 tstr_arr = iline.Split(':');
-                tout.Add(tstr_arr[0].Trim());
-                tout.Add(tstr_arr[1].Replace(";", ""));
+                string[] tstr_arr2 = tstr_arr[0].Trim().Split(' ');
+                tout.Add(tstr_arr2[tstr_arr2.GetLength(0)-1]);
+                tout.Add(tstr_arr[1].Split(';')[0]);
             }
             return tout;
         }
@@ -993,7 +1078,7 @@ namespace Translator
                     //Loop through the contents of the string to look for the word. 
                     for(int k=0; k < tstring_words.GetLength(0); k++)
                     {
-                        if (telement_words[j] == tstring_words[k])
+                        if (tstring_words[k].Contains(telement_words[j]))
                         {
                             curr_word_found = k;
                             goto check_order_of_words;
@@ -1077,7 +1162,7 @@ namespace Translator
             {
                 Class tclass = new Class();
                 DelphiClassStrings tdefinition = idefinitions[i];
-                List<string> timplementation = iimplementations[i];
+                //List<string> timplementation = iimplementations[i];
                 List<string> tdefinition_parts = new List<string>();
                 tclass.name = inames[i];
                 Variable tvar;
@@ -1086,43 +1171,99 @@ namespace Translator
                 for (int j = 0; j < tdefinition.variables.Count; j++)
                 {
                     tdefinition_parts = RecognizeClassDefinition(tdefinition.variables[j].value);
-                    tvar = new Variable(tdefinition_parts[1], tdefinition_parts[2], tdefinition.variables[j].isStatic);
+                    tvar = new Variable(tdefinition_parts[0], tdefinition_parts[1], tdefinition.variables[j].isStatic);
                     tclass.variables.Add(tvar);
                 }
 
                 for (int j = 0; j < tdefinition.properties.Count; j++)
                 {
                     tdefinition_parts = RecognizeClassDefinition(tdefinition.properties[j].value);
-                    Property tprop = new Property(tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition_parts[4], tdefinition.properties[j].isStatic);
+                    Property tprop = new Property(tdefinition_parts[0], tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition.properties[j].isStatic);
                     tclass.properties.Add(tprop);
                 }
 
                 for (int j = 0; j < tdefinition.methods.Count; j++)
                 {
                     string theader = tdefinition.methods[j].header;
-                    string[] theader_arr = theader.Split('_');
+                    string[] theader_arr = theader.Trim().Split('/');
                     string tname = theader_arr[2];
-                    string ttype = theader_arr[0];
-                    string tIsStatic = theader_arr[1];
-                    string tIsAbstract = "" + tdefinition.methods[j].isAbstract;
-                    string tIsOverloaded = "" + tdefinition.methods[j].isOverloaded;
-                    string tIsVirtual = "" + tdefinition.methods[j].isVirtual;
+                    string treturntype = theader_arr[0];
+                    string ttype = theader_arr[1];
+                    bool tIsStatic = false;
+
+                    if ((ttype == "classfunction") || (ttype == "classprocedure") || (ttype == "constructor") || (ttype == "destructor"))
+                        tIsStatic = true;
 
                     List<Variable> tparams = new List<Variable>();
 
-                    int ii = 6;
-                    for (; ii < tdefinition_parts.Count; )
+                    //Getting the parameters
+                    theader_arr = theader_arr[3].Split('|');
+
+                    //Remove first element that is always "" empty
+                    List<string> tlist = new List<string>(theader_arr);
+                    tlist.RemoveAt(0);
+                    theader_arr = tlist.ToArray();
+
+                    for ( int ii = 0; ii < theader_arr.GetLength(0); ii++)
                     {
-                        //Variables in method parameter. They are not static, so false in Variable Constructor
-                        tvar = new Variable(tdefinition_parts[ii], tdefinition_parts[ii + 1], false);
-                        tparams.Add(tvar);
-                        ii += 2;
+                        string[] tvar_arr = theader_arr[ii].Trim().Split('_');
+                        
+                        //Remove first element that is always "" empty
+                        tlist = new List<string>(tvar_arr);
+                        tlist.RemoveAt(0);
+                        tvar_arr = tlist.ToArray();
+
+                        int tlength = tvar_arr.GetLength(0);
+
+                        if (tlength <= 0)
+                        {
+                            //No parameters
+                        }
+                        else if (tlength == 1)
+                        {
+                            if (tvar_arr[0] == "")
+                            {
+                                //No parameters
+                            }
+                            else
+                            {
+                                throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[i] + " from Text.");
+                            }
+                        }
+                        else if (tlength == 2)
+                        {
+                            //Variables in method parameter. They are not static, so false in Variable Constructor
+                            tvar = new Variable(tvar_arr[tlength - 1], tvar_arr[0], false);
+                            tparams.Add(tvar);
+                        }
+                        else if (tlength == 3)
+                        {
+                            //Variables in method parameter. They are not static, so false in Variable Constructor
+                            tvar = new Variable(tvar_arr[tlength - 1], tvar_arr[0] + " " + tvar_arr[1], false);
+                            tparams.Add(tvar);
+                        }
+                        else
+                        {
+                            throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[i] + " from Text.");
+                        }
+                    }
+
+                    //Get const and var lists
+                    if (tdefinition.methods[j].const_start != -1)
+                    {
+
+                    }
+
+                    if (tdefinition.methods[j].var_start != -1)
+                    {
+
                     }
 
                     //name, parameters, type, IsVirtual, IsAbstract, IsStatic, variables, commands
-                    Function tfunc = new Function(tname, tparams, ttype, Convert.ToBoolean(tIsVirtual), Convert.ToBoolean(tIsAbstract), Convert.ToBoolean(tIsStatic), new List<Variable>(), new List<string>());
+                    Function tfunc = new Function(tname, tparams, treturntype, oclassimplementations[i].methods[j].isVirtual, tdefinition.methods[j].isAbstract, tIsStatic, new List<Variable>(), tdefinition.methods[j].body);
                     tclass.functions.Add(tfunc);
                 }
+                oclasses.Add(tclass);
             }
         }
 
@@ -1252,11 +1393,7 @@ namespace Translator
                 tvars.Add(StringToVariable(ivarsGlobal[i]));
             }
 
-            oclassGlobals.variables = new List<Variable>();
-            oclassGlobals.enums = new List<Enum>();
-            oclassGlobals.constants = new List<Constant>();
-            oclassGlobals.types = new List<Type>();
-
+            oclassGlobals = new Class();
             oclassGlobals.variables = tvars;
             oclassGlobals.enums = tenums;
             oclassGlobals.constants = tconstants;
