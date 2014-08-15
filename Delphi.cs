@@ -43,7 +43,7 @@ namespace Translator
             tmethod.isOverloaded = iOverloaded;
         }
 
-        public void AddMethodBody(string iheader, List<string> ibody, int ivar_start, int iconst_start)
+        public void AddMethodBody(string iheader, List<string> ibody, int ivar_start, int iconst_start, int ibegin_start)
         {
             for (int i = 0; i < methods.Count; i++)
                 if (methods[i].header == iheader)
@@ -51,6 +51,7 @@ namespace Translator
                     methods[i].body = ibody;
                     methods[i].const_start = iconst_start;
                     methods[i].var_start = ivar_start;
+                    methods[i].begin_start = ibegin_start;
                 }
         }
     }
@@ -61,7 +62,7 @@ namespace Translator
         public bool isAbstract = false, isVirtual = false, isOverloaded = false, isStatic = false;
 
         public List<string> body;
-        public int const_start, var_start;
+        public int const_start, var_start, begin_start;
 
         public DelphiMethodStrings(string iheader, List<string> ibody)
         {
@@ -84,7 +85,7 @@ namespace Translator
     	public Class classLocals, classGlobals;
         public List<Constant> localConsts, globalConsts;
     	public List<Enum> localEnums, globalEnums;
-    	public List<Type> localTypes, globalTypes;
+    	public List<TypeAlias> localTypes, globalTypes;
     	
     	public List<string> interfaceUses, implementationUses;
         
@@ -193,14 +194,14 @@ namespace Translator
             ParseImplementation(ref istrings, ref Uses_Implementation, ref classNames, ref classDefinitions, ref ConstsLocal, ref EnumsLocal, ref TypesLocal);
 
             //Generate the text pieces into class objects
-            GenerateGlobalClass(ref classGlobals, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal, ref VarsGlobal);
+            GenerateGlobalClass("Globals_"+ name, ref classGlobals, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal, ref VarsGlobal);
             script.classes.Add(classGlobals);
             VarsGlobal.Clear();
 
-            GenerateGlobalClass(ref classLocals, ref ConstsLocal, ref EnumsLocal, ref TypesLocal, ref VarsGlobal);
+            GenerateGlobalClass("Locals_"+ name, ref classLocals, ref ConstsLocal, ref EnumsLocal, ref TypesLocal, ref VarsGlobal);
             script.classes.Add(classLocals);
 
-            GenerateClasses(ref script.classes, ref classNames, ref classDefinitions, ref classImplementations);
+            GenerateClasses(ref istrings, ref script.classes, ref classNames, ref classDefinitions, ref classImplementations);
             GenerateIncludes(ref interfaceUses, ref Uses_Interface);
             GenerateIncludes(ref implementationUses, ref Uses_Implementation);
             
@@ -224,7 +225,7 @@ namespace Translator
         private void Beautify(ref List<string> istrings)
         {
         	for (int i = 0; i < istrings.Count; i++)
-                istrings[i] = Utilities.Beautify(istrings[i]);
+                istrings[i] = Utilities.Beautify_Delphi2CS(istrings[i]);
         }
         
         //oclassdefinitions is a list of class variables, properties, function and procedure definitions 
@@ -695,7 +696,7 @@ namespace Translator
                     List<string> tlist = ParseImplementationMethodBody(tclassname, ref istrings, ref treturnarray, tfuncstring, imethodtype, tnext_pos, inext_subsection_pos);
                     string theader = tlist[0];
                     tlist.RemoveAt(0);
-                    oclassimplementations[i].AddMethodBody(theader, tlist, tvar_pos, tconst_pos);
+                    oclassimplementations[i].AddMethodBody(theader, tlist, tvar_pos, tconst_pos, tbegin_pos);
                     break;
                 }
             }
@@ -1155,7 +1156,7 @@ namespace Translator
 	    	return toutput;
 	    }
 
-        private void GenerateClasses(ref List<Class> oclasses, ref List<string> inames, ref List<DelphiClassStrings> idefinitions, ref List<List<string>> iimplementations)
+        private void GenerateClasses(ref List<string> istrings, ref List<Class> oclasses, ref List<string> inames, ref List<DelphiClassStrings> idefinitions, ref List<List<string>> iimplementations)
         {
             //For each class discovered
             for (int i = 0; i < inames.Count; i++)
@@ -1248,19 +1249,66 @@ namespace Translator
                         }
                     }
 
+                    int const_start = tdefinition.methods[j].const_start, begin_start = tdefinition.methods[j].begin_start, var_start = tdefinition.methods[j].var_start;
+                    int from_pos = -1, till_pos = -1, body_start = -1;
+
+                    List<Constant> tconsts = new List<Constant>();
+
                     //Get const and var lists
-                    if (tdefinition.methods[j].const_start != -1)
+                    if (const_start != -1)
                     {
+                        from_pos = const_start;
+                        if (const_start < var_start)
+                        {
+                            till_pos = var_start;
+                            body_start = const_start;
+                        }
+                        else
+                            till_pos = begin_start;
 
+                        for ( int ii = from_pos+1; ii < till_pos; ii++)
+                        {
+                            string tvar_str = istrings[ii];
+                            string[] tvar_arr = tvar_str.Split('=');
+                        
+                            tvar_arr[0].Trim();
+                            tvar_arr[1] = tvar_arr[1].Replace(";", "");
+                            tvar_arr[1].Trim();
+
+                            tconsts.Add(new Constant(tvar_arr[0], tvar_arr[1]));
+                        }
                     }
 
-                    if (tdefinition.methods[j].var_start != -1)
+                    List<Variable> tvars = new List<Variable>();
+                    if (var_start != -1)
                     {
+                        from_pos = var_start;
+                        if (var_start < const_start)
+                        {
+                            till_pos = const_start;
+                            body_start = const_start;
+                        }
+                        else
+                            till_pos = begin_start;
 
+                        for (int ii = from_pos + 1; ii < till_pos; ii++)
+                        {
+                            string tvar_str = istrings[ii];
+                            string[] tvar_arr = tvar_str.Split(':');
+
+                            tvar_arr[0].Trim();
+                            tvar_arr[1] = tvar_arr[1].Replace(";", "");
+                            tvar_arr[1].Trim();
+
+                            tvars.Add(new Variable(tvar_arr[0], tvar_arr[1], false));
+                        }
                     }
+
+                    if (body_start != -1)
+                        tdefinition.methods[j].body.RemoveRange(0, begin_start - body_start);
 
                     //name, parameters, type, IsVirtual, IsAbstract, IsStatic, variables, commands
-                    Function tfunc = new Function(tname, tparams, treturntype, oclassimplementations[i].methods[j].isVirtual, tdefinition.methods[j].isAbstract, tIsStatic, new List<Variable>(), tdefinition.methods[j].body);
+                    Function tfunc = new Function(tname, tparams, treturntype, tdefinition.methods[j].isVirtual, tdefinition.methods[j].isAbstract, tIsStatic, tconsts, tvars, tdefinition.methods[j].body);
                     tclass.functions.Add(tfunc);
                 }
                 oclasses.Add(tclass);
@@ -1353,25 +1401,25 @@ namespace Translator
             return tout;
         }
 
-        private Type StringToType(string istring)
+        private TypeAlias StringToType(string istring)
         {
-            Type tout;
+            TypeAlias tout;
             string tname, ttype;
 
             string[] tarr = istring.Split(':');
             tname = tarr[0];
             ttype = tarr[1];
 
-            tout = new Type(tname, ttype);
+            tout = new TypeAlias(tname, ttype);
             return tout;
         }
 
-        private void GenerateGlobalClass(ref Class oclassGlobals, ref List<string> iconstsGlobal, ref List<string> ienumsGlobal, ref List<string> itypesGlobal, ref List<string> ivarsGlobal)
+        private void GenerateGlobalClass(string iname, ref Class oclassGlobals, ref List<string> iconstsGlobal, ref List<string> ienumsGlobal, ref List<string> itypesGlobal, ref List<string> ivarsGlobal)
         {
             List<Constant> tconstants = new List<Constant>();
             List<Variable> tvars = new List<Variable>();
             List<Enum> tenums = new List<Enum>();
-            List<Type> ttypes = new List<Type>();
+            List<TypeAlias> ttypes = new List<TypeAlias>();
 
             for (int i = 0; i < iconstsGlobal.Count; i++)
             {
@@ -1394,6 +1442,7 @@ namespace Translator
             }
 
             oclassGlobals = new Class();
+            oclassGlobals.name = iname;
             oclassGlobals.variables = tvars;
             oclassGlobals.enums = tenums;
             oclassGlobals.constants = tconstants;
@@ -1402,6 +1451,11 @@ namespace Translator
 
         private void GenerateIncludes(ref List<string> Objects_UsesInterface, ref List<string> Uses_Interface)
         {
+            Objects_UsesInterface = new List<string>();
+
+            for (int i = 0; i < Uses_Interface.Count; i++ )
+                if ((Uses_Interface[i].IndexOf('{') == -1) && (Uses_Interface[i].IndexOf('}') == -1) && (Uses_Interface[i].Trim() != ""))
+                    Objects_UsesInterface.Add(Uses_Interface[i].Replace(";","").Replace(",","").Trim());
         }
 
         public void log(List<string> imessages)

@@ -21,12 +21,19 @@ namespace Translator
             return ttext.ToList();
         }
 
-        public static string Beautify(string istring)
+        public static string Beautify_Delphi2CS(string istring)
         {
+            istring = istring.Replace("{", "/*");
+            istring = istring.Replace("}", "*/"); 
+            istring = istring.Replace("begin", "{");
+            istring = istring.Replace("end;", "}");
+            istring = istring.Replace("end.", "}");
+            istring = istring.Replace("end", "}");
             istring = istring.Replace(" and ", " && ");
             istring = istring.Replace(" or ", " || ");
             istring = istring.Replace("xor", "^");
             istring = istring.Replace("=", "==");
+            istring = istring.Replace(":==", "=");
             istring = istring.Replace("<>", "!=");
             istring = istring.Replace("shr", ">>");
             istring = istring.Replace("shl", "<<");
@@ -37,8 +44,7 @@ namespace Translator
             istring = istring.Replace("word", "uint");
             istring = istring.Replace("dword", "uint");
             istring = istring.Replace("shortstring", "string");
-            istring = istring.Replace("{", "/*");
-            istring = istring.Replace("}", "*/");
+
             return istring;
         }
     }

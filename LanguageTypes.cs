@@ -12,21 +12,21 @@ namespace Translator
         }
         public Variable(string iname, string itype, bool iisStatic)
         {
-            name = iname;
-            type = itype;
+            name = iname.Trim();
+            type = itype.Trim();
             isStatic = iisStatic;
         }
     }
 
-    public class Type: Variable
+    public class TypeAlias : Variable
     {
-        public Type()
+        public TypeAlias()
         {
         }
-        public Type(string iname, string itype)
+        public TypeAlias(string iname, string itype)
         {
-            name = iname;
-            type = itype;
+            name = iname.Trim();
+            type = itype.Trim();
         }
     }
 
@@ -45,6 +45,37 @@ namespace Translator
             type = itype;
             value = ivalue;
         }
+
+        //Evaluate the possible type for the Constant based on value
+        public Constant(string iname, string ivalue)
+        {
+            string ttype = CheckType(ivalue.Trim());
+            name = iname.Trim();
+            type = ttype.Trim();
+            value = ivalue.Trim();
+        }
+
+        public string CheckType(string value)
+        {
+            bool b;
+            char c;
+            int i;
+            float f;
+
+            if (bool.TryParse(value, out b))
+                return "bool";
+
+            if (char.TryParse(value, out c))
+                return "char";
+
+            if (float.TryParse(value, out f))
+                return "float";
+            
+            if (int.TryParse(value, out i))
+                return "int";
+
+            return "string";
+        }
     }
 
     public class Property : Variable
@@ -52,10 +83,10 @@ namespace Translator
         public string read, write;
         public Property(string iname, string itype, string iread, string iwrite, bool iisStatic)
         {
-            name = iname;
-            type = itype;
-            read = iread;
-            write = iwrite;
+            name = iname.Trim();
+            type = itype.Trim();
+            read = iread.Trim();
+            write = iwrite.Trim();
             isStatic = iisStatic;
         }
     }
@@ -71,7 +102,7 @@ namespace Translator
 
         public Enum(string iname, List<Constant> ienums)
         {
-            name = iname;
+            name = iname.Trim();
             enums = new List<Constant>();
             enums = ienums;
         }
@@ -82,6 +113,7 @@ namespace Translator
         public string name;
         public bool isVirtual, isAbstract, isStatic;
         public List<Variable> parameters, variables;
+        public List<Constant> constants;
         public List<string> commands; 
         public string returnType;
 
@@ -89,21 +121,23 @@ namespace Translator
         {
             parameters = new List<Variable>();
             variables = new List<Variable>();
+            constants = new List<Constant>();
             commands = new List<string>();
         }
 
-        public Function(string iname, List<Variable> iparameters, string ireturnType, bool iisVirtual, bool iisAbstract, bool iisStatic, List<Variable> ivariables, List<string> icommands)
+        public Function(string iname, List<Variable> iparameters, string ireturnType, bool iisVirtual, bool iisAbstract, bool iisStatic, List<Constant> iconsts, List<Variable> ivariables, List<string> icommands)
         {
             parameters = new List<Variable>();
             variables = new List<Variable>();
             commands = new List<string>();
 
-            name = iname;
+            name = iname.Trim();
             parameters = iparameters;
-            returnType = ireturnType;
+            returnType = ireturnType.Trim();
             isVirtual = iisVirtual;
             isStatic = iisStatic;
             isAbstract = iisAbstract;
+            constants = iconsts;
             variables = ivariables;
             commands = icommands;
         }
@@ -115,7 +149,7 @@ namespace Translator
         public List<Variable> variables;
         public List<Constant> constants;
         public List<Enum> enums;
-        public List<Type> types;
+        public List<TypeAlias> types;
         public List<Property> properties;
         public List<Function> functions;
 
@@ -124,7 +158,7 @@ namespace Translator
             variables = new List<Variable>();
             constants = new List<Constant>();
             enums = new List<Enum>();
-            types = new List<Type>();
+            types = new List<TypeAlias>();
             properties = new List<Property>();
             functions = new List<Function>();
         }

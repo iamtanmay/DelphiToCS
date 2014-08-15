@@ -21,7 +21,7 @@ namespace Translator
 
             tfilename = tfilename.Replace(".pas", "");
 
-            string tdirectory = tpath_elements[tpath_elements.GetLength(0)];
+            string tdirectory = tfilename_elements[tfilename_elements.GetLength(0) - 2].Replace(" ", "_");
 
             CSharp tcsharp = new CSharp();
             string[] tout = tcsharp.Write(ref tdelphi.script, tdirectory).ToArray();

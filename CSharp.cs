@@ -16,6 +16,11 @@ namespace Translator {
             return tout;
         }
 
+        public string Indent(int isize)
+        {
+            return new string(' ', isize);
+        }
+
         //Convert a script to C#
         public List<string> Write(ref Script iscript, string inamespace)
 		{
@@ -28,14 +33,18 @@ namespace Translator {
                 tout.Add(iscript.header[i]);
             }
             tout.Add("**/");
-
-			//References
+            
+            tout.Add("");
+			
+            //References
 			for( int i=0; i < iscript.includes.Count; i++)
 			{
-				tout.Add("using " + ConvertToStandardLibrary(iscript.includes[i]) + ";");
+                tout.Add("using " + ConvertToStandardLibrary(iscript.includes[i]) + ";");
 			}
 			
 			tout.Add("/*References End*/");
+
+            tout.Add("");
 			
             ////Write out types
             //for( int i=0; i < iscript.includes.Count; i++)
@@ -64,36 +73,36 @@ namespace Translator {
             //Classes / Interfaces
             //Inheritance
 
-            if (iclass.baseclass == "")
-                tout.Add("public class " + iclass.name);
+            if ((iclass.baseclass == null) || (iclass.baseclass == "") || (iclass.baseclass == "null"))
+                tout.Add(Indent(4) + "public class " + iclass.name);
             else
-                tout.Add("public class " + iclass.name + " : " + iclass.baseclass);
+                tout.Add(Indent(4) + "public class " + iclass.name + " : " + iclass.baseclass);
 
-            tout.Add("{");
+            tout.Add(Indent(4) + "{");
 
             for (int i = 0; i < iclass.constants.Count; i++)
             {
-                tout.Add("public " + ConstantToString(iclass.constants[i]));
+                tout.Add(Indent(4) + Indent(4) + "public " + ConstantToString(iclass.constants[i]));
             }
 
             for (int i = 0; i < iclass.enums.Count; i++)
             {
-                tout.Add(EnumToString(iclass.enums[i]));
+                tout.Add(Indent(4) + Indent(4) + EnumToString(iclass.enums[i]));
             }
 
             for (int i = 0; i < iclass.variables.Count; i++)
             {
-                tout.Add("public " + VarToString(iclass.variables[i]));
+                tout.Add(Indent(4) + Indent(4) + "public " + VarToString(iclass.variables[i]));
             }
 
             for (int i = 0; i < iclass.properties.Count; i++)
             {
-                tout.Add("public " + PropertyToString(iclass.properties[i]));
+                tout.Add(Indent(4) + Indent(4) + "public " + PropertyToString(iclass.properties[i]));
             }
 
             for (int i = 0; i < iclass.types.Count; i++)
             {
-                tout.Add(TypeToString(iclass.types[i]));
+                tout.Add(Indent(4) + Indent(4) + TypeToString(iclass.types[i]));
             }
 
             for (int i = 0; i < iclass.functions.Count; i++)
@@ -110,17 +119,19 @@ namespace Translator {
                 tparam_string.Replace(';', ',');
 
                 //Add method definition
-                tout.Add("public " + tfunc.isStatic + " " + tfunc.isVirtual + " " + tfunc.isAbstract + " " + tfunc.returnType + " " + tfunc.name + "(" + tparam_string + ")");
-                tout.Add("{");
+                tout.Add(Indent(4) + Indent(4) + "public " + tfunc.isStatic + " " + tfunc.isVirtual + " " + tfunc.isAbstract + " " + tfunc.returnType + " " + tfunc.name + "(" + tparam_string + ")");
+                //tout.Add(Indent(4) + Indent(4) + "{");
                 //Add all method variables
                 for (int j = 0; j < tfunc.variables.Count; j++)
-                    tout.Add(VarToString(tfunc.variables[j]));
+                    tout.Add(Indent(4) + Indent(4) + VarToString(tfunc.variables[j]));
                 //Add method body
-                tout.AddRange(tfunc.commands);
-                tout.Add("}");
+                for (int j = 0; j < tfunc.commands.Count; j++)
+                    tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(tfunc.commands[j]));
+                //tout.AddRange(tfunc.commands);
+                //tout.Add(Indent(4) + Indent(4) + "}");
             }
 
-            tout.Add("}");
+            tout.Add(Indent(4) + "}");
             return tout;
         }
 
@@ -152,7 +163,7 @@ namespace Translator {
             return iprop.type + " " + iprop.name + " { get { return " + iprop.read + ";} set { return " + iprop.write + ";} }";
         }
 
-        public string TypeToString(Type itype)
+        public string TypeToString(TypeAlias itype)
         {
             return "using " + itype.name + " = " + itype.type + ";";
         }
