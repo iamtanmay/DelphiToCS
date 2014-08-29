@@ -78,7 +78,10 @@ namespace Translator
     public class Delphi
     {
     	//Output
-        public string name;        
+        public string name;
+        public string directory;
+        public string outPath;
+
         public Script script;
         
     	//Enums, consts, types

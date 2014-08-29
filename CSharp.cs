@@ -113,7 +113,7 @@ namespace Translator {
             tout.Add("}");
 
             //Replace the local Globals used in the text
-            Translate.GlobalsRename(inamespace + "_Locals", ref tout, ref olocals);
+            Translate.GlobalsRename(inamespace + "_Locals.", ref tout, olocals);
             return tout;
         }        
 
