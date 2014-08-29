@@ -3,17 +3,24 @@ using System.Collections.Generic;
 
 namespace Translator {
     public class CSharp {
+
+        List<string> project_references = new List<string>();
+
+        bool isForm = false;
+
         //Substitute standard C# reference for standard reference of other language
-        public string ConvertToStandardLibrary(string ilibrary) {
-            string tout = ilibrary;
-            switch (tout) {
-                case "System": return "System";
-                case "System.Generics.Collections": return "System.Collections.Generic";
-                case "Windows": return "System.Windows";
-                case "Forms": return "System.Windows.Forms";
-                default: break;
+        public void ProcessReference(string ilibrary) {
+            switch (ilibrary)
+            {
+                case "SysUtils": return;
+                case "System": return;
+                case "System.Generics.Collections": return;
+                case "Windows": return;
+                case "Forms":   isForm = true; 
+                                project_references.Add("System.Windows.Forms"); 
+                                return;
+                default: project_references.Add(ilibrary); return;
             }
-            return tout;
         }
 
         public string Indent(int isize)
@@ -22,86 +29,130 @@ namespace Translator {
         }
 
         //Convert a script to C#
-        public List<string> Write(ref Script iscript, string inamespace)
+        public List<string> Write(ref Script iscript, string inamespace, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals)
 		{
 			List<string> tout = new List<string>();
 			
             //Header
-            tout.Add("/**");
+            tout.Add("/**Header Start");
             for (int i = 0; i < iscript.header.Count; i++) 
             {
                 tout.Add(iscript.header[i]);
             }
-            tout.Add("**/");
-            
+            tout.Add("Header End**/");            
             tout.Add("");
-			
+
             //References
-			for( int i=0; i < iscript.includes.Count; i++)
+            tout.Add("");
+            tout.Add("/*References Start*/");
+            tout.Add("");
+
+            for( int i=0; i < iscript.includes.Count; i++)
 			{
-                tout.Add("using " + ConvertToStandardLibrary(iscript.includes[i]) + ";");
-			}
-			
-			tout.Add("/*References End*/");
+                ProcessReference(iscript.includes[i]);
+            }
+
+            tout.Add("using " + "System" + ";");
+            tout.Add("using " + "System.Windows" + ";");
+            tout.Add("using " + "System.String" + ";");
+            tout.Add("using " + "System.Collections.Generic" + ";");
+
+            for (int i = 0; i < project_references.Count; i++)
+            {
+                tout.Add("using " + project_references[i] + ";");
+            }
 
             tout.Add("");
-			
-            ////Write out types
+            tout.Add("/*References End*/");
+            tout.Add("");
+
+            //Types
+            tout.Add("");
+            tout.Add("/*Types Start*/");
+            tout.Add("");
             //for( int i=0; i < iscript.includes.Count; i++)
             //{
             //    tout.Add("using " + ConvertToStandardLibrary(iscript.includes[i]));
             //}
-			
-			//tout.Add("/*Type Aliases End*/");
+            tout.Add("");
+            tout.Add("/*Types End*/");
+            tout.Add("");
 
+            //Namespace
+            tout.Add("");
             tout.Add("namespace " + inamespace);
             tout.Add("{");
 
-            for (int i = 0; i < iscript.classes.Count; i++)
+            //Global Constants, Variables and Enums
+            ProcessGlobals(iscript.classes[0], ref oglobals, ref oglobal_names);
+            
+            //Local Constants, Variables and Enums
+            ProcessGlobals(iscript.classes[1], ref olocals, ref olocal_names);
+
+            //Classes
+            for (int i = 2; i < iscript.classes.Count; i++)
             {
-                tout.AddRange(WriteClass(iscript.classes[i]));
+                tout.Add("");
+                tout.Add("//Class " + iscript.classes[i].name);
+
+                //Classes / Interfaces
+                //Inheritance
+                if ((iscript.classes[i].baseclass == null) || (iscript.classes[i].baseclass == "") || (iscript.classes[i].baseclass == "null"))
+                    tout.Add(Indent(4) + "public class " + iscript.classes[i].name);
+                else
+                    tout.Add(Indent(4) + "public class " + iscript.classes[i].name + " : " + iscript.classes[i].baseclass);
+
+                tout.Add(Indent(4) + "{");
+
+                List<string> telement_names = new List<string>();
+                tout.AddRange(WriteClassBody(iscript.classes[i], ref telement_names));
+
+                tout.Add(Indent(4) + "}");
             }
 
             tout.Add("}");
+
+            //Replace the local Globals used in the text
+            Translate.GlobalsRename(inamespace + "_Locals", ref tout, ref olocals);
             return tout;
         }        
 
-        public List<string> WriteClass(Class iclass)
+        public void ProcessGlobals(Class iclass, ref List<string> obody, ref List<string> onames)
+        {
+            obody = WriteClassBody(iclass, ref onames);
+        }
+
+        public List<string> WriteClassBody(Class iclass, ref List<string> oelement_names)
         {
             List<string> tout = new List<string>();
 
-            //Classes / Interfaces
-            //Inheritance
-
-            if ((iclass.baseclass == null) || (iclass.baseclass == "") || (iclass.baseclass == "null"))
-                tout.Add(Indent(4) + "public class " + iclass.name);
-            else
-                tout.Add(Indent(4) + "public class " + iclass.name + " : " + iclass.baseclass);
-
-            tout.Add(Indent(4) + "{");
-
             for (int i = 0; i < iclass.constants.Count; i++)
             {
+                oelement_names.Add(iclass.constants[i].name);
                 tout.Add(Indent(4) + Indent(4) + "public " + ConstantToString(iclass.constants[i]));
             }
 
             for (int i = 0; i < iclass.enums.Count; i++)
             {
+                oelement_names.Add(iclass.enums[i].name);
                 tout.Add(Indent(4) + Indent(4) + EnumToString(iclass.enums[i]));
             }
 
             for (int i = 0; i < iclass.variables.Count; i++)
             {
+                oelement_names.Add(iclass.variables[i].name); 
                 tout.Add(Indent(4) + Indent(4) + "public " + VarToString(iclass.variables[i]));
             }
 
             for (int i = 0; i < iclass.properties.Count; i++)
             {
+                oelement_names.Add(iclass.properties[i].name); 
                 tout.Add(Indent(4) + Indent(4) + "public " + PropertyToString(iclass.properties[i]));
             }
 
             for (int i = 0; i < iclass.types.Count; i++)
             {
+                oelement_names.Add(iclass.types[i].name); 
                 tout.Add(Indent(4) + Indent(4) + TypeToString(iclass.types[i]));
             }
 
@@ -131,7 +182,6 @@ namespace Translator {
                 //tout.Add(Indent(4) + Indent(4) + "}");
             }
 
-            tout.Add(Indent(4) + "}");
             return tout;
         }
 

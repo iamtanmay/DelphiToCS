@@ -13,6 +13,12 @@ using System.Collections.ObjectModel;
 
 namespace Translator
 {
+    struct ReferenceStruct
+    {
+        public string name;
+        public List<string> globals, locals;
+    }
+
     public partial class s : Form
     {
         private int index;
@@ -37,18 +43,29 @@ namespace Translator
         {
         }
 
-        private void AnalyzeFolder(string iPath, string ioutpath)
+        public string Indent(int isize)
+        {
+            return new string(' ', isize);
+        }
+
+        private void AnalyzeFolder(string iPath, string iOutPath, ref List<ReferenceStruct> oreferences, ref List<Delphi> odelphi)
         {
             string FolderPath = iPath;
+            string tdirectory = "";
+
+            List<string> globals = new List<string>(), locals = new List<string>();
+            List<string> global_names = new List<string>(), local_names = new List<string>();
 
             //Get files in folder
             string[] files = Directory.GetFiles(iPath);
             string[] directories = Directory.GetDirectories(iPath);
+            string tstring = "";
+            bool pasFileFound = false;
 
             //Filter for files to convert
             for (int i = 0; i < files.GetLength(0); i++)
             {
-                string tstring = files[i];
+                tstring = files[i];
                 string[] tstrarray = tstring.Split('.');
 
                 switch (tstrarray[1])
@@ -57,7 +74,9 @@ namespace Translator
                     case "dfm": break;
 
                     //Parse unit
-                    case "pas": Translate.DelphiToCS(tstring, ioutpath, Log); break;
+                    case "pas": pasFileFound = true;  
+                                odelphi.Add(Translate.DelphiToCS(tstring, iOutPath, Log, ref global_names, ref globals, ref local_names, ref locals)); 
+                                break;
 
                     //Parse Project files
                     case "dpk": Translate.DPK2Vcproj(tstring); break;
@@ -67,10 +86,73 @@ namespace Translator
                 }
             }
 
+            
+            if (pasFileFound)
+            {
+                string[] tfilename_elements = tstring.Split('\\');
+                string tfilename = tfilename_elements[tfilename_elements.GetLength(0) - 1];
+                tdirectory = tfilename_elements[tfilename_elements.GetLength(0) - 2].Replace(" ", "_");
+
+                //Create Global and Local classes file
+                List<string> globalsFile = new List<string>();
+
+                globalsFile.Add("using " + "System" + ";");
+                globalsFile.Add("using " + "System.Windows" + ";");
+                globalsFile.Add("using " + "System.String" + ";");
+                globalsFile.Add("using " + "System.Collections.Generic" + ";");
+                globalsFile.Add("");
+
+                globalsFile.Add("namespace " + tdirectory);
+                globalsFile.Add("{");
+                globalsFile.Add(Indent(4) + "public class " + tdirectory + "_Globals");
+                globalsFile.Add(Indent(4) + "{");
+
+                globalsFile.AddRange(globals);
+                globalsFile.Add(Indent(4) + "}");
+
+                globalsFile.Add(Indent(4) + "public class " + tdirectory + "_Locals");
+                globalsFile.Add(Indent(4) + "{");
+                globalsFile.AddRange(locals);
+                globalsFile.Add(Indent(4) + "}");
+                globalsFile.Add("}");
+
+                File.WriteAllLines(iOutPath + "\\" + "NamespaceGlobals.cs", globalsFile, Encoding.UTF8);
+
+                //Save Global and Local element names
+                ReferenceStruct treference = new ReferenceStruct();
+                treference.name = tdirectory;
+                treference.globals = new List<string>();
+                treference.locals = new List<string>();
+                treference.globals = global_names;
+                treference.locals = local_names;
+                oreferences.Add(treference);
+
+                //String replace the local globals used across all files in the directory
+                files = Directory.GetFiles(iPath);
+
+                for (int i = 0; i < files.GetLength(0); i++)
+                {
+                    tstring = files[i];
+                    string[] tstrarray = tstring.Split('.');
+
+                    switch (tstrarray[1])
+                    {
+                        //String replace in *.cs files
+                        case "cs":
+                            List<string> ttext = Utilities.TextFileReader(tstring);
+                            Translate.GlobalsRename(tdirectory + "_Globals", ref ttext, ref global_names);
+                            File.WriteAllLines(tstring, ttext, Encoding.UTF8);
+                            break;
+
+                        default: break;
+                    }
+                }
+            }
+
             for (int i = 0; i < directories.GetLength(0); i++)
             {
                 string[] tpath_elements = directories[i].Split('\\');
-                AnalyzeFolder(directories[i], ioutpath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1]);
+                AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], ref oreferences, ref odelphi);
             }
         }
 
