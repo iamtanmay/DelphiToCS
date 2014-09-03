@@ -25,6 +25,7 @@ namespace Translator
         private ObservableCollection<LogEntry> LogEntries { get; set; }
 
         List<string> standardDelphiReferences;
+        List<string> standardCSReferences;
         DelphiToCSConversion delphiToCSConversion;
 
         public s()
@@ -44,8 +45,12 @@ namespace Translator
 
         private void GUI_Load(object sender, EventArgs e)
         {
-            standardDelphiReferences = new List<string> { "SysUtils", "System", "System.Generics.Collections", "Windows", "Forms" };
-            richTextBox1.Text = standardDelphiReferences.ToString();
+            standardDelphiReferences = new List<string> { "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
+
+            standardDelphiReferences.ForEach(s => {
+                richTextBox1.Text += s;
+                richTextBox1.Text += Environment.NewLine;
+            });
         }
 
         private void BtnSource_Click(object sender, EventArgs e)
@@ -72,11 +77,54 @@ namespace Translator
 
         private void BtnRun_Click(object sender, EventArgs e)
         {
-            //standardDelphiReferences.AddRange( = richTextBox1.Text.Split(' ');
-            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, Log, standardDelphiReferences);
+            string[] tstrArr = richTextBox1.Text.Split(Environment.NewLine.ToCharArray());
+            standardDelphiReferences = new List<string>(tstrArr);
+            standardCSReferences = new List<string>(tstrArr);
+
+            //Get a list of Standard Delphi libraries, and their CS substitutes
+            for (int i = 0; i < tstrArr.Length; i++ )
+            {
+                string[] tarr = tstrArr[i].Split("//".ToCharArray());
+                if (tarr.Length == 2 && tarr[0] != "")
+                {
+                    standardDelphiReferences.Add(tarr[0]);
+                    standardCSReferences.Add(tarr[1]);
+                }
+                else if (tarr.Length == 1 && tarr[0] != "")
+                {
+                    standardDelphiReferences.Add(tarr[0]);
+                    standardCSReferences.Add("");
+                }
+                else
+                {
+
+                }
+            }
+
+            List<List<string>> tStandardCSReferences = new List<List<string>>();
+
+            //Organize the replacement references from Delphi to CS
+            for (int i = 0; i < standardCSReferences.Count; i++)
+            {
+                tStandardCSReferences[i] = new List<string>();
+                string[] tarr = standardCSReferences[i].Split(' ');
+
+                for (int j = 0; j < tarr.Length; j++)
+                {
+                    if (tarr[j] != "")
+                        tStandardCSReferences[i].Add(tarr[j]);
+                }
+            }
+
+            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, Log, ref standardDelphiReferences, ref tStandardCSReferences);
         }
 
         private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
         {
 
         }        

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace Translator {
@@ -9,18 +10,18 @@ namespace Translator {
         bool isForm = false;
 
         //Substitute standard C# reference for standard reference of other language
-        public void ProcessReference(string ilibrary) {
-            switch (ilibrary)
+        public void ProcessReference(string ilibrary, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
+        {
+            for (int i = 0; i < iStandardReferences.Count; i++)
             {
-                case "SysUtils": return;
-                case "System": return;
-                case "System.Generics.Collections": return;
-                case "Windows": return;
-                case "Forms":   isForm = true; 
-                                project_references.Add("System.Windows.Forms"); 
-                                return;
-                default: project_references.Add(ilibrary); return;
+                if (ilibrary == iStandardReferences[i])
+                {
+                    project_references.AddRange(iStandardCSReferences[i]);
+                }
             }
+
+            //Remove duplicates
+            project_references = project_references.Distinct().ToList();
         }
 
         public string Indent(int isize)
@@ -29,10 +30,10 @@ namespace Translator {
         }
 
         //Convert a script to C#
-        public List<string> Write(ref Script iscript, string inamespace, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals)
+        public List<string> Write(ref Script iscript, string inamespace, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
 		{
 			List<string> tout = new List<string>();
-			
+
             //Header
             tout.Add("/**Header Start");
             for (int i = 0; i < iscript.header.Count; i++) 
@@ -49,7 +50,7 @@ namespace Translator {
 
             for( int i=0; i < iscript.includes.Count; i++)
 			{
-                ProcessReference(iscript.includes[i]);
+                ProcessReference(iscript.includes[i], ref iStandardReferences, ref iStandardCSReferences);
             }
 
             tout.Add("using " + "System" + ";");

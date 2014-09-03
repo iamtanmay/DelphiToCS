@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Translator
 {
@@ -11,18 +12,23 @@ namespace Translator
         public List<Delphi> delphiParsedFiles;
         public List<ReferenceStruct> delphiReferences;
         public List<string> delphiStandardReferences;
+        public List<List<string>> standardCSReferences;
         public LogDelegate Log;
 
-        public DelphiToCSConversion(string iPath, string iOutPath, LogDelegate ilog, List<string> idelphiStandardReferences)
+        public DelphiToCSConversion(string iPath, string iOutPath, LogDelegate ilog, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences)
         {
             delphiParsedFiles = new List<Delphi>();
             delphiReferences = new List<ReferenceStruct>();
             delphiStandardReferences = new List<string>();
+            standardCSReferences = new List<List<string>>();
+
             delphiStandardReferences = idelphiStandardReferences;
+            standardCSReferences = istandardCSReferences;
+
             Log = ilog;
 
             //Do a first run to convert individual files to C#, and gather list of references
-            AnalyzeFolder(iPath, iOutPath, ref delphiReferences, ref delphiParsedFiles);
+            AnalyzeFolder(iPath, iOutPath, ref delphiReferences, ref delphiParsedFiles, ref delphiStandardReferences, ref standardCSReferences);
 
             //Replace global strings from references in files
             ResolveReferences(ref delphiParsedFiles, ref delphiReferences);
@@ -73,7 +79,7 @@ namespace Translator
             return new string(' ', iSize);
         }
 
-        private void AnalyzeFolder(string iPath, string iOutPath, ref List<ReferenceStruct> oReferences, ref List<Delphi> oDelphi)
+        private void AnalyzeFolder(string iPath, string iOutPath, ref List<ReferenceStruct> oReferences, ref List<Delphi> oDelphi, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
         {
             string FolderPath = iPath;
             string tdirectory = "";
@@ -104,7 +110,7 @@ namespace Translator
 
                     //Parse unit
                     case "pas": pasFileFound = true;
-                        oDelphi.Add(Translate.DelphiToCS(tstring, tdirectory, iOutPath, Log, ref global_names, ref globals, ref local_names, ref locals));
+                        oDelphi.Add(Translate.DelphiToCS(tstring, tdirectory, iOutPath, Log, ref global_names, ref globals, ref local_names, ref locals, ref iStandardReferences, ref standardCSReferences));
                         break;
 
                     //Parse Project files
@@ -177,14 +183,14 @@ namespace Translator
             for (int i = 0; i < directories.GetLength(0); i++)
             {
                 string[] tpath_elements = directories[i].Split('\\');
-                AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], ref oReferences, ref oDelphi);
+                AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], ref oReferences, ref oDelphi, ref iStandardReferences, ref standardCSReferences);
             }
         }
     }
 
     struct Translate
     {
-        public static Delphi DelphiToCS(string iPath, string idirectory, string iOutPath, LogDelegate ilog, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals )
+        public static Delphi DelphiToCS(string iPath, string idirectory, string iOutPath, LogDelegate ilog, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
         {
             List<string> tdelphitext = Utilities.TextFileReader(iPath);
             string[] tpath_elements = iOutPath.Split('\\');
@@ -203,7 +209,7 @@ namespace Translator
             tdelphi.Read(ref tdelphitext, true, "{ --", "-- }", ilog);
 
             CSharp tcsharp = new CSharp();
-            string[] tout = tcsharp.Write(ref tdelphi.script, idirectory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals).ToArray();
+            string[] tout = tcsharp.Write(ref tdelphi.script, idirectory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref iStandardReferences, ref iStandardCSReferences).ToArray();
 
             //Write to file
             File.WriteAllLines(iOutPath + "\\" + tfilename + ".cs", tout, Encoding.UTF8);
