@@ -12,13 +12,20 @@ namespace Translator {
         //Substitute standard C# reference for standard reference of other language
         public void ProcessReference(string ilibrary, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
         {
+            bool isStandardRef = false;
+
             for (int i = 0; i < iStandardReferences.Count; i++)
             {
                 if (ilibrary == iStandardReferences[i])
                 {
                     project_references.AddRange(iStandardCSReferences[i]);
+                    isStandardRef = true;
+                    break;
                 }
             }
+
+            if (!isStandardRef)
+                project_references.Add(ilibrary);
 
             //Remove duplicates
             project_references = project_references.Distinct().ToList();
@@ -52,11 +59,6 @@ namespace Translator {
 			{
                 ProcessReference(iscript.includes[i], ref iStandardReferences, ref iStandardCSReferences);
             }
-
-            tout.Add("using " + "System" + ";");
-            tout.Add("using " + "System.Windows" + ";");
-            tout.Add("using " + "System.String" + ";");
-            tout.Add("using " + "System.Collections.Generic" + ";");
 
             for (int i = 0; i < project_references.Count; i++)
             {

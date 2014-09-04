@@ -105,15 +105,16 @@ namespace Translator
 
             //Organize the replacement references from Delphi to CS
             for (int i = 0; i < standardCSReferences.Count; i++)
-            {
-                tStandardCSReferences[i] = new List<string>();
+            {               
+                List<string> tlist = new List<string>();
                 string[] tarr = standardCSReferences[i].Split(' ');
 
                 for (int j = 0; j < tarr.Length; j++)
                 {
                     if (tarr[j] != "")
-                        tStandardCSReferences[i].Add(tarr[j]);
+                       tlist.Add(tarr[j]);
                 }
+                tStandardCSReferences.Add(tlist);
             }
 
             delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, Log, ref standardDelphiReferences, ref tStandardCSReferences);

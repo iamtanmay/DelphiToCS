@@ -248,7 +248,7 @@ namespace Translator
             	{
                     case "const":   oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
 
-        			case "type": 	ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count); break;
+                    case "type":  ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count, tnext_subsection_pos); break;
 
                     case "uses":    ouses.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
 
@@ -273,13 +273,18 @@ namespace Translator
             return false;
         }
 
-        private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int istartpos)
+        private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int istartpos, int inext_subsection_pos)
         {
             int tnext_subsection_pos = -1, tcurr_string_count = istartpos;
             string tclassname = "";
 
+            if (inext_subsection_pos == -1)
+                inext_subsection_pos = endInterface;
+            if (inext_subsection_pos == -1)
+                inext_subsection_pos = istrings.Count;
+
             //Interface sub sectionsm
-            while ((tcurr_string_count < endInterface) && (tcurr_string_count != -1))
+            while ((tcurr_string_count < inext_subsection_pos) && (tcurr_string_count < endInterface) && (tcurr_string_count != -1))
             {
                 //Ignore comments and empty lines
                 if (!(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
@@ -1332,33 +1337,51 @@ namespace Translator
             tvalue = tvalue.Split(';')[0];
             string ttype = "";
 
-            //Check what type this is
-            //String
-            if (tvalue.IndexOf("'") != -1)
-            {
-                ttype = "string";
-                tvalue.Replace("'", "");
-            }
 
-            //Hex
-            else if (tvalue.IndexOf("$") != -1)
-            {
-                ttype = "int";
-                tvalue.Replace("$", "");
-                tvalue = "" + Convert.ToInt32(tvalue, 16);
-            }
+            //Check if this a array declaration
+            int tisArray = iconst.IndexOf("array");
 
-            //Double
-            else if (tvalue.IndexOf(".") != -1)
+            if ((tisArray != -1) && (iconst.IndexOf("[") != -1))
             {
-                ttype = "double";
-            }
+                tvalue = tvalue.Replace('(', '{');
+                tvalue = tvalue.Replace(')', '}');
 
+                tstr = tname.Split(':');
+                tname = tstr[0];
+                tstr = tstr[1].Split(' ');
+                ttype = tstr[tstr.GetLength(0) - 1] + "[]";
+                tname = tname.Replace("var", "");
+                tname = tname.Replace(" ", "");
+            }
             else
             {
-                ttype = "int";
-            }
+                //Check what type this is
+                //String
+                if (tvalue.IndexOf("'") != -1)
+                {
+                    ttype = "string";
+                    tvalue.Replace("'", "");
+                }
 
+                //Hex
+                else if (tvalue.IndexOf("$") != -1)
+                {
+                    ttype = "int";
+                    tvalue = tvalue.Replace("$", "");
+                    tvalue = "" + Convert.ToInt32(tvalue, 16);
+                }
+
+                //Double
+                else if (tvalue.IndexOf(".") != -1)
+                {
+                    ttype = "double";
+                }
+
+                else
+                {
+                    ttype = "int";
+                }
+            }
             tout = new Constant(tname, ttype, tvalue);
             return tout;
         }
@@ -1426,7 +1449,31 @@ namespace Translator
 
             for (int i = 0; i < iconstsGlobal.Count; i++)
             {
-                tconstants.Add(StringToConstant(iconstsGlobal[i]));
+                if (iconstsGlobal[i].Trim() != "")
+                {
+                    string[] tarr = iconstsGlobal[i].Split(@"//".ToCharArray());
+                    string tconst = tarr[0].Trim();
+
+                    if (tconst != "")
+                    {
+                        //Check to see if we have the whole statement
+                        
+                        int tcolon;
+                        SemiColonCheck:
+    
+                        tcolon = tconst.IndexOf(';');
+                        if (tcolon == -1)
+                        {
+                            i++;
+                            tconst = tconst + iconstsGlobal[i];
+                            tarr = tconst.Split(@"//".ToCharArray());
+                            tconst = tarr[0].Trim();
+                            goto SemiColonCheck;
+                        }
+
+                        tconstants.Add(StringToConstant(tconst));
+                    }
+                }
             }
 
             for (int i = 0; i < ienumsGlobal.Count; i++)
