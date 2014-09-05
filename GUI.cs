@@ -22,7 +22,7 @@ namespace Translator
     public partial class s : Form
     {
         private int index;
-        private ObservableCollection<LogEntry> LogEntries { get; set; }
+        private List<LogEntry> LogEntries { get; set; }
 
         List<string> standardDelphiReferences;
         List<string> standardCSReferences;
@@ -31,6 +31,7 @@ namespace Translator
         public s()
         {
             InitializeComponent();
+            LogEntries = new List<LogEntry>();
         }
 
         public delegate void LogDelegate(string imessage);
@@ -40,8 +41,15 @@ namespace Translator
         {
             //Dispatcher is needed because Threads cannot change Main UI data. 
             //Dispatcher transfers data to main thread to apply to UI
-            Dispatcher.CurrentDispatcher.BeginInvoke((Action)(() => LogEntries.Add(new LogEntry(DateTime.Now, index++, imessage))));
-        } 
+            //LogEntry tlogEntry = new LogEntry(index++, imessage);
+            listBox1.Text += DateTime.Now + Indent(4) + imessage + Environment.NewLine;
+            //Dispatcher.CurrentDispatcher.BeginInvoke((Action)(() => LogEntries.Add(tlogEntry)));
+        }
+
+        public string Indent(int isize)
+        {
+            return new string(' ', isize);
+        }
 
         private void GUI_Load(object sender, EventArgs e)
         {

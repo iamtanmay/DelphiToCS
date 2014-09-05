@@ -19,8 +19,9 @@ namespace Translator
         public LogEntry()
         { }
 
-        public LogEntry(DateTime DateTime, int Index, string Message)
+        public LogEntry(int Index, string Message)
         {
+            DateTime = DateTime.Now;
         }
     }
 

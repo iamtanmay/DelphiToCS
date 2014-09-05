@@ -38,11 +38,13 @@
             this.label1 = new System.Windows.Forms.Label();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
             this.label2 = new System.Windows.Forms.Label();
+            this.BoxPatch = new System.Windows.Forms.TextBox();
+            this.BtnPatch = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // BtnSource
             // 
-            this.BtnSource.Location = new System.Drawing.Point(12, 31);
+            this.BtnSource.Location = new System.Drawing.Point(12, 9);
             this.BtnSource.Name = "BtnSource";
             this.BtnSource.Size = new System.Drawing.Size(75, 23);
             this.BtnSource.TabIndex = 0;
@@ -52,21 +54,21 @@
             // 
             // BoxSource
             // 
-            this.BoxSource.Location = new System.Drawing.Point(93, 34);
+            this.BoxSource.Location = new System.Drawing.Point(93, 12);
             this.BoxSource.Name = "BoxSource";
             this.BoxSource.Size = new System.Drawing.Size(347, 20);
             this.BoxSource.TabIndex = 1;
             // 
             // BoxDest
             // 
-            this.BoxDest.Location = new System.Drawing.Point(93, 70);
+            this.BoxDest.Location = new System.Drawing.Point(93, 48);
             this.BoxDest.Name = "BoxDest";
             this.BoxDest.Size = new System.Drawing.Size(347, 20);
             this.BoxDest.TabIndex = 3;
             // 
             // BtnDest
             // 
-            this.BtnDest.Location = new System.Drawing.Point(12, 67);
+            this.BtnDest.Location = new System.Drawing.Point(12, 45);
             this.BtnDest.Name = "BtnDest";
             this.BtnDest.Size = new System.Drawing.Size(75, 23);
             this.BtnDest.TabIndex = 2;
@@ -96,7 +98,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(12, 109);
+            this.label1.Location = new System.Drawing.Point(12, 116);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(353, 17);
             this.label1.TabIndex = 7;
@@ -105,9 +107,9 @@
             // 
             // richTextBox1
             // 
-            this.richTextBox1.Location = new System.Drawing.Point(12, 134);
+            this.richTextBox1.Location = new System.Drawing.Point(12, 141);
             this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(428, 91);
+            this.richTextBox1.Size = new System.Drawing.Size(428, 139);
             this.richTextBox1.TabIndex = 8;
             this.richTextBox1.Text = "";
             // 
@@ -122,11 +124,29 @@
             this.label2.Text = "Log";
             this.label2.Click += new System.EventHandler(this.label2_Click);
             // 
+            // BoxPatch
+            // 
+            this.BoxPatch.Location = new System.Drawing.Point(93, 84);
+            this.BoxPatch.Name = "BoxPatch";
+            this.BoxPatch.Size = new System.Drawing.Size(347, 20);
+            this.BoxPatch.TabIndex = 11;
+            // 
+            // BtnPatch
+            // 
+            this.BtnPatch.Location = new System.Drawing.Point(12, 81);
+            this.BtnPatch.Name = "BtnPatch";
+            this.BtnPatch.Size = new System.Drawing.Size(75, 23);
+            this.BtnPatch.TabIndex = 10;
+            this.BtnPatch.Text = "Patch File";
+            this.BtnPatch.UseVisualStyleBackColor = true;
+            // 
             // s
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(456, 618);
+            this.Controls.Add(this.BoxPatch);
+            this.Controls.Add(this.BtnPatch);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.richTextBox1);
             this.Controls.Add(this.label1);
@@ -156,6 +176,8 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.RichTextBox richTextBox1;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox BoxPatch;
+        private System.Windows.Forms.Button BtnPatch;
 
     }
 }

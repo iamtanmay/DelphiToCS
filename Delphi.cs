@@ -250,7 +250,7 @@ namespace Translator
 
                     case "type":  ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count, tnext_subsection_pos); break;
 
-                    case "uses":    ouses.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
+                    case "uses":    ouses.AddRange(GetStringSubList(ref  istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
 
         			//Log unrecognized sub section
         			default: 		List<string> tlogmessages = new List<string>();
@@ -1511,7 +1511,7 @@ namespace Translator
         public void log(List<string> imessages)
         {
             for (int i = 0; i < imessages.Count; i++)
-                Console.WriteLine(imessages[i]);
+                logsingle(imessages[i]);//Console.WriteLine(imessages[i]);
         }
     }    
 }

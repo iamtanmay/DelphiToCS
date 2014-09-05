@@ -110,7 +110,7 @@ namespace Translator
 
                     //Parse unit
                     case "pas": pasFileFound = true;
-                        oDelphi.Add(Translate.DelphiToCS(tstring, tdirectory, iOutPath, Log, ref global_names, ref globals, ref local_names, ref locals, ref iStandardReferences, ref standardCSReferences));
+                        oDelphi.Add(Translate.DelphiToCS(tstring, tdirectory, iOutPath, Log, ref global_names, ref globals, ref local_names, ref locals, ref iStandardReferences, ref standardCSReferences, Log));
                         break;
 
                     //Parse Project files
@@ -126,22 +126,22 @@ namespace Translator
             {
                 //Create Global and Local classes file
                 List<string> globalsFile = new List<string>();
-
+                string tnamespace = tdirectory.Replace(" ", "_");
                 globalsFile.Add("using " + "System" + ";");
                 globalsFile.Add("using " + "System.Windows" + ";");
                 globalsFile.Add("using " + "System.String" + ";");
                 globalsFile.Add("using " + "System.Collections.Generic" + ";");
                 globalsFile.Add("");
 
-                globalsFile.Add("namespace " + tdirectory);
+                globalsFile.Add("namespace " + tnamespace);
                 globalsFile.Add("{");
-                globalsFile.Add(Indent(4) + "public class " + tdirectory + "_Globals");
+                globalsFile.Add(Indent(4) + "public class " + tnamespace + "_Globals");
                 globalsFile.Add(Indent(4) + "{");
 
                 globalsFile.AddRange(globals);
                 globalsFile.Add(Indent(4) + "}");
 
-                globalsFile.Add(Indent(4) + "public class " + tdirectory + "_Locals");
+                globalsFile.Add(Indent(4) + "public class " + tnamespace + "_Locals");
                 globalsFile.Add(Indent(4) + "{");
                 globalsFile.AddRange(locals);
                 globalsFile.Add(Indent(4) + "}");
@@ -190,7 +190,7 @@ namespace Translator
 
     struct Translate
     {
-        public static Delphi DelphiToCS(string iPath, string idirectory, string iOutPath, LogDelegate ilog, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
+        public static Delphi DelphiToCS(string iPath, string idirectory, string iOutPath, LogDelegate ilog, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences, LogDelegate iLog)
         {
             List<string> tdelphitext = Utilities.TextFileReader(iPath);
             string[] tpath_elements = iOutPath.Split('\\');
@@ -204,6 +204,7 @@ namespace Translator
 
             //Embed path information
             tdelphi.directory = idirectory;
+            tdelphi.logsingle = iLog;
             tdelphi.outPath = iOutPath + "\\" + tfilename + ".cs";
 
             tdelphi.Read(ref tdelphitext, true, "{ --", "-- }", ilog);
