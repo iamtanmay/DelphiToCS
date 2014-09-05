@@ -16,6 +16,7 @@ namespace Translator
         public LogDelegate Log;
 
         //TestComment
+        //Testcomment2
 
         public DelphiToCSConversion(string iPath, string iOutPath, LogDelegate ilog, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences)
         {

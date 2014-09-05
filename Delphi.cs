@@ -21,6 +21,7 @@ namespace Translator
     public class DelphiClassStrings
     {
         public string name;
+        public string baseclass;
         public List<DelphiMethodStrings> methods;
         public List<DelphiVarStrings> properties;
         public List<DelphiVarStrings> variables;
@@ -33,6 +34,7 @@ namespace Translator
             methods = new List<DelphiMethodStrings>();
             properties = new List<DelphiVarStrings>();
             variables = new List<DelphiVarStrings>();
+            baseclass = "";
         }
 
         public void AddMethodDefinition(string iheader, bool iAbstract, bool iVirtual, bool iOverloaded)
@@ -291,18 +293,41 @@ namespace Translator
                 {
                     switch (RecognizeKey(istrings[tcurr_string_count], ref interfaceKindKeys))
                     {
-                        case "class":   tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
-                                        tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
-                                        oclassnames.Add(tclassname);
+                        case "class":   //Check if it is a forward declaration or alias
+                                        string tstring = istrings[tcurr_string_count];
+                                        if (tstring.IndexOf(";") != -1)
+                                        {
+                                            //Alias, just make an empty class with this baseclass
+                                            if (tstring.IndexOf("class(") != -1)
+                                            {
+                                                string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('='); 
+                                                tclassname = ttemparr[0];
+                                                DelphiClassStrings tclassdef = new DelphiClassStrings();
+                                                tclassdef.name = tclassname;
+                                                tclassdef.baseclass = ttemparr[1].Replace("class(", "").Replace(");", "");
+                                                oclassdefinitions.Add(tclassdef);
+                                            }
+                                            //Forward declaration, ignore
+                                            else
+                                            {
+                                            }
+                                        }
+                                        else
+                                        { 
+                                            tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+                                            oclassnames.Add(tclassname);
 
-                                        if (tnext_subsection_pos == -1)
-                                            throw new Exception("Incomplete class definition");
+                                            if (tnext_subsection_pos == -1)
+                                                throw new Exception("Incomplete class definition");
 
-                                        DelphiClassStrings tclassdef = new DelphiClassStrings();
-                                        tclassdef.name = tclassname;
-                                        tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                                            DelphiClassStrings tclassdef = new DelphiClassStrings();
+                                            tclassdef.name = tclassname;
+                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
-                                        oclassdefinitions.Add(tclassdef);
+                                            oclassdefinitions.Add(tclassdef);
+                                        }
+
                                         tcurr_string_count = tnext_subsection_pos + 1;
                                         break;
 
@@ -1174,6 +1199,7 @@ namespace Translator
                 //List<string> timplementation = iimplementations[i];
                 List<string> tdefinition_parts = new List<string>();
                 tclass.name = inames[i];
+                tclass.baseclass = idefinitions[i].baseclass;
                 Variable tvar;
 
                 //Add Variables, Properties and method names from definitions
