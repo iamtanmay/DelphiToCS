@@ -15,6 +15,8 @@ namespace Translator
         public List<List<string>> standardCSReferences;
         public LogDelegate Log;
 
+        //TestComment
+
         public DelphiToCSConversion(string iPath, string iOutPath, LogDelegate ilog, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences)
         {
             delphiParsedFiles = new List<Delphi>();
