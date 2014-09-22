@@ -8,6 +8,10 @@ namespace Translator {
         List<string> project_references = new List<string>();
 
         bool isForm = false;
+        //Log 
+        public LogDelegate logsingle;
+        public string file_path = "";
+
 
         //Substitute standard C# reference for standard reference of other language
         public void ProcessReference(string ilibrary, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
@@ -95,12 +99,18 @@ namespace Translator {
             //Classes
             for (int i = 2; i < iscript.classes.Count; i++)
             {
+                bool tHasBaseclass = true;
+                if ((iscript.classes[i].baseclass == null) || (iscript.classes[i].baseclass == "") || (iscript.classes[i].baseclass == "null"))
+                    tHasBaseclass = false;
+
+                //Handle constructor
+
                 tout.Add("");
                 tout.Add("//Class " + iscript.classes[i].name);
 
                 //Classes / Interfaces
                 //Inheritance
-                if ((iscript.classes[i].baseclass == null) || (iscript.classes[i].baseclass == "") || (iscript.classes[i].baseclass == "null"))
+                if (!tHasBaseclass)
                     tout.Add(Indent(4) + "public class " + iscript.classes[i].name);
                 else
                     tout.Add(Indent(4) + "public class " + iscript.classes[i].name + " : " + iscript.classes[i].baseclass);
@@ -143,8 +153,11 @@ namespace Translator {
 
             for (int i = 0; i < iclass.variables.Count; i++)
             {
-                oelement_names.Add(iclass.variables[i].name); 
-                tout.Add(Indent(4) + Indent(4) + "public " + VarToString(iclass.variables[i]));
+                oelement_names.Add(iclass.variables[i].name);
+                if (iclass.variables[i].isStatic)
+                    tout.Add(Indent(4) + Indent(4) + "public static " + VarToString(iclass.variables[i]));
+                else
+                    tout.Add(Indent(4) + Indent(4) + "public " + VarToString(iclass.variables[i]));
             }
 
             for (int i = 0; i < iclass.properties.Count; i++)
@@ -162,6 +175,52 @@ namespace Translator {
             for (int i = 0; i < iclass.functions.Count; i++)
             {
                 Function tfunc = iclass.functions[i];
+                string tfunction_name = tfunc.name;
+
+                //Method body
+                List<string> tbody = new List<string>();
+
+                for (int j = 0; j < tfunc.commands.Count; j++)
+                    tbody.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(tfunc.commands[j])));
+
+                bool tHasBaseclass = true;
+                string tinheritance = ""; 
+
+                if ((iclass.baseclass == null) || (iclass.baseclass == "") || (iclass.baseclass == "null"))
+                    tHasBaseclass = false;
+
+                //Special Constructor rules
+                if (tfunc.name == "Create")
+                {
+                    //Change Create to Class name in C#
+                    tfunction_name = iclass.name;
+
+                    //Remove "inherited Create();"
+                    int tfound = Delphi.FindStringInList("inherited Create", ref tbody, 0, true);
+                    if (tfound != -1)
+                        tbody.RemoveAt(tfound);
+
+                    //If the constructor is inherited
+                    if (tHasBaseclass)
+                    {
+                        tinheritance = ": base(";
+
+                        if (tfunc.parameters.Count > 0)
+                            tinheritance = tinheritance + tfunc.parameters[0].name;
+
+                        if (tfunc.parameters.Count > 1)
+                            for (int j = 1; j < tfunc.parameters.Count - 1; j++)
+                                tinheritance = tinheritance + ", " + tfunc.parameters[j].name;
+                        
+                        tinheritance = tinheritance + ")";
+
+                        //If there are additional commands to modify the inherited constructor, Flag in Log, to inspect manually
+                        if (tbody.Count > 0)
+                            logsingle("Complex Constructor detected in Class:" + iclass.name + " in File" + file_path);
+                    }
+                }
+
+                //Method Parameters
                 string tparam_string = "";
 
                 for (int j = 0; j < tfunc.parameters.Count - 1; j++)
@@ -170,17 +229,30 @@ namespace Translator {
                 if (tfunc.parameters.Count > 0)
                     tparam_string = tparam_string + VarToString(tfunc.parameters[tfunc.parameters.Count-1]).Replace(";","");
 
-                tparam_string.Replace(';', ',');
+                tparam_string = tparam_string.Replace(";", ",").Replace(":", "").Replace("const","").Replace("  "," ");
 
-                //Add method definition
-                tout.Add(Indent(4) + Indent(4) + "public " + tfunc.isStatic + " " + tfunc.isVirtual + " " + tfunc.isAbstract + " " + tfunc.returnType + " " + tfunc.name + "(" + tparam_string + ")");
+                //Method Attributes
+                string tattributes = "";
+
+                if (tfunc.isStatic)
+                    tattributes += "static ";
+
+                if (tfunc.isVirtual)
+                    tattributes += "virtual ";
+
+                if (tfunc.isAbstract)
+                    tattributes += "abstract ";
+
+                //Method Definition (attributes + return type + name + parameters + inheritance)
+                tout.Add(Indent(4) + Indent(4) + "public " + tattributes + tfunc.returnType + " " + tfunction_name + "(" + tparam_string + ")" + tinheritance);
                 //tout.Add(Indent(4) + Indent(4) + "{");
-                //Add all method variables
+                
+                //Method Variables
                 for (int j = 0; j < tfunc.variables.Count; j++)
                     tout.Add(Indent(4) + Indent(4) + VarToString(tfunc.variables[j]));
-                //Add method body
-                for (int j = 0; j < tfunc.commands.Count; j++)
-                    tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(tfunc.commands[j]));
+
+                tout.AddRange(tbody);
+
                 //tout.AddRange(tfunc.commands);
                 //tout.Add(Indent(4) + Indent(4) + "}");
             }
@@ -213,7 +285,18 @@ namespace Translator {
 
         public string PropertyToString(Property iprop)
         {
-            return iprop.type + " " + iprop.name + " { get { return " + iprop.read + ";} set { return " + iprop.write + ";} }";
+            string tread = "", twrite = "";
+            if (iprop.read == "null")
+                tread = "";
+            else
+                tread = "return " + iprop.read + ";";
+
+            if (iprop.write == "null")
+                twrite = "";
+            else
+                twrite = "value = " + iprop.write + ";";
+
+            return iprop.type + " " + iprop.name + " { get { " + tread + "} set { " + twrite + "} }";
         }
 
         public string TypeToString(TypeAlias itype)

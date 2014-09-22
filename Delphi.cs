@@ -291,6 +291,7 @@ namespace Translator
                 //Ignore comments and empty lines
                 if (!(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
                 {
+                    DelphiClassStrings tclassdef = new DelphiClassStrings();
                     switch (RecognizeKey(istrings[tcurr_string_count], ref interfaceKindKeys))
                     {
                         case "class":   //Check if it is a forward declaration or alias
@@ -301,8 +302,7 @@ namespace Translator
                                             if (tstring.IndexOf("class(") != -1)
                                             {
                                                 string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('='); 
-                                                tclassname = ttemparr[0];
-                                                DelphiClassStrings tclassdef = new DelphiClassStrings();
+                                                tclassname = ttemparr[0];                                                
                                                 tclassdef.name = tclassname;
                                                 tclassdef.baseclass = ttemparr[1].Replace("class(", "").Replace(");", "");
                                                 oclassdefinitions.Add(tclassdef);
@@ -321,7 +321,6 @@ namespace Translator
                                             if (tnext_subsection_pos == -1)
                                                 throw new Exception("Incomplete class definition");
 
-                                            DelphiClassStrings tclassdef = new DelphiClassStrings();
                                             tclassdef.name = tclassname;
                                             tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
@@ -337,8 +336,7 @@ namespace Translator
 
                                         if (tnext_subsection_pos == -1)
                                             throw new Exception("Incomplete class definition");
-
-                                        tclassdef = new DelphiClassStrings();
+                                        
                                         tclassdef.name = tclassname;
                                         tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
@@ -690,13 +688,15 @@ namespace Translator
             {
                 int i = 0;
                 //Check if const is a parameter
-                while ((tconst_pos <= tclosebracket_pos) && (tconst_pos >= topenbracket_pos))
+                if (topenbracket_pos != -1)
                 {
-                    //Look for more consts
-                    tconst_pos = FindNextSymbol(ref istrings, "const", icurr_string_count + i);
-                    i++;
+                    while ((tconst_pos <= tclosebracket_pos) && (tconst_pos >= topenbracket_pos))
+                    {
+                        //Look for more consts
+                        tconst_pos = FindNextSymbol(ref istrings, "const", icurr_string_count + i);
+                        i++;
+                    }
                 }
-
                 //Check if this const comes before "begin". If yes, then this is a sub-section declaration. Otherwise ignore.
                 if ((tconst_pos != -1) && (tconst_pos < tnext_pos))
                     tnext_pos = tconst_pos;
@@ -1002,6 +1002,8 @@ namespace Translator
 
             int isproperty = iline.IndexOf("property");
 
+
+            //Handle Properties
             if (isproperty != -1)
             {
                 string tstr = iline.Replace("property", "").Replace("class", "").Replace(";", "").Trim();
@@ -1066,11 +1068,12 @@ namespace Translator
                     tout.Add(tstr_arr[2].Trim());
                 }
             }
+            //Handle variables and constants
             else
             {
                 tstr_arr = iline.Split(':');
                 string[] tstr_arr2 = tstr_arr[0].Trim().Split(' ');
-                tout.Add(tstr_arr2[tstr_arr2.GetLength(0)-1]);
+                tout.Add(tstr_arr2[tstr_arr2.GetLength(0) - 1]);
                 tout.Add(tstr_arr[1].Split(';')[0]);
             }
             return tout;
@@ -1162,7 +1165,7 @@ namespace Translator
            	return -1;
 		}
                                                            
-	    static private int FindStringInList(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
+	    static public int FindStringInList(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
 		{
 	    	for (int i = iindex; i < iarray.Count; i++)
 	    	{
@@ -1201,8 +1204,16 @@ namespace Translator
                 tclass.name = inames[i];
                 tclass.baseclass = idefinitions[i].baseclass;
                 Variable tvar;
+                Constant tconst;
 
-                //Add Variables, Properties and method names from definitions
+                //Add Constants, Variables, Properties and method names from definitions
+                for (int j = 0; j < tdefinition.consts.Count; j++)
+                {
+                    //tdefinition_parts = RecognizeClassDefinition(tdefinition.consts[j].value);
+                    tconst = StringToConstant(tdefinition.consts[j].value);//new Constant(tdefinition_parts[0], tdefinition_parts[1], tdefinition_parts[2], tdefinition.variables[j].isStatic);
+                    tclass.constants.Add(tconst);
+                }
+
                 for (int j = 0; j < tdefinition.variables.Count; j++)
                 {
                     tdefinition_parts = RecognizeClassDefinition(tdefinition.variables[j].value);
@@ -1268,13 +1279,13 @@ namespace Translator
                         else if (tlength == 2)
                         {
                             //Variables in method parameter. They are not static, so false in Variable Constructor
-                            tvar = new Variable(tvar_arr[tlength - 1], tvar_arr[0], false);
+                            tvar = new Variable(tvar_arr[0], tvar_arr[tlength - 1], false);
                             tparams.Add(tvar);
                         }
                         else if (tlength == 3)
                         {
                             //Variables in method parameter. They are not static, so false in Variable Constructor
-                            tvar = new Variable(tvar_arr[tlength - 1], tvar_arr[0] + " " + tvar_arr[1], false);
+                            tvar = new Variable(tvar_arr[0] + " " + tvar_arr[1],  tvar_arr[tlength - 1], false);
                             tparams.Add(tvar);
                         }
                         else
@@ -1365,9 +1376,9 @@ namespace Translator
 
 
             //Check if this a array declaration
-            int tisArray = iconst.IndexOf("array");
+            int tIsArray = iconst.IndexOf("array");
 
-            if ((tisArray != -1) && (iconst.IndexOf("[") != -1))
+            if ((tIsArray != -1) && (iconst.IndexOf("[") != -1))
             {
                 tvalue = tvalue.Replace('(', '{');
                 tvalue = tvalue.Replace(')', '}');

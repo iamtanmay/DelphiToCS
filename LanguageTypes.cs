@@ -45,6 +45,13 @@ namespace Translator
             type = itype;
             value = ivalue;
         }
+        public Constant(string iname, string itype, string ivalue, bool iisStatic)
+        {
+            name = iname;
+            type = itype;
+            value = ivalue;
+            isStatic = iisStatic;
+        }
 
         //Evaluate the possible type for the Constant based on value
         public Constant(string iname, string ivalue)

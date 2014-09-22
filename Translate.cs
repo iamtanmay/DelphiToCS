@@ -213,6 +213,8 @@ namespace Translator
             tdelphi.Read(ref tdelphitext, true, "{ --", "-- }", ilog);
 
             CSharp tcsharp = new CSharp();
+            tcsharp.file_path = tdelphi.outPath;
+
             string[] tout = tcsharp.Write(ref tdelphi.script, idirectory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref iStandardReferences, ref iStandardCSReferences).ToArray();
 
             //Write to file

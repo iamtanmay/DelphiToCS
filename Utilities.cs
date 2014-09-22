@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 
 namespace Translator
@@ -21,27 +22,79 @@ namespace Translator
             return ttext.ToList();
         }
 
+        public static string Delphi2CSRules(string istring)
+        {
+            //New object creation
+            int tindex = istring.IndexOf(".Create(");
+            if (tindex != -1)
+            {
+                string[] tarr = istring.Split(' ');
+
+                tindex = tarr[0].IndexOf(".Create(");
+                int i = 0;
+                while (tindex == -1)
+                {
+                    i++;
+                    tindex = tarr[i].IndexOf(".Create(");
+                }
+                tarr[i] = "new " + tarr[i].Replace(".Create", "");
+                istring = "";
+
+                for (i = 0; i < tarr.GetLength(0); i++)
+                {
+                    istring = istring + " " + tarr[i];
+                }
+            }
+
+            return istring;
+        }
+        
         public static string Beautify_Delphi2CS(string istring)
         {
+            string pattern = "";
+
             istring = istring.Replace("#", "(char)"); //ASCII usage
+
             istring = istring.Replace("{", "/*");//Comments
             istring = istring.Replace("}", "*/"); 
+
             istring = istring.Replace("begin", "{");//Scope
             istring = istring.Replace("end;", "}");
-            istring = istring.Replace("end.", "}");
+            istring = istring.Replace("end.", "");
             istring = istring.Replace("end", "}");
+            
             istring = istring.Replace("'", "\"");//String quotes
+            
             istring = istring.Replace(" and ", " && ");//Logical
             istring = istring.Replace(" or ", " || ");
             istring = istring.Replace("xor", "^");
             istring = istring.Replace("not", "!");
-            istring = istring.Replace("<>", "!=");
             istring = istring.Replace("=", "==");
+            
             istring = istring.Replace("low(Integer)", " 0 * (");//Lower bound
+            
+            pattern = @"\bresult\b";
+            string tstr = Regex.Replace(istring, pattern, "return");//Method return
+            if (istring != tstr)
+                istring = tstr.Replace(":==", "").Replace("  "," ");
+
+            istring = istring.Replace("EXIT", "return");//Method return
+
             istring = istring.Replace(":==", "=");//Assignment
-            istring = istring.Replace("shr", ">>");
+
+            istring = istring.Replace("<>", "!=");//Logical
+            
+            istring = istring.Replace("shr", ">>");//Byte shift
             istring = istring.Replace("shl", "<<");
+
             istring = istring.Replace("\n", "");//Carriage return
+
+            istring = istring.Replace("if", "if(");//Conditional
+            istring = istring.Replace("then", ")");//Conditional
+
+            istring = istring.Replace("FreeAndNil", "//FreeAndNil");//Memory deallocation
+
+
             istring = istring.Replace("boolean ", "bool");//Types
             istring = istring.Replace("Boolean ", "bool");
             istring = istring.Replace("integer ", "int");
@@ -54,6 +107,7 @@ namespace Translator
             istring = istring.Replace("Shortstring ", "string");
             istring = istring.Replace("Real ", "double");
             istring = istring.Replace("real ", "double");
+
 
             return istring;
         }
