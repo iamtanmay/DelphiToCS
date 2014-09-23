@@ -53,12 +53,25 @@ namespace Translator
 
         private void GUI_Load(object sender, EventArgs e)
         {
-            standardDelphiReferences = new List<string> { "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
+            standardDelphiReferences = new List<string> { "Generics.Collections / System.Collections.Generic", "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
+            
+            //Load last used settings
+            if (DelphiToCSTranslator.Properties.Settings.Default.InPath != "")
+                BoxSource.Text = DelphiToCSTranslator.Properties.Settings.Default.InPath;
 
-            standardDelphiReferences.ForEach(s => {
-                richTextBox1.Text += s;
-                richTextBox1.Text += Environment.NewLine;
-            });
+            if (DelphiToCSTranslator.Properties.Settings.Default.OutPath != "")
+                BoxDest.Text = DelphiToCSTranslator.Properties.Settings.Default.OutPath;
+
+            if (DelphiToCSTranslator.Properties.Settings.Default.PatchPath != "")
+                BoxPatch.Text = DelphiToCSTranslator.Properties.Settings.Default.PatchPath;
+
+            if (DelphiToCSTranslator.Properties.Settings.Default.StdLibraries != "")
+                richTextBox1.Text = DelphiToCSTranslator.Properties.Settings.Default.StdLibraries;
+            else
+                standardDelphiReferences.ForEach(s => {
+                    richTextBox1.Text += s;
+                    richTextBox1.Text += Environment.NewLine;
+                });
         }
 
         private void BtnSource_Click(object sender, EventArgs e)
@@ -85,9 +98,19 @@ namespace Translator
 
         private void BtnRun_Click(object sender, EventArgs e)
         {
+            //Save last used settings
+            if (BoxSource.Text != "")
+                DelphiToCSTranslator.Properties.Settings.Default.InPath = BoxSource.Text;
+            if (BoxDest.Text != "")
+                DelphiToCSTranslator.Properties.Settings.Default.OutPath = BoxDest.Text;
+            if (BoxPatch.Text != "")
+                DelphiToCSTranslator.Properties.Settings.Default.PatchPath = BoxPatch.Text;
+            if (richTextBox1.Text != "")
+                DelphiToCSTranslator.Properties.Settings.Default.StdLibraries = richTextBox1.Text;
+
             string[] tstrArr = richTextBox1.Text.Split(Environment.NewLine.ToCharArray());
-            standardDelphiReferences = new List<string>(tstrArr);
-            standardCSReferences = new List<string>(tstrArr);
+            standardDelphiReferences = new List<string>();
+            standardCSReferences = new List<string>();
 
             //Get a list of Standard Delphi libraries, and their CS substitutes
             for (int i = 0; i < tstrArr.Length; i++ )

@@ -20,7 +20,7 @@ namespace Translator {
 
             for (int i = 0; i < iStandardReferences.Count; i++)
             {
-                if (ilibrary == iStandardReferences[i])
+                if (ilibrary.Trim().ToLower() == iStandardReferences[i].Trim().ToLower())
                 {
                     project_references.AddRange(iStandardCSReferences[i]);
                     isStandardRef = true;
@@ -142,46 +142,69 @@ namespace Translator {
             for (int i = 0; i < iclass.constants.Count; i++)
             {
                 oelement_names.Add(iclass.constants[i].name);
-                tout.Add(Indent(4) + Indent(4) + "public " + ConstantToString(iclass.constants[i]));
+                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(ConstantToString(iclass.constants[i])));
             }
 
             for (int i = 0; i < iclass.enums.Count; i++)
             {
                 oelement_names.Add(iclass.enums[i].name);
-                tout.Add(Indent(4) + Indent(4) + EnumToString(iclass.enums[i]));
+                tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(EnumToString(iclass.enums[i])));
             }
 
             for (int i = 0; i < iclass.variables.Count; i++)
             {
                 oelement_names.Add(iclass.variables[i].name);
                 if (iclass.variables[i].isStatic)
-                    tout.Add(Indent(4) + Indent(4) + "public static " + VarToString(iclass.variables[i]));
+                    tout.Add(Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(VarToString(iclass.variables[i])));
                 else
-                    tout.Add(Indent(4) + Indent(4) + "public " + VarToString(iclass.variables[i]));
+                    tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(VarToString(iclass.variables[i])));
             }
 
             for (int i = 0; i < iclass.properties.Count; i++)
             {
                 oelement_names.Add(iclass.properties[i].name); 
-                tout.Add(Indent(4) + Indent(4) + "public " + PropertyToString(iclass.properties[i]));
+                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(PropertyToString(iclass.properties[i])));
             }
 
             for (int i = 0; i < iclass.types.Count; i++)
             {
                 oelement_names.Add(iclass.types[i].name); 
-                tout.Add(Indent(4) + Indent(4) + TypeToString(iclass.types[i]));
+                tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(TypeToString(iclass.types[i])));
             }
 
             for (int i = 0; i < iclass.functions.Count; i++)
             {
+                tout.Add("");
+
                 Function tfunc = iclass.functions[i];
                 string tfunction_name = tfunc.name;
+                string treturn_type = Utilities.Beautify_Delphi2CS(tfunc.returnType);
 
                 //Method body
                 List<string> tbody = new List<string>();
 
                 for (int j = 0; j < tfunc.commands.Count; j++)
-                    tbody.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(tfunc.commands[j])));
+                {
+                    string tstr = tfunc.commands[j].Trim();
+                    //Remove all empty lines
+                    if (( tstr!= "") && (tstr != "\n"))
+                        tstr = Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(tfunc.commands[j]));
+                    
+                    //Check if output is empty
+                    if ((tstr != "") && (tstr != "\n"))
+                    {
+                        //If line is only "Exit;", check for type to return
+                        if (tstr.IndexOf("Exit;") != -1)
+                        {
+                            if (treturn_type != "void")
+                                tbody.Add(Indent(4) + Indent(4)  + Indent(4) + "return result;");
+                            else
+                                tbody.Add(Indent(4) + Indent(4)  + Indent(4) + "return;");
+                        }
+                        else
+                            tbody.Add(Indent(4) + Indent(4) + tstr);
+                    }
+                }
 
                 bool tHasBaseclass = true;
                 string tinheritance = ""; 
@@ -244,17 +267,29 @@ namespace Translator {
                     tattributes += "abstract ";
 
                 //Method Definition (attributes + return type + name + parameters + inheritance)
-                tout.Add(Indent(4) + Indent(4) + "public " + tattributes + tfunc.returnType + " " + tfunction_name + "(" + tparam_string + ")" + tinheritance);
-                //tout.Add(Indent(4) + Indent(4) + "{");
-                
+                tout.Add(Indent(4) + Indent(4) + "public " + tattributes + treturn_type + " " + tfunction_name + "(" + Utilities.Beautify_Delphi2CS(tparam_string) + ")" + tinheritance);
+
+                tout.Add(Indent(4) + Indent(4) + "{");
+                //Add 'result'
+                if (treturn_type != "void")
+                    tout.Add(Indent(4) + Indent(4) + Indent(4) + treturn_type + " result;");
+
+                //Method Constants
+                for (int j = 0; j < tfunc.constants.Count; j++)
+                    tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(ConstantToString(tfunc.constants[j])));
+
                 //Method Variables
                 for (int j = 0; j < tfunc.variables.Count; j++)
-                    tout.Add(Indent(4) + Indent(4) + VarToString(tfunc.variables[j]));
-
+                    tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(VarToString(tfunc.variables[j])));
+                
+                tbody.RemoveAt(0);
+                tbody.RemoveAt(tbody.Count-1);
                 tout.AddRange(tbody);
 
-                //tout.AddRange(tfunc.commands);
-                //tout.Add(Indent(4) + Indent(4) + "}");
+                if (treturn_type != "void")
+                    tout.Add(Indent(4) + Indent(4) + Indent(4) + "return result;");
+
+                tout.Add(Indent(4) + Indent(4) + "}");
             }
 
             return tout;

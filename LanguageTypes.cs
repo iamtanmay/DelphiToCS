@@ -121,8 +121,8 @@ namespace Translator
         public bool isVirtual, isAbstract, isStatic;
         public List<Variable> parameters, variables;
         public List<Constant> constants;
-        public List<string> commands; 
-        public string returnType;
+        public List<string> commands;
+        public string returnType = "void";
 
         public Function()
         {
@@ -130,6 +130,7 @@ namespace Translator
             variables = new List<Variable>();
             constants = new List<Constant>();
             commands = new List<string>();
+            returnType = "void";
         }
 
         public Function(string iname, List<Variable> iparameters, string ireturnType, bool iisVirtual, bool iisAbstract, bool iisStatic, List<Constant> iconsts, List<Variable> ivariables, List<string> icommands)
@@ -141,6 +142,10 @@ namespace Translator
             name = iname.Trim();
             parameters = iparameters;
             returnType = ireturnType.Trim();
+            
+            if (returnType == "")
+                returnType = "void";
+
             isVirtual = iisVirtual;
             isStatic = iisStatic;
             isAbstract = iisAbstract;

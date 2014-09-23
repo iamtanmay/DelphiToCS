@@ -311,6 +311,7 @@ namespace Translator
                                             else
                                             {
                                             }
+                                            tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
                                         }
                                         else
                                         { 
@@ -351,10 +352,15 @@ namespace Translator
                                             tnext_subsection_pos = FindNextSymbol(ref istrings, ");", tcurr_string_count);
 
                                             if (tnext_subsection_pos == -1)
+                                            {
+                                                tcurr_string_count++;
                                                 throw new Exception("Incomplete Enum definition");
-
-                                            oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos).ToArray())));
-                                            tcurr_string_count = tnext_subsection_pos + 1;
+                                            }
+                                            else
+                                            {
+                                                oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos).ToArray())));
+                                                tcurr_string_count = tnext_subsection_pos + 1;
+                                            }
                                         }
                                         //Type Alias start
                                         else if ((istrings[tcurr_string_count].IndexOf('=') != -1) && (istrings[tcurr_string_count].IndexOf(';') != -1))
@@ -374,6 +380,7 @@ namespace Translator
                                             tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
                                             tlogmessages.Add(istrings[tcurr_string_count]);
                                             log(tlogmessages);
+                                            tcurr_string_count++;
                                         }
                                         break;
                     }
@@ -1295,18 +1302,18 @@ namespace Translator
                     }
 
                     int const_start = tdefinition.methods[j].const_start, begin_start = tdefinition.methods[j].begin_start, var_start = tdefinition.methods[j].var_start;
-                    int from_pos = -1, till_pos = -1, body_start = -1;
-
-                    List<Constant> tconsts = new List<Constant>();
+                    int from_pos = -1, till_pos = -1, body_start = begin_start;
 
                     //Get const and var lists
+                    List<Constant> tconsts = new List<Constant>();
                     if (const_start != -1)
                     {
                         from_pos = const_start;
-                        if (const_start < var_start)
+                        body_start = const_start;
+
+                        if (var_start > const_start)
                         {
                             till_pos = var_start;
-                            body_start = const_start;
                         }
                         else
                             till_pos = begin_start;
@@ -1328,13 +1335,17 @@ namespace Translator
                     if (var_start != -1)
                     {
                         from_pos = var_start;
-                        if (var_start < const_start)
+
+                        if (const_start > var_start)
                         {
                             till_pos = const_start;
-                            body_start = const_start;
+                            body_start = var_start;
                         }
                         else
                             till_pos = begin_start;
+
+                        if (const_start == -1)
+                            body_start = var_start;
 
                         for (int ii = from_pos + 1; ii < till_pos; ii++)
                         {
