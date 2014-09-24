@@ -275,6 +275,15 @@ namespace Translator
             return false;
         }
 
+        private bool CheckRecordVariable(string istring)
+        {
+            string[] tarray = istring.Trim().Split(':');
+
+            if (tarray.GetLength(0) == 2)
+                return true;
+            return false;
+        }
+
         private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int istartpos, int inext_subsection_pos)
         {
             int tnext_subsection_pos = -1, tcurr_string_count = istartpos;
@@ -289,7 +298,7 @@ namespace Translator
             while ((tcurr_string_count < inext_subsection_pos) && (tcurr_string_count < endInterface) && (tcurr_string_count != -1))
             {
                 //Ignore comments and empty lines
-                if (!(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
+                if ((istrings[tcurr_string_count] != "") && !(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
                 {
                     DelphiClassStrings tclassdef = new DelphiClassStrings();
                     switch (RecognizeKey(istrings[tcurr_string_count], ref interfaceKindKeys))
@@ -306,12 +315,15 @@ namespace Translator
                                                 tclassdef.name = tclassname;
                                                 tclassdef.baseclass = ttemparr[1].Replace("class(", "").Replace(");", "");
                                                 oclassdefinitions.Add(tclassdef);
+                                                tcurr_string_count++;
+                                                tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
                                             }
                                             //Forward declaration, ignore
                                             else
                                             {
+                                                tcurr_string_count = tnext_subsection_pos + 1;
+                                                tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                             }
-                                            tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
                                         }
                                         else
                                         { 
@@ -326,9 +338,10 @@ namespace Translator
                                             tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
                                             oclassdefinitions.Add(tclassdef);
+                                            tcurr_string_count = tnext_subsection_pos + 1;
+                                            tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                         }
 
-                                        tcurr_string_count = tnext_subsection_pos + 1;
                                         break;
 
                         case "record":  tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
@@ -339,10 +352,11 @@ namespace Translator
                                             throw new Exception("Incomplete class definition");
                                         
                                         tclassdef.name = tclassname;
-                                        tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                                        tclassdef = ParseRecord(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
                                         oclassdefinitions.Add(tclassdef);
                                         tcurr_string_count = tnext_subsection_pos + 1;
+                                        tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                         break;
 
                         //Check if Enum or Type Alias, else Log unrecognized sub section
@@ -358,9 +372,10 @@ namespace Translator
                                             }
                                             else
                                             {
-                                                oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos).ToArray())));
-                                                tcurr_string_count = tnext_subsection_pos + 1;
+                                                oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos+1).ToArray())));
+                                                tcurr_string_count++;// = tnext_subsection_pos + 1;
                                             }
+                                            //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                         }
                                         //Type Alias start
                                         else if ((istrings[tcurr_string_count].IndexOf('=') != -1) && (istrings[tcurr_string_count].IndexOf(';') != -1))
@@ -370,8 +385,11 @@ namespace Translator
                                             //if (tnext_subsection_pos == -1)
                                             //    throw new Exception("Incomplete Type Alias definition");
 
-                                            otypes.Add(istrings[tcurr_string_count]);
-                                            tcurr_string_count++;
+                                            if (istrings[tcurr_string_count].IndexOf("set of") != -1)
+                                                otypes.Add(istrings[tcurr_string_count].Replace("set of", "HashSet<").Replace(";", ">;"));
+                                            else
+                                                otypes.Add(istrings[tcurr_string_count]);
+                                            tcurr_string_count++;                                            
                                         }
                                         //Unrecognized line logged
                                         else
@@ -384,7 +402,6 @@ namespace Translator
                                         }
                                         break;
                     }
-                    tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                 }
                 else
                 {
@@ -603,6 +620,40 @@ namespace Translator
 
             return tout;
         }
+
+        private DelphiClassStrings ParseRecord(ref List<string> istrings, string iclassname, int icurr_string_count, int inext_subsection_pos)
+        {
+            DelphiClassStrings tout = new DelphiClassStrings();
+            List<string> tstrings = new List<string>();
+            List<DelphiVarStrings> tvars = new List<DelphiVarStrings>(), tproperties = new List<DelphiVarStrings>(), tconsts = new List<DelphiVarStrings>();
+            List<DelphiMethodStrings> tmethods = new List<DelphiMethodStrings>();
+
+            int tcurr_string_count = icurr_string_count;
+
+            //Variable filter. Variables are removed so that functions can be read without confusion
+            int i = icurr_string_count;
+
+            while (i < inext_subsection_pos)
+            {
+                if (istrings[i].IndexOf("set of") != -1)
+                    tvars.Add(new DelphiVarStrings(istrings[i].Replace("set of", "HashSet<").Replace(";", ">;"), false));
+                else if (CheckRecordVariable(istrings[i]))
+                    tvars.Add(new DelphiVarStrings(istrings[i], false));
+                else
+                    tstrings.Add(istrings[i]);
+
+                i++;
+            }
+            
+            tout.name = iclassname;
+            tout.methods = tmethods;
+            tout.variables = tvars;
+            tout.properties = tproperties;
+            tout.consts = tconsts;
+
+            return tout;
+        }
+
 
         private void ParseVar(ref List<string> istrings, ref List<string> ovars)
         {
@@ -1360,7 +1411,7 @@ namespace Translator
                         }
                     }
 
-                    if (body_start != -1)
+                    if ((body_start != -1) && (tdefinition.methods[j].body.Count > 0))
                         tdefinition.methods[j].body.RemoveRange(0, begin_start - body_start);
 
                     //name, parameters, type, IsVirtual, IsAbstract, IsStatic, variables, commands
@@ -1375,6 +1426,30 @@ namespace Translator
         {
             return new List<string>();
         }
+
+        private Constant StringToEnumConstant(string iconst, int iindex, ref string iwholestring)
+        {
+            string[] tarr = iconst.Split('=');
+
+            //An enum with value = index
+            if (tarr.Length == 1)
+            {
+                return new Constant(iconst, iindex + "");
+            }
+            //A constant with a value
+            else if (tarr.Length == 2)
+            {
+                return new Constant(tarr[0], tarr[1]);
+            }
+            //?? Bad input
+            else
+            {
+                //Be sad :-(
+                logsingle("Bad Enum value ! " + iconst + "," + iindex + " in " + iwholestring + " file: " + outPath);
+                return new Constant();
+            }
+        }
+        
 
         private Constant StringToConstant(string iconst)
         {
@@ -1458,8 +1533,7 @@ namespace Translator
             string tname = tenum_arguments[0].Split('=')[0].Trim();
             
             //Remove trailing ')' and ';'
-            tenum_arguments[1].Replace(')', ' ');
-            tenum_arguments[1].Replace(';', ' ');
+            tenum_arguments[1] = tenum_arguments[1].Replace(')', ' ').Replace(';', ' ');
 
             string[] tconstants = tenum_arguments[1].Split(',');
             tconstants[tconstants.GetLength(0) - 1].Trim();
@@ -1467,7 +1541,7 @@ namespace Translator
             //Loop and add all constants
             for (int i = 0; i < tconstants.GetLength(0); i++)
             {
-                Constant tconst = StringToConstant(tconstants[i]);
+                Constant tconst = StringToEnumConstant(tconstants[i], i, ref istring);
                 tconsts.Add(tconst);
             }
 
@@ -1480,7 +1554,7 @@ namespace Translator
             TypeAlias tout;
             string tname, ttype;
 
-            string[] tarr = istring.Split(':');
+            string[] tarr = istring.Split('=');
             tname = tarr[0];
             ttype = tarr[1];
 

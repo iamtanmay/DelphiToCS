@@ -51,19 +51,19 @@ namespace Translator
 
         public static string[] Delphi_CSRegexTypes = {"TList", "boolean", "Boolean", "integer", "Integer", 
                                                     "word", "Word", "dword", "Dword", "shortstring", "Shortstring", 
-                                                    "Real", "real", "{", "}", "begin"},
+                                                    "Real", "real", "{", "}", "begin", "end;", "end."},
 
             Delphi_CSRegexTypesSubstitutes = { "List", "bool", "bool", "int", "int", 
                                             "uint", "uint", "uint", "uint", "string", "string", 
-                                            "double", "double", "/*", "*/", "{" },
+                                            "double", "double", "/*", "*/", "{", "}", "" },
 
-            Delphi_CSNonRegexTypes = { "#", "end;", "end.", "end", "'", "and ", "or ", 
+            Delphi_CSNonRegexTypes = { "#", "'", "and ", "or ", 
                                   "xor ", "not ", "=", "low(Integer)", "EXIT(", ":==", "<>", "shr", "shl", 
-                                  "\n", "if", "then", "FreeAndNil", "TList<", "self.", "(self)", ".Delete("},
+                                  "\n", "if", "then", "FreeAndNil", "TList<", "self.", "(self)", ".Delete(", "end;"},
 
-            Delphi_CSNonRegexSubstitutes = { "(char)", "}", "", "}", "\\", "&& ", "|| ", 
+            Delphi_CSNonRegexSubstitutes = { "(char)", "\\", "&& ", "|| ", 
                                                "^ ", "! ", "==", "0*", "result = (", "=", "!=", ">>", "<<", 
-                                               "", "if(", ")", "//FreeAndNil", "List<", "", "(this)", ".RemoveAt(" };
+                                               "", "if(", ")", "//FreeAndNil", "List<", "", "(this)", ".RemoveAt(", "" };
 
         public static string ReplaceElementsInStringRegex(string istring, ref string[] iElementList, ref string[] iSubstitutesList)
         {
