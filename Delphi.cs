@@ -34,6 +34,7 @@ namespace Translator
             methods = new List<DelphiMethodStrings>();
             properties = new List<DelphiVarStrings>();
             variables = new List<DelphiVarStrings>();
+            consts = new List<DelphiVarStrings>();
             baseclass = "";
         }
 
@@ -322,7 +323,7 @@ namespace Translator
                                             else
                                             {
                                                 tcurr_string_count = tnext_subsection_pos + 1;
-                                                tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                                //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                             }
                                         }
                                         else
@@ -339,7 +340,7 @@ namespace Translator
 
                                             oclassdefinitions.Add(tclassdef);
                                             tcurr_string_count = tnext_subsection_pos + 1;
-                                            tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                            //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                         }
 
                                         break;
@@ -356,7 +357,7 @@ namespace Translator
 
                                         oclassdefinitions.Add(tclassdef);
                                         tcurr_string_count = tnext_subsection_pos + 1;
-                                        tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                        //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                         break;
 
                         //Check if Enum or Type Alias, else Log unrecognized sub section
@@ -387,6 +388,8 @@ namespace Translator
 
                                             if (istrings[tcurr_string_count].IndexOf("set of") != -1)
                                                 otypes.Add(istrings[tcurr_string_count].Replace("set of", "HashSet<").Replace(";", ">;"));
+                                            else if (istrings[tcurr_string_count].IndexOf("set of") != -1)
+                                                otypes.Add(istrings[tcurr_string_count].Replace("array of ", "").Replace(";", "[];"));
                                             else
                                                 otypes.Add(istrings[tcurr_string_count]);
                                             tcurr_string_count++;                                            
@@ -637,6 +640,8 @@ namespace Translator
             {
                 if (istrings[i].IndexOf("set of") != -1)
                     tvars.Add(new DelphiVarStrings(istrings[i].Replace("set of", "HashSet<").Replace(";", ">;"), false));
+                else if (istrings[i].IndexOf("array of") != -1)
+                    tvars.Add(new DelphiVarStrings(istrings[i].Replace("array of", "").Replace(";", "[];"), false));
                 else if (CheckRecordVariable(istrings[i]))
                     tvars.Add(new DelphiVarStrings(istrings[i], false));
                 else
@@ -1513,6 +1518,12 @@ namespace Translator
         {
             Variable tout;
             string tname, ttype;
+
+            if (istring.IndexOf("set of") != -1)
+                istring = istring.Replace("set of", "HashSet<").Replace(";", ">;");
+            else if (istring.IndexOf("array of") != -1)
+                istring = istring.Replace("array of", "").Replace(";", "[];");
+
 
             string[] tarr = istring.Split(':');
             tname = tarr[0];

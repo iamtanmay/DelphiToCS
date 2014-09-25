@@ -45,17 +45,16 @@ namespace Translator
                     istring = istring + " " + tarr[i];
                 }
             }
-
             return istring;
         }
 
         public static string[] Delphi_CSRegexTypes = {"TList", "boolean", "Boolean", "integer", "Integer", 
                                                     "word", "Word", "dword", "Dword", "shortstring", "Shortstring", 
-                                                    "Real", "real", "{", "}", "begin", "end;", "end."},
+                                                    "Real", "real", "{", "}", "begin", "end;", "end.", "Double"},
 
             Delphi_CSRegexTypesSubstitutes = { "List", "bool", "bool", "int", "int", 
                                             "uint", "uint", "uint", "uint", "string", "string", 
-                                            "double", "double", "/*", "*/", "{", "}", "" },
+                                            "double", "double", "/*", "*/", "{", "}", "", "double" },
 
             Delphi_CSNonRegexTypes = { "#", "'", "and ", "or ", 
                                   "xor ", "not ", "=", "low(Integer)", "EXIT(", ":==", "<>", "shr", "shl", 

@@ -142,34 +142,34 @@ namespace Translator {
             for (int i = 0; i < iclass.constants.Count; i++)
             {
                 oelement_names.Add(iclass.constants[i].name);
-                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(ConstantToString(iclass.constants[i])));
+                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(ConstantToString(iclass.constants[i]))));
             }
 
             for (int i = 0; i < iclass.enums.Count; i++)
             {
                 oelement_names.Add(iclass.enums[i].name);
-                tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(EnumToString(iclass.enums[i])));
+                tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(EnumToString(iclass.enums[i]))));
             }
 
             for (int i = 0; i < iclass.variables.Count; i++)
             {
                 oelement_names.Add(iclass.variables[i].name);
                 if (iclass.variables[i].isStatic)
-                    tout.Add(Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(VarToString(iclass.variables[i])));
+                    tout.Add(Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(VarToString(iclass.variables[i]))));
                 else
-                    tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(VarToString(iclass.variables[i])));
+                    tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(VarToString(iclass.variables[i]))));
             }
 
             for (int i = 0; i < iclass.properties.Count; i++)
             {
                 oelement_names.Add(iclass.properties[i].name); 
-                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(PropertyToString(iclass.properties[i])));
+                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
             }
 
             for (int i = 0; i < iclass.types.Count; i++)
             {
                 oelement_names.Add(iclass.types[i].name); 
-                tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(TypeToString(iclass.types[i])));
+                tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(TypeToString(iclass.types[i]))));
             }
 
             for (int i = 0; i < iclass.functions.Count; i++)
