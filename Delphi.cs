@@ -21,6 +21,7 @@ namespace Translator
     public class DelphiClassStrings
     {
         public string name;
+        public string type;
         public string baseclass;
         public List<DelphiMethodStrings> methods;
         public List<DelphiVarStrings> properties;
@@ -36,6 +37,7 @@ namespace Translator
             variables = new List<DelphiVarStrings>();
             consts = new List<DelphiVarStrings>();
             baseclass = "";
+            type = "";
         }
 
         public void AddMethodDefinition(string iheader, bool iAbstract, bool iVirtual, bool iOverloaded)
@@ -71,7 +73,9 @@ namespace Translator
         {
             header = iheader;
             body = new List<string>();
-            body = ibody;
+
+            if (ibody != null)
+                body = ibody;
             
             const_start = -1;
             var_start = -1;
@@ -123,7 +127,7 @@ namespace Translator
     	public static string[] subsectionKeys = {"type","const","uses"};
 
         //Divide subsection kinds
-        public static string[] interfaceKindKeys = {"class","record","procedure","function" };
+        public static string[] interfaceKindKeys = {"class","record","procedure","function", "interface" };
         public static string[] implementKindKeys = { "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "uses", "property", "const" };
 
         //Divide method commands
@@ -271,16 +275,16 @@ namespace Translator
         {
             string[] tarray = istring.Trim().Split(' ');
 
-            if ((tarray.GetLength(0) == 2) && ((tarray[0][0] == 'f') || (tarray[0][0] == 'F')) && (istring.Split(':').GetLength(0) == 2))
+            if ((tarray.GetLength(0) >= 2) && ((tarray[0][0] == 'f') || (tarray[0][0] == 'F')) && (istring.Split(':').GetLength(0) == 2))
                 return true;
             return false;
         }
 
         private bool CheckRecordVariable(string istring)
         {
-            string[] tarray = istring.Trim().Split(':');
+            string[] tarray = istring.Trim().Split(' ');
 
-            if (tarray.GetLength(0) == 2)
+            if ((tarray.GetLength(0) >= 2) && (istring.Split(':').GetLength(0) == 2))
                 return true;
             return false;
         }
@@ -314,7 +318,9 @@ namespace Translator
                                                 string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('='); 
                                                 tclassname = ttemparr[0];                                                
                                                 tclassdef.name = tclassname;
+                                                tclassdef.type = "c";
                                                 tclassdef.baseclass = ttemparr[1].Replace("class(", "").Replace(");", "");
+                                                oclassnames.Add(tclassname); 
                                                 oclassdefinitions.Add(tclassdef);
                                                 tcurr_string_count++;
                                                 tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
@@ -330,14 +336,57 @@ namespace Translator
                                         { 
                                             tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
                                             tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
-                                            oclassnames.Add(tclassname);
 
                                             if (tnext_subsection_pos == -1)
                                                 throw new Exception("Incomplete class definition");
 
+                                            tclassdef.type = "c";
                                             tclassdef.name = tclassname;
                                             tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
+                                            oclassnames.Add(tclassname);
+                                            oclassdefinitions.Add(tclassdef);
+                                            tcurr_string_count = tnext_subsection_pos + 1;
+                                            //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                        }
+
+                                        break;
+                        case "interface":   //Check if it is a forward declaration or alias
+                                        tstring = istrings[tcurr_string_count];
+                                        if (tstring.IndexOf(";") != -1)
+                                        {
+                                            //Alias, just make an empty class with this baseclass
+                                            if (tstring.IndexOf("interface(") != -1)
+                                            {
+                                                string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('=');
+                                                tclassname = ttemparr[0];
+                                                tclassdef.name = tclassname;
+                                                tclassdef.baseclass = ttemparr[1].Replace("interface(", "").Replace(");", "");
+                                                tclassdef.type = "i";
+                                                oclassnames.Add(tclassname);
+                                                oclassdefinitions.Add(tclassdef);
+                                                tcurr_string_count++;
+                                                tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
+                                            }
+                                            //Forward declaration, ignore
+                                            else
+                                            {
+                                                tcurr_string_count = tnext_subsection_pos + 1;
+                                                //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+
+                                            if (tnext_subsection_pos == -1)
+                                                throw new Exception("Incomplete interface definition");
+
+                                            tclassdef.name = tclassname;
+                                            tclassdef.type = "i";
+                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                                            oclassnames.Add(tclassname);
                                             oclassdefinitions.Add(tclassdef);
                                             tcurr_string_count = tnext_subsection_pos + 1;
                                             //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
@@ -347,14 +396,14 @@ namespace Translator
 
                         case "record":  tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
                                         tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
-                                        oclassnames.Add(tclassname);
 
                                         if (tnext_subsection_pos == -1)
                                             throw new Exception("Incomplete class definition");
                                         
                                         tclassdef.name = tclassname;
+                                        tclassdef.type = "r";
                                         tclassdef = ParseRecord(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
-
+                                        oclassnames.Add(tclassname);
                                         oclassdefinitions.Add(tclassdef);
                                         tcurr_string_count = tnext_subsection_pos + 1;
                                         //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
@@ -392,7 +441,8 @@ namespace Translator
                                                 otypes.Add(istrings[tcurr_string_count].Replace("array of ", "").Replace(";", "[];"));
                                             else
                                                 otypes.Add(istrings[tcurr_string_count]);
-                                            tcurr_string_count++;                                            
+
+                                            tcurr_string_count++;                                              
                                         }
                                         //Unrecognized line logged
                                         else
@@ -1265,7 +1315,8 @@ namespace Translator
                 //List<string> timplementation = iimplementations[i];
                 List<string> tdefinition_parts = new List<string>();
                 tclass.name = inames[i];
-                tclass.baseclass = idefinitions[i].baseclass;
+                tclass.type = tdefinition.type;
+                tclass.baseclass = tdefinition.baseclass;
                 Variable tvar;
                 Constant tconst;
 
@@ -1279,9 +1330,22 @@ namespace Translator
 
                 for (int j = 0; j < tdefinition.variables.Count; j++)
                 {
-                    tdefinition_parts = RecognizeClassDefinition(tdefinition.variables[j].value);
-                    tvar = new Variable(tdefinition_parts[0], tdefinition_parts[1], tdefinition.variables[j].isStatic);
-                    tclass.variables.Add(tvar);
+                    //tdefinition_parts = RecognizeClassDefinition(tdefinition.variables[j].value);
+
+                    string[] tvar_arr = tdefinition.variables[j].value.Replace(";","").Trim().Split(':');
+                    string tvartype = tvar_arr[1].Trim();
+                    string[] tvars = tvar_arr[0].Trim().Split(',');
+
+                    int tlength = tvars.GetLength(0);
+
+                    for (int jj = 0; jj < tlength; jj++)
+                    {
+                        tvar = new Variable(tvars[jj], tvartype, tdefinition.variables[j].isStatic);
+                        tclass.variables.Add(tvar);
+                    }
+
+                    //tvar = new Variable(tdefinition_parts[0], tdefinition_parts[1], tdefinition.variables[j].isStatic);
+                    //tclass.variables.Add(tvar);
                 }
 
                 for (int j = 0; j < tdefinition.properties.Count; j++)
@@ -1345,16 +1409,20 @@ namespace Translator
                             tvar = new Variable(tvar_arr[0], tvar_arr[tlength - 1], false);
                             tparams.Add(tvar);
                         }
-                        else if (tlength == 3)
+                        else //if (tlength == 3)
                         {
                             //Variables in method parameter. They are not static, so false in Variable Constructor
-                            tvar = new Variable(tvar_arr[0] + " " + tvar_arr[1],  tvar_arr[tlength - 1], false);
-                            tparams.Add(tvar);
+                            //tvar = new Variable(tvar_arr[0] + " " + tvar_arr[1],  tvar_arr[tlength - 1], false);
+                            for (int jj = 0; jj < (tlength - 2); jj++)
+                            {
+                                tvar = new Variable(tvar_arr[jj], tvar_arr[tlength - 1], false);
+                                tparams.Add(tvar);
+                            }
                         }
-                        else
-                        {
-                            throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[i] + " from Text.");
-                        }
+                        //else
+                        //{
+                        //    throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[i] + " from Text.");
+                        //}
                     }
 
                     int const_start = tdefinition.methods[j].const_start, begin_start = tdefinition.methods[j].begin_start, var_start = tdefinition.methods[j].var_start;

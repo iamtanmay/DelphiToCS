@@ -103,6 +103,14 @@ namespace Translator {
                 if ((iscript.classes[i].baseclass == null) || (iscript.classes[i].baseclass == "") || (iscript.classes[i].baseclass == "null"))
                     tHasBaseclass = false;
 
+                string classtype = "";
+                if ((iscript.classes[i].type == "c"))
+                    classtype = "class";
+                else if ((iscript.classes[i].type == "r"))
+                    classtype = "struct";
+                else
+                    classtype = "interface";
+
                 //Handle constructor
 
                 tout.Add("");
@@ -111,9 +119,9 @@ namespace Translator {
                 //Classes / Interfaces
                 //Inheritance
                 if (!tHasBaseclass)
-                    tout.Add(Indent(4) + "public class " + iscript.classes[i].name);
+                    tout.Add(Indent(4) + "public " + classtype + " " + iscript.classes[i].name);
                 else
-                    tout.Add(Indent(4) + "public class " + iscript.classes[i].name + " : " + iscript.classes[i].baseclass);
+                    tout.Add(Indent(4) + "public " + classtype + " " + iscript.classes[i].name + " : " + iscript.classes[i].baseclass);
 
                 tout.Add(Indent(4) + "{");
 
@@ -281,9 +289,13 @@ namespace Translator {
                 //Method Variables
                 for (int j = 0; j < tfunc.variables.Count; j++)
                     tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(VarToString(tfunc.variables[j])));
-                
-                tbody.RemoveAt(0);
-                tbody.RemoveAt(tbody.Count-1);
+
+                if (tbody.Count > 0)
+                {
+                    tbody.RemoveAt(0);
+                    tbody.RemoveAt(tbody.Count - 1);
+                }
+
                 tout.AddRange(tbody);
 
                 if (treturn_type != "void")

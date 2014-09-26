@@ -157,7 +157,8 @@ namespace Translator
     
     public class Class
     {
-    	public string name, baseclass;
+        //type = record, class or interface
+    	public string name, baseclass, type;
         public List<Variable> variables;
         public List<Constant> constants;
         public List<Enum> enums;
@@ -167,6 +168,7 @@ namespace Translator
 
         public Class()
         {
+            type = "";
             variables = new List<Variable>();
             constants = new List<Constant>();
             enums = new List<Enum>();
