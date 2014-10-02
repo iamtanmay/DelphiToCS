@@ -36,8 +36,6 @@ namespace Translator
             properties = new List<DelphiVarStrings>();
             variables = new List<DelphiVarStrings>();
             consts = new List<DelphiVarStrings>();
-            baseclass = "";
-            type = "";
         }
 
         public void AddMethodDefinition(string iheader, bool iAbstract, bool iVirtual, bool iOverloaded)
@@ -253,11 +251,26 @@ namespace Translator
 
             	switch (RecognizeKey(istrings[tcurr_string_count], ref subsectionKeys))
             	{
-                    case "const":   oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
+                    case "const":   int tendRange = tnext_subsection_pos;
+                                    
+                                    if (tendRange == -1)
+                                        tendRange = endInterface;
+                                    
+                                    oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tendRange)); break;
 
-                    case "type":  ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count, tnext_subsection_pos); break;
+                    case "type":    tendRange = tnext_subsection_pos;
 
-                    case "uses":    ouses.AddRange(GetStringSubList(ref  istrings, tcurr_string_count + 1, tnext_subsection_pos)); break;
+                                    if (tendRange == -1)
+                                        tendRange = endInterface; 
+                                    
+                                    ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count, tendRange); break;
+
+                    case "uses":    tendRange = tnext_subsection_pos;
+
+                                    if (tendRange == -1)
+                                        tendRange = endInterface;
+
+                                    ouses.AddRange(GetStringSubList(ref  istrings, tcurr_string_count + 1, tendRange)); break;
 
         			//Log unrecognized sub section
         			default: 		List<string> tlogmessages = new List<string>();
@@ -340,9 +353,9 @@ namespace Translator
                                             if (tnext_subsection_pos == -1)
                                                 throw new Exception("Incomplete class definition");
 
+                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
                                             tclassdef.type = "c";
                                             tclassdef.name = tclassname;
-                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
 
                                             oclassnames.Add(tclassname);
                                             oclassdefinitions.Add(tclassdef);
@@ -383,9 +396,9 @@ namespace Translator
                                             if (tnext_subsection_pos == -1)
                                                 throw new Exception("Incomplete interface definition");
 
+                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
                                             tclassdef.name = tclassname;
                                             tclassdef.type = "i";
-                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
                                             oclassnames.Add(tclassname);
                                             oclassdefinitions.Add(tclassdef);
                                             tcurr_string_count = tnext_subsection_pos + 1;
@@ -400,9 +413,9 @@ namespace Translator
                                         if (tnext_subsection_pos == -1)
                                             throw new Exception("Incomplete class definition");
                                         
+                                        tclassdef = ParseRecord(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
                                         tclassdef.name = tclassname;
                                         tclassdef.type = "r";
-                                        tclassdef = ParseRecord(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
                                         oclassnames.Add(tclassname);
                                         oclassdefinitions.Add(tclassdef);
                                         tcurr_string_count = tnext_subsection_pos + 1;
@@ -780,9 +793,9 @@ namespace Translator
 
             //Check for parameters
 
-            int tnext_pos = FindNextSymbol(ref istrings, "begin", icurr_string_count);
-            int tvar_pos = FindNextSymbol(ref istrings, "var", icurr_string_count);
-            int tconst_pos = FindNextSymbol(ref istrings, "const", icurr_string_count);
+            int tnext_pos = FindNextSymbol(ref istrings, "begin", icurr_string_count, true);
+            int tvar_pos = FindNextSymbol(ref istrings, "var", icurr_string_count, true);
+            int tconst_pos = FindNextSymbol(ref istrings, "const", icurr_string_count, true);
 
             int tclosebracket_pos = FindNextSymbol(ref istrings, ")", icurr_string_count-1);
             int topenbracket_pos = FindNextSymbol(ref istrings, "(", icurr_string_count - 1);
@@ -939,21 +952,26 @@ namespace Translator
         {
             if (ireadheader)
             {
-            	startHeader = FindStringInList(iheaderstart, ref istrings, 0, true);
-            	if (startHeader != -1)
-            	{
-            		endHeader = FindStringInList(iheaderend, ref istrings, startHeader, true);
-            		if (endHeader == -1)
-		        		throw new Exception("Header end not found");
+                startHeader = FindStringInList(iheaderstart, ref istrings, 0, true);
+                if (startHeader != -1)
+                {
+                    endHeader = FindStringInList(iheaderend, ref istrings, startHeader, true);
+                    if (endHeader == -1)
+                        throw new Exception("Header end not found");
 
-		        	Section_Names.Add("Header");
-	        		Section_Bookmarks.Add(startHeader);
-        		}
+                    Section_Names.Add("Header");
+                    Section_Bookmarks.Add(startHeader);
+                }
+
+                startInterface = FindStringInList("interface", ref istrings, endHeader, true) + 1;
+            }
+            else
+            {
+                startInterface = FindStringInList("interface", ref istrings, 0, true) + 1;
             }
 
-            startInterface = FindStringInList("interface", ref istrings, 0, true) + 1;
-        	if (startInterface == -1)
-	    		throw new Exception("Interface not found");
+            if (startInterface == -1)
+                throw new Exception("Interface not found");
 
         	Section_Names.Add("Interface");
     		Section_Bookmarks.Add(startInterface);
@@ -1016,17 +1034,22 @@ namespace Translator
             return -1;
         }
 
-        static private int FindNextSymbol(ref List<string> istrings, string isymbol, int istartpos)
+        static private int FindNextSymbol(ref List<string> istrings, string isymbol, int istartpos, bool iexactmatch)
         {
             string[] tEnd = new string[1];
             tEnd[0] = isymbol;
 
             for (int i = istartpos; i < istrings.Count; i++)
             {
-                if (Check_If_StringList_Elements_Exist_In_String(istrings[i], ref tEnd) != -1)
+                if (Check_If_StringList_Elements_Exist_In_String(istrings[i], ref tEnd, iexactmatch) != -1)
                     return i;
             }
             return -1;
+        }
+
+        static private int FindNextSymbol(ref List<string> istrings, string isymbol, int istartpos)
+        {
+            return FindNextSymbol(ref istrings, isymbol, istartpos, false);
         }
 
         static private int FindNextKey(ref List<string> istrings, ref string[] ikeys, int istartpos)
@@ -1206,6 +1229,11 @@ namespace Translator
         //Check if any of the elements in a array ielements is found inside a string istring.    
         static private int Check_If_StringList_Elements_Exist_In_String(string istring, ref string[] ielements)
         {
+            return Check_If_StringList_Elements_Exist_In_String(istring, ref ielements, false);
+        }
+
+        static private int Check_If_StringList_Elements_Exist_In_String(string istring, ref string[] ielements, bool iexactmatch)
+        {
             //Split string to check in, and element to check against, according to spaces. 
             //If the first element word is found, check for the rest in order. Otherwise return false.
 
@@ -1228,10 +1256,24 @@ namespace Translator
                     //Loop through the contents of the string to look for the word. 
                     for(int k=0; k < tstring_words.GetLength(0); k++)
                     {
-                        if (tstring_words[k].Contains(telement_words[j]))
+                        if (iexactmatch)
                         {
-                            curr_word_found = k;
-                            goto check_order_of_words;
+                            foreach (String str in tstring_words[k].Split(" \n\r".ToCharArray()))
+                            {
+                                if (str.Equals(telement_words[j]))
+                                {
+                                    curr_word_found = k;
+                                    goto check_order_of_words;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (tstring_words[k].Contains(telement_words[j]))
+                            {
+                                curr_word_found = k;
+                                goto check_order_of_words;
+                            }
                         }
                     }
                     //The elementword was not found in the string array, the element is not present in the string
@@ -1655,24 +1697,39 @@ namespace Translator
                     string[] tarr = iconstsGlobal[i].Split(@"//".ToCharArray());
                     string tconst = tarr[0].Trim();
 
-                    if (tconst != "")
+                    int tcomment = tconst.IndexOf('{');
+                    if (tcomment != -1)
                     {
-                        //Check to see if we have the whole statement
-                        
-                        int tcolon;
-                        SemiColonCheck:
-    
-                        tcolon = tconst.IndexOf(';');
-                        if (tcolon == -1)
+                        do
                         {
                             i++;
-                            tconst = tconst + iconstsGlobal[i];
-                            tarr = tconst.Split(@"//".ToCharArray());
-                            tconst = tarr[0].Trim();
-                            goto SemiColonCheck;
-                        }
+                            tcomment = tconst.IndexOf('}');
+                        } while ((tcomment == -1) && (i < iconstsGlobal.Count));
+                    }
+                    if (i < iconstsGlobal.Count)
+                    {
+                        if (tconst != "")
+                        {
+                            //Check to see if we have the whole statement
 
-                        tconstants.Add(StringToConstant(tconst));
+                            int tcolon;
+                        SemiColonCheck:
+
+                            tcolon = tconst.IndexOf(';');
+                            if (tcolon == -1)
+                            {
+                                i++;
+                                if (i >= iconstsGlobal.Count)
+                                    goto Out;
+
+                                tconst = tconst + iconstsGlobal[i];
+                                tarr = tconst.Split(@"//".ToCharArray());
+                                tconst = tarr[0].Trim();
+                                goto SemiColonCheck;
+                            }
+                        Out:
+                            tconstants.Add(StringToConstant(tconst));
+                        }
                     }
                 }
             }
