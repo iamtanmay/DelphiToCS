@@ -641,7 +641,7 @@ namespace Translator
                         tnext_subsection_pos = tcurr_string_count;
                         break;
 
-                    case "const": tconsts.Add(new DelphiVarStrings(tstrings[tcurr_string_count], false));
+                    case "const": tconsts.Add(new DelphiVarStrings(tstrings[tcurr_string_count].Replace("=",":="), false));
                         break;
 
                     case "class var": tvars.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
@@ -1215,7 +1215,6 @@ namespace Translator
             return tout;
         }
 
-
         static private int Match_StringList_Elements_To_String(string istring, ref string[] ielements)
         {
             for (int i = 0; i < ielements.GetLength(0); i++)
@@ -1305,8 +1304,7 @@ namespace Translator
                 //Go to next element
             }
             return -1;
-        }
- 
+        } 
 
         static private int CheckStringListElementsInString(string istring, ref string[] ielements)
 		{
@@ -1346,6 +1344,161 @@ namespace Translator
 	    	
 	    	return toutput;
 	    }
+
+        private void GenerateFunction(ref List<string> istrings, ref DelphiClassStrings iCurrentDefinition, ref Class iclass, ref List<string> inames, int icounter, int icounter2)
+        {
+            string theader = iCurrentDefinition.methods[icounter].header;
+            string[] theader_arr = theader.Trim().Split('/');
+            string tname = theader_arr[2];
+            string treturntype = theader_arr[0];
+            string ttype = theader_arr[1];
+            bool tIsStatic = false;
+            Variable tvar;
+
+            if ((ttype == "classfunction") || (ttype == "classprocedure") || (ttype == "constructor") || (ttype == "destructor"))
+                tIsStatic = true;
+
+            List<Variable> tparams = new List<Variable>();
+
+            //Getting the parameters
+            theader_arr = theader_arr[3].Split('|');
+
+            //Remove first element that is always "" empty
+            List<string> tlist = new List<string>(theader_arr);
+            tlist.RemoveAt(0);
+            theader_arr = tlist.ToArray();
+
+            for ( int ii = 0; ii < theader_arr.GetLength(0); ii++)
+            {
+                string[] tvar_arr = theader_arr[ii].Trim().Split('_');
+                        
+                //Remove first element that is always "" empty
+                tlist = new List<string>(tvar_arr);
+                tlist.RemoveAt(0);
+                tvar_arr = tlist.ToArray();
+
+                int tlength = tvar_arr.GetLength(0);
+
+                if (tlength <= 0)
+                {
+                    //No parameters
+                }
+                else if (tlength == 1)
+                {
+                    if (tvar_arr[0] == "")
+                    {
+                        //No parameters
+                    }
+                    else
+                    {
+                        throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[icounter2] + " from Text.");
+                    }
+                }
+                else if (tlength == 2)
+                {
+                    //Variables in method parameter. They are not static, so false in Variable Constructor
+                    tvar = new Variable(tvar_arr[0], tvar_arr[tlength - 1], false);
+                    tparams.Add(tvar);
+                }
+                else //if (tlength == 3)
+                {
+                    //Variables in method parameter. They are not static, so false in Variable Constructor
+                    //tvar = new Variable(tvar_arr[0] + " " + tvar_arr[1],  tvar_arr[tlength - 1], false);
+                    for (int jj = 0; jj < (tlength - 2); jj++)
+                    {
+                        tvar = new Variable(tvar_arr[jj], tvar_arr[tlength - 1], false);
+                        tparams.Add(tvar);
+                    }
+                }
+                //else
+                //{
+                //    throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[icounter2] + " from Text.");
+                //}
+            }
+
+            int const_start = iCurrentDefinition.methods[icounter].const_start, begin_start = iCurrentDefinition.methods[icounter].begin_start, var_start = iCurrentDefinition.methods[icounter].var_start;
+            int from_pos = -1, till_pos = -1, body_start = begin_start;
+
+            //Get const and var lists
+            List<Constant> tconsts = new List<Constant>();
+            if (const_start != -1)
+            {
+                from_pos = const_start;
+                body_start = const_start;
+
+                if (var_start > const_start)
+                {
+                    till_pos = var_start;
+                }
+                else
+                    till_pos = begin_start;
+
+                for ( int ii = from_pos+1; ii < till_pos; ii++)
+                {
+                    string tvar_str = istrings[ii];
+                    string[] tvar_arr = tvar_str.Split('=');
+                        
+                    tvar_arr[0].Trim();
+                    tvar_arr[1] = tvar_arr[1].Replace(";", "");
+                    tvar_arr[1].Trim();
+
+                    tconsts.Add(new Constant(tvar_arr[0], tvar_arr[1]));
+                }
+            }
+
+            List<Variable> tvars = new List<Variable>();
+            if (var_start != -1)
+            {
+                from_pos = var_start;
+
+                if (const_start > var_start)
+                {
+                    till_pos = const_start;
+                    body_start = var_start;
+                }
+                else
+                    till_pos = begin_start;
+
+                if (const_start == -1)
+                    body_start = var_start;
+
+                for (int ii = from_pos + 1; ii < till_pos; ii++)
+                {
+                    string tvar_str = istrings[ii];
+
+
+                    if (tvar_str != "")
+                    {
+                        int tfuncindex = tvar_str.IndexOf("function"), tprocindex = tvar_str.IndexOf("procedure");
+                        if ( tfuncindex != -1 )
+                        {
+
+                        }
+                        if (tprocindex != -1)
+                        {
+
+                        }
+                        else
+                        {
+                            string[] tvar_arr = tvar_str.Split(':');
+
+                            tvar_arr[0].Trim();
+                            tvar_arr[1] = tvar_arr[1].Replace(";", "");
+                            tvar_arr[1].Trim();
+
+                            tvars.Add(new Variable(tvar_arr[0], tvar_arr[1], false));
+                        }
+                    }
+                }
+            }
+
+            if ((body_start != -1) && (iCurrentDefinition.methods[icounter].body.Count > 0))
+                iCurrentDefinition.methods[icounter].body.RemoveRange(0, begin_start - body_start);
+
+            //name, parameters, type, IsVirtual, IsAbstract, IsStatic, variables, commands
+            Function tfunc = new Function(tname, tparams, treturntype, iCurrentDefinition.methods[icounter].isVirtual, iCurrentDefinition.methods[icounter].isAbstract, tIsStatic, tconsts, tvars, iCurrentDefinition.methods[icounter].body);
+            iclass.functions.Add(tfunc);
+        }
 
         private void GenerateClasses(ref List<string> istrings, ref List<Class> oclasses, ref List<string> inames, ref List<DelphiClassStrings> idefinitions, ref List<List<string>> iimplementations)
         {
@@ -1399,139 +1552,7 @@ namespace Translator
 
                 for (int j = 0; j < tdefinition.methods.Count; j++)
                 {
-                    string theader = tdefinition.methods[j].header;
-                    string[] theader_arr = theader.Trim().Split('/');
-                    string tname = theader_arr[2];
-                    string treturntype = theader_arr[0];
-                    string ttype = theader_arr[1];
-                    bool tIsStatic = false;
-
-                    if ((ttype == "classfunction") || (ttype == "classprocedure") || (ttype == "constructor") || (ttype == "destructor"))
-                        tIsStatic = true;
-
-                    List<Variable> tparams = new List<Variable>();
-
-                    //Getting the parameters
-                    theader_arr = theader_arr[3].Split('|');
-
-                    //Remove first element that is always "" empty
-                    List<string> tlist = new List<string>(theader_arr);
-                    tlist.RemoveAt(0);
-                    theader_arr = tlist.ToArray();
-
-                    for ( int ii = 0; ii < theader_arr.GetLength(0); ii++)
-                    {
-                        string[] tvar_arr = theader_arr[ii].Trim().Split('_');
-                        
-                        //Remove first element that is always "" empty
-                        tlist = new List<string>(tvar_arr);
-                        tlist.RemoveAt(0);
-                        tvar_arr = tlist.ToArray();
-
-                        int tlength = tvar_arr.GetLength(0);
-
-                        if (tlength <= 0)
-                        {
-                            //No parameters
-                        }
-                        else if (tlength == 1)
-                        {
-                            if (tvar_arr[0] == "")
-                            {
-                                //No parameters
-                            }
-                            else
-                            {
-                                throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[i] + " from Text.");
-                            }
-                        }
-                        else if (tlength == 2)
-                        {
-                            //Variables in method parameter. They are not static, so false in Variable Constructor
-                            tvar = new Variable(tvar_arr[0], tvar_arr[tlength - 1], false);
-                            tparams.Add(tvar);
-                        }
-                        else //if (tlength == 3)
-                        {
-                            //Variables in method parameter. They are not static, so false in Variable Constructor
-                            //tvar = new Variable(tvar_arr[0] + " " + tvar_arr[1],  tvar_arr[tlength - 1], false);
-                            for (int jj = 0; jj < (tlength - 2); jj++)
-                            {
-                                tvar = new Variable(tvar_arr[jj], tvar_arr[tlength - 1], false);
-                                tparams.Add(tvar);
-                            }
-                        }
-                        //else
-                        //{
-                        //    throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[i] + " from Text.");
-                        //}
-                    }
-
-                    int const_start = tdefinition.methods[j].const_start, begin_start = tdefinition.methods[j].begin_start, var_start = tdefinition.methods[j].var_start;
-                    int from_pos = -1, till_pos = -1, body_start = begin_start;
-
-                    //Get const and var lists
-                    List<Constant> tconsts = new List<Constant>();
-                    if (const_start != -1)
-                    {
-                        from_pos = const_start;
-                        body_start = const_start;
-
-                        if (var_start > const_start)
-                        {
-                            till_pos = var_start;
-                        }
-                        else
-                            till_pos = begin_start;
-
-                        for ( int ii = from_pos+1; ii < till_pos; ii++)
-                        {
-                            string tvar_str = istrings[ii];
-                            string[] tvar_arr = tvar_str.Split('=');
-                        
-                            tvar_arr[0].Trim();
-                            tvar_arr[1] = tvar_arr[1].Replace(";", "");
-                            tvar_arr[1].Trim();
-
-                            tconsts.Add(new Constant(tvar_arr[0], tvar_arr[1]));
-                        }
-                    }
-
-                    List<Variable> tvars = new List<Variable>();
-                    if (var_start != -1)
-                    {
-                        from_pos = var_start;
-
-                        if (const_start > var_start)
-                        {
-                            till_pos = const_start;
-                            body_start = var_start;
-                        }
-                        else
-                            till_pos = begin_start;
-
-                        if (const_start == -1)
-                            body_start = var_start;
-
-                        for (int ii = from_pos + 1; ii < till_pos; ii++)
-                        {
-                            string tvar_str = istrings[ii];
-                            string[] tvar_arr = tvar_str.Split(':');
-
-                            tvar_arr[0].Trim();
-                            tvar_arr[1] = tvar_arr[1].Replace(";", "");
-                            tvar_arr[1].Trim();
-
-                            tvars.Add(new Variable(tvar_arr[0], tvar_arr[1], false));
-                        }
-                    }
-
-                    if ((body_start != -1) && (tdefinition.methods[j].body.Count > 0))
-                        tdefinition.methods[j].body.RemoveRange(0, begin_start - body_start);
-
-                    //name, parameters, type, IsVirtual, IsAbstract, IsStatic, variables, commands
-                    Function tfunc = new Function(tname, tparams, treturntype, tdefinition.methods[j].isVirtual, tdefinition.methods[j].isAbstract, tIsStatic, tconsts, tvars, tdefinition.methods[j].body);
-                    tclass.functions.Add(tfunc);
+                    GenerateFunction(ref istrings, ref tdefinition, ref tclass, ref inames, j, i);
                 }
                 oclasses.Add(tclass);
             }
@@ -1563,8 +1584,7 @@ namespace Translator
                 logsingle("Bad Enum value ! " + iconst + "," + iindex + " in " + iwholestring + " file: " + outPath);
                 return new Constant();
             }
-        }
-        
+        }        
 
         private Constant StringToConstant(string iconst)
         {

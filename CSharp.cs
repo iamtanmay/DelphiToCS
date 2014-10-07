@@ -332,18 +332,42 @@ namespace Translator {
 
         public string PropertyToString(Property iprop)
         {
+            string tcomment = "";
             string tread = "", twrite = "";
             if (iprop.read == "null")
                 tread = "";
             else
-                tread = "return " + iprop.read + ";";
+            {
+                string tstr = iprop.read;
+                tstr = tstr.Replace(@"//", "~");
+                string[] tarr = tstr.Split('~');
+                if (tarr.Length > 1)
+                    tcomment += tarr[1];
+
+                tread = "return " + tarr[0] + ";";
+            }
 
             if (iprop.write == "null")
                 twrite = "";
             else
-                twrite = "value = " + iprop.write + ";";
+            {
+                string tstr = iprop.write;
 
-            return iprop.type + " " + iprop.name + " { get { " + tread + "} set { " + twrite + "} }";
+                tstr = tstr.Replace(@"//", "~");
+
+                string[] tarr = tstr.Split('~');
+
+                if (tarr.Length > 1)
+                    tcomment += tarr[1];
+
+                twrite = "value := " + tarr[0] + ";";
+            }
+            string treturnstr = iprop.type + " " + iprop.name + " { get { " + tread + "} set { " + twrite + "} }";
+
+            if (tcomment != "")
+                treturnstr = treturnstr + @"//" + tcomment;
+
+            return treturnstr;
         }
 
         public string TypeToString(TypeAlias itype)
