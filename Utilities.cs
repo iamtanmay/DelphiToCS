@@ -58,11 +58,11 @@ namespace Translator
 
             Delphi_CSNonRegexTypes = { "#", "'", " and ", " or ", 
                                   "xor ", "not ", "=", "low(Integer)", "EXIT(", ":==", "<>", "shr", "shl", 
-                                  "\n", "if", "then", "FreeAndNil", "TList<", "self.", "(self)", ".Delete(", "end;"},
+                                  "\n", "if", "then", "FreeAndNil", "TList<", "self.", "(self)", ".Delete(", "end;", "Assigned("},
 
             Delphi_CSNonRegexSubstitutes = { "(char)", "\"", " && ", " || ", 
                                                "^ ", "! ", "==", "0*", "result = (", "=", "!=", ">>", "<<", 
-                                               "", "if(", ")", "//FreeAndNil", "List<", "", "(this)", ".RemoveAt(", "" };
+                                               "", "if(", ")", "//FreeAndNil", "List<", "", "(this)", ".RemoveAt(", "", "WrapperUtilities.Assigned(" };
 
         public static string ReplaceElementsInStringRegex(string istring, ref string[] iElementList, ref string[] iSubstitutesList)
         {

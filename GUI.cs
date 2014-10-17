@@ -24,8 +24,10 @@ namespace Translator
         private int index;
         private List<LogEntry> LogEntries { get; set; }
 
-        List<string> standardDelphiReferences;
-        List<string> standardCSReferences;
+        List<string> standardDelphiReferences = new List<string>();
+        List<string> standardCSReferences = new List<string>();
+        List<string> standardReferences = new List<string>();
+
         DelphiToCSConversion delphiToCSConversion;
 
         public s()
@@ -53,7 +55,7 @@ namespace Translator
 
         private void GUI_Load(object sender, EventArgs e)
         {
-            standardDelphiReferences = new List<string> { "Generics.Collections / System.Collections.Generic", "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
+            standardDelphiReferences = new List<string> { "+DelphiStandardWrapper", "-Example_DelphiLibrary_To_Remove","Generics.Collections / System.Collections.Generic", "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
             
             //Load last used settings
             if (DelphiToCSTranslator.Properties.Settings.Default.InPath != "")
@@ -123,8 +125,19 @@ namespace Translator
                 }
                 else if (tarr.Length == 1 && tarr[0] != "")
                 {
-                    standardDelphiReferences.Add(tarr[0]);
-                    standardCSReferences.Add("");
+                    if (tarr[0].IndexOf('-') != -1)
+                    {
+                        standardDelphiReferences.Add(tarr[0].Replace("-",""));
+                        standardCSReferences.Add("");
+                    }
+                    else if (tarr[0].IndexOf('+') != -1)
+                    {
+                        standardReferences.Add(tarr[0].Replace("+",""));
+                    }
+                    else
+                    {
+                        //Unknown ??
+                    }
                 }
                 else
                 {
@@ -148,7 +161,7 @@ namespace Translator
                 tStandardCSReferences.Add(tlist);
             }
 
-            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, Log, ref standardDelphiReferences, ref tStandardCSReferences);
+            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences);
         }
 
         private void label1_Click(object sender, EventArgs e)

@@ -6,6 +6,7 @@ namespace Translator {
     public class CSharp {
 
         List<string> project_references = new List<string>();
+        public List<string> standard_references = new List<string>();
 
         bool isForm = false;
         //Log 
@@ -59,6 +60,13 @@ namespace Translator {
             tout.Add("/*References Start*/");
             tout.Add("");
 
+            //Add standard references
+            for (int i = 0; i < standard_references.Count; i++)
+            {
+                tout.Add("using " + standard_references[i] + ";");
+            }
+
+            //Process rest
             for( int i=0; i < iscript.includes.Count; i++)
 			{
                 ProcessReference(iscript.includes[i], ref iStandardReferences, ref iStandardCSReferences);
@@ -170,8 +178,12 @@ namespace Translator {
 
             for (int i = 0; i < iclass.properties.Count; i++)
             {
-                oelement_names.Add(iclass.properties[i].name); 
-                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
+                oelement_names.Add(iclass.properties[i].name);
+
+                if (iclass.properties[i].isStatic)
+                    tout.Add(Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
+                else
+                    tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
             }
 
             for (int i = 0; i < iclass.types.Count; i++)
@@ -194,23 +206,26 @@ namespace Translator {
                 for (int j = 0; j < tfunc.commands.Count; j++)
                 {
                     string tstr = tfunc.commands[j].Trim();
-                    //Remove all empty lines
-                    if (( tstr!= "") && (tstr != "\n"))
-                        tstr = Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(tfunc.commands[j]));
-                    
-                    //Check if output is empty
-                    if ((tstr != "") && (tstr != "\n"))
+                    if (tstr != "end.")
                     {
-                        //If line is only "Exit;", check for type to return
-                        if (tstr.IndexOf("Exit;") != -1)
+                        //Remove all empty lines
+                        if ((tstr != "") && (tstr != "\n"))
+                            tstr = Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(tfunc.commands[j]));
+
+                        //Check if output is empty
+                        if ((tstr != "") && (tstr != "\n"))
                         {
-                            if (treturn_type != "void")
-                                tbody.Add(Indent(4) + Indent(4)  + Indent(4) + "return result;");
+                            //If line is only "Exit;", check for type to return
+                            if (tstr.IndexOf("Exit;") != -1)
+                            {
+                                if (treturn_type != "void")
+                                    tbody.Add(Indent(4) + Indent(4) + Indent(4) + "return result;");
+                                else
+                                    tbody.Add(Indent(4) + Indent(4) + Indent(4) + "return;");
+                            }
                             else
-                                tbody.Add(Indent(4) + Indent(4)  + Indent(4) + "return;");
+                                tbody.Add(Indent(4) + Indent(4) + tstr);
                         }
-                        else
-                            tbody.Add(Indent(4) + Indent(4) + tstr);
                     }
                 }
 
@@ -293,7 +308,7 @@ namespace Translator {
                 if (tbody.Count > 0)
                 {
                     tbody.RemoveAt(0);
-                    tbody.RemoveAt(tbody.Count - 1);
+                    //tbody.RemoveAt(tbody.Count - 1);
                 }
 
                 tout.AddRange(tbody);
@@ -327,7 +342,20 @@ namespace Translator {
 
         public string VarToString(Variable ivar)
         {
-            return ivar.type + " " + ivar.name + ";";
+            //Search for comments in 'type' and replace with /**/ style comment
+            int tindex = ivar.type.IndexOf(@"//");
+            string tcomment = "";
+            if (tindex != -1)
+            {
+                tcomment = ivar.type.Substring(tindex);
+                ivar.type = ivar.type.Substring(0, tindex);
+            }
+
+            //Remove type name from ivar.name
+            ivar.name = ivar.name.Replace("class", "").Replace("var", "");
+
+            string tout = ivar.type + " " + ivar.name + ";" + tcomment;
+            return tout.Replace("  ", " ").Replace("  ", " ");
         }
 
         public string PropertyToString(Property iprop)
@@ -343,6 +371,10 @@ namespace Translator {
                 string[] tarr = tstr.Split('~');
                 if (tarr.Length > 1)
                     tcomment += tarr[1];
+
+                char[] tchar_arr = tarr[0].ToCharArray();
+                if (tchar_arr[0] == 'f')
+                    tarr[0] = tarr[0] + "()";
 
                 tread = "return " + tarr[0] + ";";
             }

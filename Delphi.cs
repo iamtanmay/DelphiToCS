@@ -800,14 +800,73 @@ namespace Translator
             int tclosebracket_pos = FindNextSymbol(ref istrings, ")", icurr_string_count-1);
             int topenbracket_pos = FindNextSymbol(ref istrings, "(", icurr_string_count - 1);
             int tbegin_pos = tnext_pos;
+            int tvarfunctionpos = -1, tprocedurepos = -1;
+            List<int> taction_begins = new List<int>(), taction_ends = new List<int>();
 
             //If there is a var section
             if (tvar_pos != -1)
+            {
+                //Check for Delphi Actions and separate them - they will mess up normal parsing
+                tvarfunctionpos = FindNextSymbol(ref istrings, "function ", tvar_pos);
+                tprocedurepos = FindNextSymbol(ref istrings, "procedure ", tvar_pos);
+
+                //Check if Delphi Action exists
+                if (((tvarfunctionpos != -1) && (tvarfunctionpos < tbegin_pos)) ||
+                    ((tprocedurepos != -1) && (tprocedurepos < tbegin_pos)))
+                {
+                    int tfuncindex, ii;
+
+                    if (tvarfunctionpos != -1)
+                        tfuncindex = tvarfunctionpos;
+                    else
+                        tfuncindex = tprocedurepos;
+
+                    ii = tfuncindex+1;
+
+                    int tbegincounter = 0;
+                    string tvar_str = istrings[ii];
+                    Match tmatch = Regex.Match(tvar_str, "\\bbegin\\b"), tmatch2;
+
+                    //Find begin
+                    while (!tmatch.Success)
+                    {
+                        ii++;
+                        tvar_str = istrings[ii];
+                        tmatch = Regex.Match(tvar_str, "\\bbegin\\b");
+                    }
+
+                    //Find final end;
+                    int tbegin = ii, tend = -1;
+                    taction_begins.Add(tbegin);
+
+                    tbegincounter++;
+                    while (tbegincounter > 0)
+                    {
+                        ii++;
+                        tvar_str = istrings[ii];
+                        tmatch = Regex.Match(tvar_str, "\\bbegin\\b");
+                        tmatch2 = Regex.Match(tvar_str, "\\bend;\\b");
+
+                        if (tmatch.Success)
+                            tbegincounter++;
+                        else if (tmatch2.Success)
+                            tbegincounter--;
+                    }
+
+                    tend = ii;
+                    taction_ends.Add(tend);
+
+                    tnext_pos = FindNextSymbol(ref istrings, "begin", tend, true);
+                    
+                    //Pack everything into an Action
+                }
+
                 //If the var comes before the begin, then this belongs to our current function. 
                 if (tvar_pos < tnext_pos)
                     tnext_pos = tvar_pos;
                 else
                     tvar_pos = -1;
+            }
 
             //If there is a const sections
             if ((tconst_pos != -1) && (tconst_pos < tbegin_pos))
@@ -1404,7 +1463,7 @@ namespace Translator
                 {
                     //Variables in method parameter. They are not static, so false in Variable Constructor
                     //tvar = new Variable(tvar_arr[0] + " " + tvar_arr[1],  tvar_arr[tlength - 1], false);
-                    for (int jj = 0; jj < (tlength - 2); jj++)
+                    for (int jj = 1; jj < (tlength - 1); jj++)
                     {
                         tvar = new Variable(tvar_arr[jj], tvar_arr[tlength - 1], false);
                         tparams.Add(tvar);
@@ -1469,25 +1528,13 @@ namespace Translator
 
                     if (tvar_str != "")
                     {
-                        int tfuncindex = tvar_str.IndexOf("function"), tprocindex = tvar_str.IndexOf("procedure");
-                        if ( tfuncindex != -1 )
-                        {
+                        string[] tvar_arr = tvar_str.Split(':');
 
-                        }
-                        if (tprocindex != -1)
-                        {
+                        tvar_arr[0].Trim();
+                        tvar_arr[1] = tvar_arr[1].Replace(";", "");
+                        tvar_arr[1].Trim();
 
-                        }
-                        else
-                        {
-                            string[] tvar_arr = tvar_str.Split(':');
-
-                            tvar_arr[0].Trim();
-                            tvar_arr[1] = tvar_arr[1].Replace(";", "");
-                            tvar_arr[1].Trim();
-
-                            tvars.Add(new Variable(tvar_arr[0], tvar_arr[1], false));
-                        }
+                        tvars.Add(new Variable(tvar_arr[0], tvar_arr[1], false));
                     }
                 }
             }
