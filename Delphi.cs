@@ -802,13 +802,15 @@ namespace Translator
             int tbegin_pos = tnext_pos;
             int tvarfunctionpos = -1, tprocedurepos = -1;
             List<int> taction_begins = new List<int>(), taction_ends = new List<int>();
+            List<List<string>> tactions = new List<List<string>>(); 
+
 
             //If there is a var section
             if (tvar_pos != -1)
             {
                 //Check for Delphi Actions and separate them - they will mess up normal parsing
-                tvarfunctionpos = FindNextSymbol(ref istrings, "function ", tvar_pos);
-                tprocedurepos = FindNextSymbol(ref istrings, "procedure ", tvar_pos);
+                tvarfunctionpos = FindNextSymbol(ref istrings, "function", tvar_pos);
+                tprocedurepos = FindNextSymbol(ref istrings, "procedure", tvar_pos);
 
                 //Check if Delphi Action exists
                 if (((tvarfunctionpos != -1) && (tvarfunctionpos < tbegin_pos)) ||
@@ -824,15 +826,15 @@ namespace Translator
                     ii = tfuncindex+1;
 
                     int tbegincounter = 0;
-                    string tvar_str = istrings[ii];
-                    Match tmatch = Regex.Match(tvar_str, "\\bbegin\\b"), tmatch2;
+                    string tvar_str = istrings[ii].Trim();
+                    //Match tmatch = Regex.Match(tvar_str, "\\bbegin\\b"), tmatch2;
 
                     //Find begin
-                    while (!tmatch.Success)
+                    while (tvar_str != "begin")//(!tmatch.Success)
                     {
                         ii++;
-                        tvar_str = istrings[ii];
-                        tmatch = Regex.Match(tvar_str, "\\bbegin\\b");
+                        tvar_str = istrings[ii].Trim();
+                        //tmatch = Regex.Match(tvar_str, "\\bbegin\\b");
                     }
 
                     //Find final end;
@@ -843,13 +845,13 @@ namespace Translator
                     while (tbegincounter > 0)
                     {
                         ii++;
-                        tvar_str = istrings[ii];
-                        tmatch = Regex.Match(tvar_str, "\\bbegin\\b");
-                        tmatch2 = Regex.Match(tvar_str, "\\bend;\\b");
+                        tvar_str = istrings[ii].Trim();
+                        //tmatch = Regex.Match(tvar_str, "\\bbegin\\b");
+                        //tmatch2 = Regex.Match(tvar_str, "\\bend;\\b");
 
-                        if (tmatch.Success)
+                        if (tvar_str == "begin")//(tmatch.Success)
                             tbegincounter++;
-                        else if (tmatch2.Success)
+                        else if (tvar_str == "end;")//(tmatch2.Success)
                             tbegincounter--;
                     }
 
@@ -857,8 +859,16 @@ namespace Translator
                     taction_ends.Add(tend);
 
                     tnext_pos = FindNextSymbol(ref istrings, "begin", tend, true);
-                    
+                    tbegin_pos = tnext_pos;
+
                     //Pack everything into an Action
+                    List<string> taction = new List<string>();
+                    taction = istrings.GetRange(tvarfunctionpos, tend - tvarfunctionpos);
+                    istrings.RemoveRange(tvarfunctionpos, tend - tvarfunctionpos);
+                    tactions.Add(taction);
+
+                    List<string> tblanks = new List<string>(tend - tvarfunctionpos);
+                    istrings.InsertRange(tvarfunctionpos, tblanks);
                 }
 
                 //If the var comes before the begin, then this belongs to our current function. 
