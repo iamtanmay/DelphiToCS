@@ -50,11 +50,11 @@ namespace Translator
 
         public static string[] Delphi_CSRegexTypes = {"TList", "boolean", "Boolean", "integer", "Integer", 
                                                     "word", "Word", "dword", "Dword", "shortstring", "Shortstring", 
-                                                    "Real", "real", "{", "}", "begin", "end;", "end.", "Double", "extended", "Extended"},
+                                                    "Real", "real", "{", "}", "begin", "end;", "end.", "Double", "extended", "Extended", "string"},
 
             Delphi_CSRegexTypesSubstitutes = { "List", "bool", "bool", "int", "int", 
                                             "uint", "uint", "uint", "uint", "string", "string", 
-                                            "double", "double", "/*", "*/", "{", "}", "", "double", "double", "double" },
+                                            "double", "double", "/*", "*/", "{", "}", "", "double", "double", "double", "delphistring"},
 
             Delphi_CSNonRegexTypes = { "#", "'", " and ", " or ", 
                                   "xor ", "not ", "=", "low(Integer)", "EXIT(", ":==", "<>", "shr", "shl", 

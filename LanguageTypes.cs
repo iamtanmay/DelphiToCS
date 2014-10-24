@@ -165,6 +165,7 @@ namespace Translator
         public List<TypeAlias> types;
         public List<Property> properties;
         public List<Function> functions;
+        public List<List<Function>> actions;
 
         public Class()
         {
@@ -175,6 +176,7 @@ namespace Translator
             types = new List<TypeAlias>();
             properties = new List<Property>();
             functions = new List<Function>();
+            actions = new List<List<Function>>();
         }
     }
     

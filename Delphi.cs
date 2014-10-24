@@ -24,6 +24,7 @@ namespace Translator
         public string type;
         public string baseclass;
         public List<DelphiMethodStrings> methods;
+        public List<List<DelphiMethodStrings>> actions = new List<List<DelphiMethodStrings>>();
         public List<DelphiVarStrings> properties;
         public List<DelphiVarStrings> variables;
         public List<DelphiVarStrings> consts;
@@ -46,7 +47,22 @@ namespace Translator
             tmethod.isOverloaded = iOverloaded;
         }
 
-        public void AddMethodBody(string iheader, List<string> ibody, int ivar_start, int iconst_start, int ibegin_start)
+        public void AddAction(string iheader, List<string> ibody, int ivar_start, int iconst_start, int ibegin_start)
+        {
+            DelphiMethodStrings tmethod = new DelphiMethodStrings("", null);
+
+            for (int i = 0; i < methods.Count; i++)
+                if (methods[i].header == iheader)
+                {
+                    tmethod.body = ibody;
+                    tmethod.const_start = iconst_start;
+                    tmethod.var_start = ivar_start;
+                    tmethod.begin_start = ibegin_start;
+                    actions[i].Add(tmethod);
+                }
+        }
+
+        public void AddMethodBody(string iheader, List<string> ibody, int ivar_start, int iconst_start, int ibegin_start, int inextpos)
         {
             for (int i = 0; i < methods.Count; i++)
                 if (methods[i].header == iheader)
@@ -55,7 +71,11 @@ namespace Translator
                     methods[i].const_start = iconst_start;
                     methods[i].var_start = ivar_start;
                     methods[i].begin_start = ibegin_start;
+                    methods[i].nextpos = inextpos;
                 }
+
+            List<DelphiMethodStrings> tactions = new List<DelphiMethodStrings>();
+            actions.Add(tactions);
         }
     }
 
@@ -63,6 +83,7 @@ namespace Translator
     {
         public string header ="";
         public bool isAbstract = false, isVirtual = false, isOverloaded = false, isStatic = false;
+        public int nextpos = -1;
 
         public List<string> body;
         public int const_start, var_start, begin_start;
@@ -77,6 +98,7 @@ namespace Translator
             
             const_start = -1;
             var_start = -1;
+            nextpos = -1;
         }
     }
 
@@ -804,10 +826,10 @@ namespace Translator
             List<int> taction_begins = new List<int>(), taction_ends = new List<int>();
             List<List<string>> tactions = new List<List<string>>(); 
 
-
             //If there is a var section
             if (tvar_pos != -1)
             {
+                ActionFilter:
                 //Check for Delphi Actions and separate them - they will mess up normal parsing
                 tvarfunctionpos = FindNextSymbol(ref istrings, "function", tvar_pos);
                 tprocedurepos = FindNextSymbol(ref istrings, "procedure", tvar_pos);
@@ -863,12 +885,18 @@ namespace Translator
 
                     //Pack everything into an Action
                     List<string> taction = new List<string>();
+                    //tvarfunctionpos++;
+                    tend++;
                     taction = istrings.GetRange(tvarfunctionpos, tend - tvarfunctionpos);
                     istrings.RemoveRange(tvarfunctionpos, tend - tvarfunctionpos);
                     tactions.Add(taction);
 
-                    List<string> tblanks = new List<string>(tend - tvarfunctionpos);
+                    List<string> tblanks = new List<string>();
+                    for (int i = 0; i < tend - tvarfunctionpos; i++)
+                        tblanks.Add("");
+
                     istrings.InsertRange(tvarfunctionpos, tblanks);
+                    goto ActionFilter;
                 }
 
                 //If the var comes before the begin, then this belongs to our current function. 
@@ -922,30 +950,92 @@ namespace Translator
                 if (oclassimplementations[i].name == tclassname)
                 {
                     List<string> tlist = ParseImplementationMethodBody(tclassname, ref istrings, ref treturnarray, tfuncstring, imethodtype, tnext_pos, inext_subsection_pos);
+                    
+
                     string theader = tlist[0];
                     tlist.RemoveAt(0);
-                    oclassimplementations[i].AddMethodBody(theader, tlist, tvar_pos, tconst_pos, tbegin_pos);
+                    oclassimplementations[i].AddMethodBody(theader, tlist, tvar_pos, tconst_pos, tbegin_pos, tnext_pos);
+
+                    //Add the actions
+                    for (int j = 0; j < tactions.Count; j++)
+                    {
+                        List<string> tactionstrings = new List<string>();
+                        tactionstrings.Add("");
+                        tactionstrings.AddRange(tactions[j]);
+
+                        imethodtype = RecognizeKey(tactions[j][0], ref implementKindKeys);
+
+                        icurr_string_count = 1;
+                        tnext_pos = FindNextSymbol(ref tactionstrings, "begin", icurr_string_count, true);
+                        tvar_pos = FindNextSymbol(ref tactionstrings, "var", icurr_string_count, true);
+                        tconst_pos = FindNextSymbol(ref tactionstrings, "const", icurr_string_count, true);
+
+                        tclosebracket_pos = FindNextSymbol(ref tactionstrings, ")", icurr_string_count - 1);
+                        topenbracket_pos = FindNextSymbol(ref tactionstrings, "(", icurr_string_count - 1);
+                        tbegin_pos = tnext_pos;
+                        tvarfunctionpos = -1;
+                        tprocedurepos = -1;
+
+                        taction_begins = new List<int>();
+                        taction_ends = new List<int>();
+                        tactions = new List<List<string>>();
+
+                        //If there is a var section
+                        if (tvar_pos != -1)
+                        {
+                            //If the var comes before the begin, then this belongs to our current function. 
+                            if (tvar_pos < tnext_pos)
+                                tnext_pos = tvar_pos;
+                            else
+                                tvar_pos = -1;
+                        }
+
+                        //If there is a const sections
+                        if ((tconst_pos != -1) && (tconst_pos < tbegin_pos))
+                        {
+                            int ii = 0;
+                            //Check if const is a parameter
+                            if (topenbracket_pos != -1)
+                            {
+                                while ((tconst_pos <= tclosebracket_pos) && (tconst_pos >= topenbracket_pos))
+                                {
+                                    //Look for more consts
+                                    tconst_pos = FindNextSymbol(ref tactionstrings, "const", icurr_string_count + ii);
+                                    ii++;
+                                }
+                            }
+                            //Check if this const comes before "begin". If yes, then this is a sub-section declaration. Otherwise ignore.
+                            if ((tconst_pos != -1) && (tconst_pos < tnext_pos))
+                                tnext_pos = tconst_pos;
+                            else
+                                tconst_pos = -1;
+                        }
+                        else
+                            tconst_pos = -1;
+
+                        tfuncstring = "";
+
+                        //Add all the indented lines in function title
+                        for (int ii = icurr_string_count; ii < tnext_pos; ii++)
+                            tfuncstring = tfuncstring + tactionstrings[ii].Trim();
+
+                        tclassnamearray = tfuncstring.Split('.');
+                        treturnarray = tclassnamearray;
+
+                        inext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tnext_pos);
+
+                        tlist = ParseImplementationMethodBody(tclassname, tactionstrings, ref treturnarray, tfuncstring, imethodtype, tnext_pos, tactionstrings.Count - 1);
+                        oclassimplementations[i].AddAction(theader, tlist, tvar_pos, tconst_pos, tbegin_pos);
+                    }
                     break;
                 }
             }
         }
 
-        private List<string> ParseImplementationMethodBody(string iclassname, ref List<string> istrings, ref string[] iclassnamearray, string ifuncstring, string itype, int ipos, int inextpos)
+        private List<string> ParseImplementationMethodBody(string iclassname, List<string> istrings, ref string[] iclassnamearray, string ifuncstring, string itype, int ipos, int inextpos)
         {
-            //int tnext_pos = FindEndOfFunctionTitle(ref istrings, ipos);//FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count);
-            //int oend_pos = tnext_pos;
-            //string tfuncstring = "";
-
-            ////Add all the indented lines in function title
-            //for (int i = ipos; i < tnext_pos + 1; i++)
-            //{
-            //    tfuncstring = tfuncstring + istrings[i].Trim();
-            //}
-
             string imethodtype = RecognizeKey(ifuncstring, ref classKeys);
             imethodtype = imethodtype.Replace(" ", "");
-
-            //string[] tclassnamearray = tfuncstring.Split('.');
 
             //Break down function elements
             string treturntype, tparameters, tmethodname;
@@ -993,28 +1083,41 @@ namespace Translator
                 for (int j = 0; j < tparameter.GetLength(0); j++)
                 {
                     if ((tparameter[j] != "") && (tparameter[j] != " "))
-                        tformatted_param = tformatted_param + "_" +tparameter[j];
+                        tformatted_param = tformatted_param + "_" + tparameter[j];
                 }
 
                 //Separate parameters with '|' and remove trailing and beginning spaces
                 tparameters = tparameters + "|" + tformatted_param.Trim();
             }
 
-            tmethodname = tmethodname.Split('.')[1];
-            tmethodname = tmethodname.Replace(";","");
+            string[] tmethodnamearr = tmethodname.Split('.');
+
+            if (tmethodnamearr.Length > 1)
+                tmethodname = tmethodname.Split('.')[1];
+            else if (tmethodnamearr.Length < 1)
+            {
+                //error
+            }
+
+            tmethodname = tmethodname.Replace(";", "");
 
             string tfunctionstring = treturntype + "/" + imethodtype + "/" + tmethodname + "/" + tparameters;
-            DelphiMethodStrings tfunction = new DelphiMethodStrings(tfunctionstring, null);
 
             List<string> tout = new List<string>();
-            tout.Add(tfunctionstring);
-
-            if (inextpos == -1)
-                inextpos = istrings.Count;
+            tout.Add(tfunctionstring);            
 
             tout.AddRange(GetStringSubList(ref istrings, ipos, inextpos));
 
             return tout;
+        }
+
+        private List<string> ParseImplementationMethodBody(string iclassname, ref List<string> istrings, ref string[] iclassnamearray, string ifuncstring, string itype, int ipos, int inextpos)
+        {
+            if (inextpos == -1)
+                inextpos = istrings.Count;
+
+            List<string> tstrarray = GetStringSubList(ref istrings, ipos, inextpos);
+            return ParseImplementationMethodBody(iclassname, tstrarray, ref iclassnamearray, ifuncstring, itype, 0, inextpos-ipos);
         }
 
     	private void IndexStructure(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend)
@@ -1414,33 +1517,28 @@ namespace Translator
 	    	return toutput;
 	    }
 
-        private void GenerateFunction(ref List<string> istrings, ref DelphiClassStrings iCurrentDefinition, ref Class iclass, ref List<string> inames, int icounter, int icounter2)
+        private Function GenerateMethod(ref List<string> iMethodStrings, ref string[] iheader_arr, string iheader, string iname, string ireturntype, string itype, int const_start, int begin_start, int var_start, bool tisVirtual, bool tisAbstract, ref Class iclass, ref List<string> inames, int icounter, int icounter2)
         {
-            string theader = iCurrentDefinition.methods[icounter].header;
-            string[] theader_arr = theader.Trim().Split('/');
-            string tname = theader_arr[2];
-            string treturntype = theader_arr[0];
-            string ttype = theader_arr[1];
             bool tIsStatic = false;
             Variable tvar;
 
-            if ((ttype == "classfunction") || (ttype == "classprocedure") || (ttype == "constructor") || (ttype == "destructor"))
+            if ((itype == "classfunction") || (itype == "classprocedure") || (itype == "constructor") || (itype == "destructor"))
                 tIsStatic = true;
 
             List<Variable> tparams = new List<Variable>();
 
             //Getting the parameters
-            theader_arr = theader_arr[3].Split('|');
+            iheader_arr = iheader_arr[3].Split('|');
 
             //Remove first element that is always "" empty
-            List<string> tlist = new List<string>(theader_arr);
+            List<string> tlist = new List<string>(iheader_arr);
             tlist.RemoveAt(0);
-            theader_arr = tlist.ToArray();
+            iheader_arr = tlist.ToArray();
 
-            for ( int ii = 0; ii < theader_arr.GetLength(0); ii++)
+            for (int ii = 0; ii < iheader_arr.GetLength(0); ii++)
             {
-                string[] tvar_arr = theader_arr[ii].Trim().Split('_');
-                        
+                string[] tvar_arr = iheader_arr[ii].Trim().Split('_');
+
                 //Remove first element that is always "" empty
                 tlist = new List<string>(tvar_arr);
                 tlist.RemoveAt(0);
@@ -1460,7 +1558,7 @@ namespace Translator
                     }
                     else
                     {
-                        throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[icounter2] + " from Text.");
+                        throw new Exception("Parsing function parameter : " + iheader_arr[ii] + " resulted in error while Generating class " + inames[icounter2] + " from Text.");
                     }
                 }
                 else if (tlength == 2)
@@ -1484,8 +1582,7 @@ namespace Translator
                 //    throw new Exception("Parsing function parameter : " + theader_arr[ii] + " resulted in error while Generating class " + inames[icounter2] + " from Text.");
                 //}
             }
-
-            int const_start = iCurrentDefinition.methods[icounter].const_start, begin_start = iCurrentDefinition.methods[icounter].begin_start, var_start = iCurrentDefinition.methods[icounter].var_start;
+            
             int from_pos = -1, till_pos = -1, body_start = begin_start;
 
             //Get const and var lists
@@ -1502,11 +1599,11 @@ namespace Translator
                 else
                     till_pos = begin_start;
 
-                for ( int ii = from_pos+1; ii < till_pos; ii++)
+                for (int ii = from_pos + 1; ii < till_pos; ii++)
                 {
-                    string tvar_str = istrings[ii];
+                    string tvar_str = iMethodStrings[ii];
                     string[] tvar_arr = tvar_str.Split('=');
-                        
+
                     tvar_arr[0].Trim();
                     tvar_arr[1] = tvar_arr[1].Replace(";", "");
                     tvar_arr[1].Trim();
@@ -1533,7 +1630,7 @@ namespace Translator
 
                 for (int ii = from_pos + 1; ii < till_pos; ii++)
                 {
-                    string tvar_str = istrings[ii];
+                    string tvar_str = iMethodStrings[ii];
 
 
                     if (tvar_str != "")
@@ -1549,12 +1646,48 @@ namespace Translator
                 }
             }
 
-            if ((body_start != -1) && (iCurrentDefinition.methods[icounter].body.Count > 0))
-                iCurrentDefinition.methods[icounter].body.RemoveRange(0, begin_start - body_start);
+            if ((body_start != -1) && (iMethodStrings.Count > 0))
+                iMethodStrings.RemoveRange(0, begin_start - body_start);
 
             //name, parameters, type, IsVirtual, IsAbstract, IsStatic, variables, commands
-            Function tfunc = new Function(tname, tparams, treturntype, iCurrentDefinition.methods[icounter].isVirtual, iCurrentDefinition.methods[icounter].isAbstract, tIsStatic, tconsts, tvars, iCurrentDefinition.methods[icounter].body);
-            iclass.functions.Add(tfunc);
+            Function tfunc = new Function(iname, tparams, ireturntype, tisVirtual, tisAbstract, tIsStatic, tconsts, tvars, iMethodStrings);
+            return tfunc;
+        }
+
+        private void GenerateFunction(ref List<string> istrings, ref DelphiClassStrings iCurrentDefinition, ref Class iclass, ref List<string> inames, int icounter, int icounter2)
+        {
+            string theader = iCurrentDefinition.methods[icounter].header;
+            string[] theader_arr = theader.Trim().Split('/');
+            string tname = theader_arr[2];
+            string treturntype = theader_arr[0];
+            string ttype = theader_arr[1];
+
+            List<string> tstrings = iCurrentDefinition.methods[icounter].body;
+            bool tisVirtual = iCurrentDefinition.methods[icounter].isVirtual;
+            bool tisAbstract = iCurrentDefinition.methods[icounter].isAbstract;
+
+            int tnextpos = iCurrentDefinition.methods[icounter].nextpos;
+            int const_start = iCurrentDefinition.methods[icounter].const_start, begin_start = iCurrentDefinition.methods[icounter].begin_start, var_start = iCurrentDefinition.methods[icounter].var_start;
+
+            if (tnextpos != -1)
+            {
+                if (const_start != -1)
+                    const_start = const_start - tnextpos;
+                if (begin_start != -1)
+                    begin_start = begin_start - tnextpos;
+                if (var_start != -1)
+                    var_start = var_start - tnextpos;
+            }
+
+
+            //Add Function
+            iclass.functions.Add(GenerateMethod(ref tstrings,ref theader_arr, theader, tname, treturntype, ttype, const_start, begin_start, var_start, tisVirtual, tisAbstract, ref iclass, ref inames, icounter, icounter2));
+
+            //Add Actions
+            for (int i=0; i<iCurrentDefinition.actions.Count; i++)
+            {
+                //ToDo
+            }
         }
 
         private void GenerateClasses(ref List<string> istrings, ref List<Class> oclasses, ref List<string> inames, ref List<DelphiClassStrings> idefinitions, ref List<List<string>> iimplementations)
