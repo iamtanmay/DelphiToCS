@@ -219,6 +219,7 @@ namespace Translator
             string[] tout = tcsharp.Write(ref tdelphi.script, idirectory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref iDelphiStandardReferences, ref iStandardCSReferences).ToArray();
 
             //Write to file
+            Directory.CreateDirectory(iOutPath);
             File.WriteAllLines(iOutPath + "\\" + tfilename + ".cs", tout, Encoding.UTF8);
 
             return tdelphi;

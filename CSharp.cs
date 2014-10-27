@@ -148,7 +148,7 @@ namespace Translator {
 
         public void ProcessGlobals(Class iclass, ref List<string> obody, ref List<string> onames)
         {
-            obody = WriteClassBody(iclass, ref onames);
+            obody.AddRange(WriteClassBody(iclass, ref onames));
         }
 
         public List<string> WriteClassBody(Class iclass, ref List<string> oelement_names)
@@ -197,128 +197,149 @@ namespace Translator {
                 tout.Add("");
 
                 Function tfunc = iclass.functions[i];
-                string tfunction_name = tfunc.name;
-                string treturn_type = Utilities.Beautify_Delphi2CS(tfunc.returnType);
 
-                //Method body
-                List<string> tbody = new List<string>();
-
-                for (int j = 0; j < tfunc.commands.Count; j++)
-                {
-                    string tstr = tfunc.commands[j].Trim();
-                    if (tstr != "end.")
-                    {
-                        //Remove all empty lines
-                        if ((tstr != "") && (tstr != "\n"))
-                            tstr = Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(tfunc.commands[j]));
-
-                        //Check if output is empty
-                        if ((tstr != "") && (tstr != "\n"))
-                        {
-                            //If line is only "Exit;", check for type to return
-                            if (tstr.IndexOf("Exit;") != -1)
-                            {
-                                if (treturn_type != "void")
-                                    tbody.Add(Indent(4) + Indent(4) + Indent(4) + "return result;");
-                                else
-                                    tbody.Add(Indent(4) + Indent(4) + Indent(4) + "return;");
-                            }
-                            else
-                                tbody.Add(Indent(4) + Indent(4) + tstr);
-                        }
-                    }
-                }
-
-                bool tHasBaseclass = true;
-                string tinheritance = ""; 
-
-                if ((iclass.baseclass == null) || (iclass.baseclass == "") || (iclass.baseclass == "null"))
-                    tHasBaseclass = false;
-
-                //Special Constructor rules
-                if (tfunc.name == "Create")
-                {
-                    //Change Create to Class name in C#
-                    tfunction_name = iclass.name;
-
-                    //Remove "inherited Create();"
-                    int tfound = Delphi.FindStringInList("inherited Create", ref tbody, 0, true);
-                    if (tfound != -1)
-                        tbody.RemoveAt(tfound);
-
-                    //If the constructor is inherited
-                    if (tHasBaseclass)
-                    {
-                        tinheritance = ": base(";
-
-                        if (tfunc.parameters.Count > 0)
-                            tinheritance = tinheritance + tfunc.parameters[0].name;
-
-                        if (tfunc.parameters.Count > 1)
-                            for (int j = 1; j < tfunc.parameters.Count - 1; j++)
-                                tinheritance = tinheritance + ", " + tfunc.parameters[j].name;
-                        
-                        tinheritance = tinheritance + ")";
-
-                        //If there are additional commands to modify the inherited constructor, Flag in Log, to inspect manually
-                        if (tbody.Count > 0)
-                            logsingle("Complex Constructor detected in Class:" + iclass.name + " in File" + file_path);
-                    }
-                }
-
-                //Method Parameters
-                string tparam_string = "";
-
-                for (int j = 0; j < tfunc.parameters.Count - 1; j++)
-                    tparam_string = tparam_string + VarToString(tfunc.parameters[j]);
-
-                if (tfunc.parameters.Count > 0)
-                    tparam_string = tparam_string + VarToString(tfunc.parameters[tfunc.parameters.Count-1]).Replace(";","");
-
-                tparam_string = tparam_string.Replace(";", ",").Replace(":", "").Replace("const","").Replace("  "," ");
-
-                //Method Attributes
-                string tattributes = "";
-
-                if (tfunc.isStatic)
-                    tattributes += "static ";
-
-                if (tfunc.isVirtual)
-                    tattributes += "virtual ";
-
-                if (tfunc.isAbstract)
-                    tattributes += "abstract ";
-
-                //Method Definition (attributes + return type + name + parameters + inheritance)
-                tout.Add(Indent(4) + Indent(4) + "public " + tattributes + treturn_type + " " + tfunction_name + "(" + Utilities.Beautify_Delphi2CS(tparam_string) + ")" + tinheritance);
-
-                tout.Add(Indent(4) + Indent(4) + "{");
-                //Add 'result'
-                if (treturn_type != "void")
-                    tout.Add(Indent(4) + Indent(4) + Indent(4) + treturn_type + " result;");
-
-                //Method Constants
-                for (int j = 0; j < tfunc.constants.Count; j++)
-                    tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(ConstantToString(tfunc.constants[j])));
-
-                //Method Variables
-                for (int j = 0; j < tfunc.variables.Count; j++)
-                    tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(VarToString(tfunc.variables[j])));
-
-                if (tbody.Count > 0)
-                {
-                    tbody.RemoveAt(0);
-                    //tbody.RemoveAt(tbody.Count - 1);
-                }
-
-                tout.AddRange(tbody);
-
-                if (treturn_type != "void")
-                    tout.Add(Indent(4) + Indent(4) + Indent(4) + "return result;");
-
-                tout.Add(Indent(4) + Indent(4) + "}");
+                List<string> tconvertedfunc = ConvertFunction(tfunc, ref iclass, i, false);
+                tout.AddRange(tconvertedfunc);
             }
 
+            //Actions
+            for (int i = 0; i < iclass.actions.Count; i++)
+            {
+                for (int j = 0; j < iclass.actions[i].Count; j++)
+                {
+                    List<string> tconvertedaction = new List<string>();
+                    tconvertedaction = ConvertFunction(iclass.actions[i][j], ref iclass, i, true);
+                    tout.AddRange(tconvertedaction);
+                }
+            }
+
+            return tout;
+        }
+
+        public List<string> ConvertFunction(Function ifunction, ref Class iclass, int icounter, bool isaction)
+        {
+            List<string> tout = new List<string>();
+            string tfunction_name = ifunction.name;
+            string treturn_type = Utilities.Beautify_Delphi2CS(ifunction.returnType);
+
+            //Method body
+            List<string> tbody = new List<string>();
+
+            for (int j = 0; j < ifunction.commands.Count; j++)
+            {
+                string tstr = ifunction.commands[j].Trim();
+                if (tstr != "end.")
+                {
+                    //Remove all empty lines
+                    if ((tstr != "") && (tstr != "\n"))
+                        tstr = Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(ifunction.commands[j]));
+
+                    //Check if output is empty
+                    if ((tstr != "") && (tstr != "\n"))
+                    {
+                        //If line is only "Exit;", check for type to return
+                        if (tstr.IndexOf("Exit;") != -1)
+                        {
+                            if (treturn_type != "void")
+                                tbody.Add(Indent(4) + Indent(4) + Indent(4) + "return result;");
+                            else
+                                tbody.Add(Indent(4) + Indent(4) + Indent(4) + "return;");
+                        }
+                        else
+                            tbody.Add(Indent(4) + Indent(4) + tstr);
+                    }
+                }
+            }
+
+            bool tHasBaseclass = true;
+            string tinheritance = "";
+
+            if ((iclass.baseclass == null) || (iclass.baseclass == "") || (iclass.baseclass == "null"))
+                tHasBaseclass = false;
+
+            //Special Constructor rules
+            if (ifunction.name == "Create")
+            {
+                //Change Create to Class name in C#
+                tfunction_name = iclass.name;
+
+                //Remove "inherited Create();"
+                int tfound = Delphi.FindStringInList("inherited Create", ref tbody, 0, true);
+                if (tfound != -1)
+                    tbody.RemoveAt(tfound);
+
+                //If the constructor is inherited
+                if (tHasBaseclass)
+                {
+                    tinheritance = ": base(";
+
+                    if (ifunction.parameters.Count > 0)
+                        tinheritance = tinheritance + ifunction.parameters[0].name;
+
+                    if (ifunction.parameters.Count > 1)
+                        for (int j = 1; j < ifunction.parameters.Count - 1; j++)
+                            tinheritance = tinheritance + ", " + ifunction.parameters[j].name;
+
+                    tinheritance = tinheritance + ")";
+
+                    //If there are additional commands to modify the inherited constructor, Flag in Log, to inspect manually
+                    if (tbody.Count > 0)
+                        logsingle("Complex Constructor detected in Class:" + iclass.name + " in File" + file_path);
+                }
+            }
+
+            //Method Parameters
+            string tparam_string = "";
+
+            for (int j = 0; j < ifunction.parameters.Count - 1; j++)
+                tparam_string = tparam_string + VarToString(ifunction.parameters[j]);
+
+            if (ifunction.parameters.Count > 0)
+                tparam_string = tparam_string + VarToString(ifunction.parameters[ifunction.parameters.Count - 1]).Replace(";", "");
+
+            tparam_string = tparam_string.Replace(";", ",").Replace(":", "").Replace("const", "").Replace("  ", " ");
+
+            //Method Attributes
+            string tattributes = "";
+
+            if (ifunction.isStatic)
+                tattributes += "static ";
+
+            if (ifunction.isVirtual)
+                tattributes += "virtual ";
+
+            if (ifunction.isAbstract)
+                tattributes += "abstract ";
+
+            //Method Definition (attributes + return type + name + parameters + inheritance)
+            tout.Add(Indent(4) + Indent(4) + "public " + tattributes + treturn_type + " " + tfunction_name + "(" + Utilities.Beautify_Delphi2CS(tparam_string) + ")" + tinheritance);
+
+            tout.Add(Indent(4) + Indent(4) + "{");
+            //Add 'result'
+            if (treturn_type != "void")
+                tout.Add(Indent(4) + Indent(4) + Indent(4) + treturn_type + " result;");
+
+            //Method Constants
+            for (int j = 0; j < ifunction.constants.Count; j++)
+                tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(ConstantToString(ifunction.constants[j])));
+
+            //Method Variables
+            for (int j = 0; j < ifunction.variables.Count; j++)
+                tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(VarToString(ifunction.variables[j])));
+
+            if (tbody.Count > 0)
+            {
+                tbody.RemoveAt(0);
+                //tbody.RemoveAt(tbody.Count - 1);
+            }
+
+            tout.AddRange(tbody);
+
+            if (treturn_type != "void")
+                tout.Add(Indent(4) + Indent(4) + Indent(4) + "return result;");
+
+            tout.Add(Indent(4) + Indent(4) + "}");
+            
             return tout;
         }
 
@@ -342,19 +363,25 @@ namespace Translator {
 
         public string VarToString(Variable ivar)
         {
-            //Search for comments in 'type' and replace with /**/ style comment
-            int tindex = ivar.type.IndexOf(@"//");
-            string tcomment = "";
-            if (tindex != -1)
-            {
-                tcomment = ivar.type.Substring(tindex);
-                ivar.type = ivar.type.Substring(0, tindex);
-            }
+            ////Search for comments in 'type' and replace with /**/ style comment
+            //int tindex = ivar.type.IndexOf(@"//");
+            //string tcomment = "";
+            //if (tindex != -1)
+            //{
+            //    tcomment = ivar.type.Substring(tindex);
+            //    ivar.type = ivar.type.Substring(0, tindex);
+            //}
 
             //Remove type name from ivar.name
             ivar.name = ivar.name.Replace("class", "").Replace("var", "");
 
-            string tout = ivar.type + " " + ivar.name + ";" + tcomment;
+            string tout = "";
+            
+            if (ivar.value != "" )
+                tout = ivar.type + " " + ivar.name + " = " + ivar.value + ";" + ivar.comment;
+            else
+                tout = ivar.type + " " + ivar.name + ";" + ivar.comment;
+
             return tout.Replace("  ", " ").Replace("  ", " ");
         }
 

@@ -4,16 +4,19 @@ namespace Translator
 {
     public class Variable
     {
-        public string name, type;
+        public string name, type, value, comment;
         public bool isStatic;
 
         public Variable()
         {
         }
-        public Variable(string iname, string itype, bool iisStatic)
+
+        public Variable(string iname, string itype, string ivalue, string icomment, bool iisStatic)
         {
             name = iname.Trim();
             type = itype.Trim();
+            value = ivalue.Trim();
+            comment = icomment.Trim();
             isStatic = iisStatic;
         }
     }
@@ -32,24 +35,25 @@ namespace Translator
 
     public class Constant: Variable
     {
-        public string value;
         public Constant()
         {
         }
         public Constant(string ivalue)
         {
         }
-        public Constant(string iname, string itype, string ivalue)
+        public Constant(string iname, string itype, string ivalue, string icomment)
         {
             name = iname;
             type = itype;
             value = ivalue;
+            comment = icomment;
         }
-        public Constant(string iname, string itype, string ivalue, bool iisStatic)
+        public Constant(string iname, string itype, string ivalue, string icomment, bool iisStatic)
         {
             name = iname;
             type = itype;
             value = ivalue;
+            comment = icomment;
             isStatic = iisStatic;
         }
 
