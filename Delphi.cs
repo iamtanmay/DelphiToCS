@@ -146,13 +146,13 @@ namespace Translator
 
         //Divide subsection kinds
         public static string[] interfaceKindKeys = {"class","record","procedure","function", "interface" };
-        public static string[] implementKindKeys = { "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "uses", "property", "private const", "const" };
+        public static string[] implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
 
         //Divide method commands
         public static string[] methodKeys = {"var","begin","label","end","try","catch","finally" };
     	
         //Divide class defintion
-        public static string[] classKeys = { "strict private", "public", "private", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "private const", "const" };
+        public static string[] classKeys = { "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
 
         List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
         List<string> Section_Names;
@@ -657,9 +657,10 @@ namespace Translator
 
                 switch (RecognizeKey(tstrings[tcurr_string_count], ref classKeys))
                 {
-                    //{ "public", "private", "var", "class var", "const", "class const", "constructor", 
-                    //"class function", "class procedure", "procedure", "function", "property", "class property"};
                     case "public":  //ignore
+                        break;
+
+                    case "protected":  //ignore
                         break;
 
                     case "private": //ignore
@@ -667,17 +668,22 @@ namespace Translator
 
                     case "strict private": //ignore
                         break;
-                    
-                    case "class const": tconsts.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
-                        tnext_subsection_pos = tcurr_string_count;
-                        break;
 
-                    case "private const": 
-                        tconsts.Add(new DelphiVarStrings(tstrings[tcurr_string_count].Replace("=", ":="), false));
-                        break;
+                    case "class const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos; j++)
+                                            tconsts.Add(new DelphiVarStrings(tstrings[j].Replace("=", ":="), true));                        
+                                        break;
 
-                    case "const": tconsts.Add(new DelphiVarStrings(tstrings[tcurr_string_count].Replace("=",":="), false));
-                        break;
+                    case "public const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos; j++)
+                                            tconsts.Add(new DelphiVarStrings(tstrings[j].Replace("=", ":="), true));
+                                        break;
+
+                    case "private const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos; j++)
+                                            tconsts.Add(new DelphiVarStrings(tstrings[j].Replace("=", ":="), true));
+                                        break;
+
+                    case "const":       for (int j = tcurr_string_count + 1; j < tnext_subsection_pos; j++)
+                                            tconsts.Add(new DelphiVarStrings(tstrings[j].Replace("=", ":="), true));
+                                        break;
 
                     case "class var": tvars.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
                         break;
@@ -854,8 +860,8 @@ namespace Translator
                 tprocedurepos = FindNextSymbol(ref istrings, "procedure", tvar_pos);
 
                 //Check if Delphi Action exists
-                if (((tvarfunctionpos != -1) && (tvarfunctionpos < tbegin_pos)) ||
-                    ((tprocedurepos != -1) && (tprocedurepos < tbegin_pos)))
+                if (((tvarfunctionpos != -1) && (tvarfunctionpos < tbegin_pos) && (tvarfunctionpos > tclosebracket_pos)) ||
+                    ((tprocedurepos != -1) && (tprocedurepos < tbegin_pos) && (tvarfunctionpos > tclosebracket_pos)))
                 {
                     int tfuncindex, ii;
 
@@ -1771,7 +1777,14 @@ namespace Translator
                 for (int j = 0; j < tdefinition.consts.Count; j++)
                 {
                     //tdefinition_parts = RecognizeClassDefinition(tdefinition.consts[j].value);
-                    tconst = StringToConstant(tdefinition.consts[j].value.Split(';')[0], "", 0);//new Constant(tdefinition_parts[0], tdefinition_parts[1], tdefinition_parts[2], tdefinition.variables[j].isStatic);
+                    tdefinition.consts[j].value = tdefinition.consts[j].value.Split(';')[0];
+                    string[] tconstarr = tdefinition.consts[j].value.Split("//".ToCharArray());
+                    string tconstcomment = "";
+
+                    if (tconstarr.Length > 1)
+                        tconstcomment = tconstarr[1];
+
+                    tconst = StringToConstant(tconstarr[0], tconstcomment, 0);//new Constant(tdefinition_parts[0], tdefinition_parts[1], tdefinition_parts[2], tdefinition.variables[j].isStatic);
                     tclass.constants.Add(tconst);
                 }
 
@@ -1888,36 +1901,41 @@ namespace Translator
         private Constant StringToConstant(string iconst, string icomment, int idummy)
         {
             Constant tout;
-            string[] tstr = iconst.Split('=');
-            string tname = tstr[0].Trim();
-            string tvalue = tstr[1].Trim();
-            string ttype = "";
-            
-            //Check what type this is
-            //String
-            if (tvalue.IndexOf("'") != -1)
-            {
-                ttype = "string";
-                tvalue.Replace("'", "");
-            }
+            string tname = "", tvalue = "", ttype = "";
 
-            //Hex
-            else if (tvalue.IndexOf("$") != -1)
+            if (iconst.Trim() != "")
             {
-                ttype = "int";
-                tvalue = tvalue.Replace("$", "");
-                tvalue = "" + Convert.ToInt32(tvalue, 16);
-            }
+                string[] tstr = iconst.Split('=');
+                tname = tstr[0].Trim();
+                tvalue = tstr[1].Trim();
+                ttype = "";
 
-            //Double
-            else if (tvalue.IndexOf(".") != -1)
-            {
-                ttype = "double";
-            }
+                //Check what type this is
+                //String
+                if (tvalue.IndexOf("'") != -1)
+                {
+                    ttype = "string";
+                    tvalue.Replace("'", "");
+                }
 
-            else
-            {
-                ttype = "int";
+                //Hex
+                else if (tvalue.IndexOf("$") != -1)
+                {
+                    ttype = "int";
+                    tvalue = tvalue.Replace("$", "");
+                    tvalue = "" + Convert.ToInt32(tvalue, 16);
+                }
+
+                //Double
+                else if (tvalue.IndexOf(".") != -1)
+                {
+                    ttype = "double";
+                }
+
+                else
+                {
+                    ttype = "int";
+                }
             }
 
             tout = new Constant(tname, ttype, tvalue, icomment);

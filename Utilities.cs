@@ -50,11 +50,11 @@ namespace Translator
 
         public static string[] Delphi_CSRegexTypes = {"TList", "boolean", "Boolean", "integer", "Integer", 
                                                     "word", "Word", "dword", "Dword", "shortstring", "Shortstring", 
-                                                    "Real", "real", "{", "}", "begin", "end;", "end.", "Double", "extended", "Extended", "string"},
+                                                    "Real", "real", "begin", "end;", "end.", "Double", "extended", "Extended", "string", "var"},
 
             Delphi_CSRegexTypesSubstitutes = { "List", "bool", "bool", "int", "int", 
                                             "uint", "uint", "uint", "uint", "string", "string", 
-                                            "double", "double", "/*", "*/", "{", "}", "", "double", "double", "double", "delphistring"},
+                                            "double", "double", "{", "}", "", "double", "double", "double", "delphistring", "ref"},
 
             Delphi_CSNonRegexTypes = { "#", "'", " and ", " or ", 
                                   "xor ", "not ", "=", "low(Integer)", "EXIT(", ":==", "<>", "shr", "shl", 
@@ -86,6 +86,9 @@ namespace Translator
 
         public static string Beautify_Delphi2CS(string istring)
         {
+            //Change comments from { to //
+            istring = istring.Replace("{", "/*").Replace("}", "*/");
+
             istring = ReplaceElementsInStringRegex(istring, ref Delphi_CSRegexTypes, ref Delphi_CSRegexTypesSubstitutes);
             istring = ReplaceElementsInStringSimple(istring, ref Delphi_CSNonRegexTypes, ref Delphi_CSNonRegexSubstitutes);
 
