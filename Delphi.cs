@@ -353,7 +353,7 @@ namespace Translator
                                         if (tstring.IndexOf(";") != -1)
                                         {
                                             //Alias, just make an empty class with this baseclass
-                                            if (tstring.IndexOf("class(") != -1)
+                                            if ((tstring.IndexOf("class(") != -1) || (tstring.IndexOf("class of") != -1))
                                             {
                                                 string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('='); 
                                                 tclassname = ttemparr[0];                                                
@@ -508,7 +508,7 @@ namespace Translator
             bool end_found = false;
             int i = icurr_string_count;
             int bracket_closed = -1;
-            while (!end_found)
+            while (!end_found && i < iFiltered_strings.Count)
             {
                 bracket_closed = iFiltered_strings[i].IndexOf(')');
 
@@ -534,6 +534,14 @@ namespace Translator
        {
             bool toverload = false, tvirtual = false, tabstract = false, tstatic = false;
             int tnext_pos = FindEndOfFunctionTitle(ref iFiltered_strings, icurr_string_count);//FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count);
+
+            //If not function parameter brackets, e.g Create; instead of Create();, then add empty brackets for parsing
+            if (tnext_pos == -1)
+            {
+                iFiltered_strings[icurr_string_count] = iFiltered_strings[icurr_string_count].Replace(";", "();");
+                tnext_pos = icurr_string_count;
+            }
+
             oend_pos = tnext_pos;
             string tfuncstring = "";
 
@@ -645,6 +653,12 @@ namespace Translator
                 i++;
             }
 
+            if (istrings[i].Trim() == "end;")
+            {
+                tstrings.Add(istrings[i]);
+                i++;
+            }
+
             new_next_subsection_pos = icurr_string_count + tstrings.Count;
             tcurr_string_count = 0;
 
@@ -655,73 +669,204 @@ namespace Translator
                 if (tnext_subsection_pos == -1)
                     tnext_subsection_pos = endInterface;
 
-                switch (RecognizeKey(tstrings[tcurr_string_count], ref classKeys))
+                string tconststr = "", ttempstr = "";
+
+                string tcommentcheckstr = tstrings[tcurr_string_count].Trim();
+
+                if (tcommentcheckstr != "")
                 {
-                    case "public":  //ignore
-                        break;
+                    if (tcommentcheckstr[0] == '{')
+                    {
+                        //Ignore comments containing class name
+                        tcurr_string_count++;
+                    }
+                    else
+                    {
+                        switch (RecognizeKey(tstrings[tcurr_string_count], ref classKeys))
+                        {
+                            case "public":  //ignore
+                                break;
 
-                    case "protected":  //ignore
-                        break;
+                            case "protected":  //ignore
+                                break;
 
-                    case "private": //ignore
-                        break;
+                            case "private": //ignore
+                                break;
 
-                    case "strict private": //ignore
-                        break;
+                            case "strict private": //ignore
+                                break;
 
-                    case "class const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos; j++)
-                                            tconsts.Add(new DelphiVarStrings(tstrings[j].Replace("=", ":="), true));                        
-                                        break;
+                            case "class const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                                {
+                                    tconststr = tstrings[j];
 
-                    case "public const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos; j++)
-                                            tconsts.Add(new DelphiVarStrings(tstrings[j].Replace("=", ":="), true));
-                                        break;
+                                    ttempstr = tstrings[j].Trim();
 
-                    case "private const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos; j++)
-                                            tconsts.Add(new DelphiVarStrings(tstrings[j].Replace("=", ":="), true));
-                                        break;
+                                    if (ttempstr != "")
+                                    {
+                                        if (ttempstr[0] == '{')
+                                        {
+                                            //Ignore comments containing class name
+                                            while (ttempstr.IndexOf('}') == -1)
+                                            {
+                                                j++;
+                                                ttempstr = tstrings[j].Trim();
+                                            }
+                                        }
+                                        else if (ttempstr != "")
+                                        {
+                                            while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                            {
+                                                j++;
+                                                ttempstr = tstrings[j].Trim();
+                                                tconststr = tconststr + tstrings[j];
+                                            }
 
-                    case "const":       for (int j = tcurr_string_count + 1; j < tnext_subsection_pos; j++)
-                                            tconsts.Add(new DelphiVarStrings(tstrings[j].Replace("=", ":="), true));
-                                        break;
+                                            tconsts.Add(new DelphiVarStrings(tconststr.Replace("=", ":="), true));
+                                        }
+                                    }
+                                }
+                                break;
 
-                    case "class var": tvars.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
-                        break;
+                            case "public const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                                {
+                                    tconststr = tstrings[j];
 
-                    case "constructor":
-                        tmethods.Add(ParseInterfaceMethod("constructor", ref tstrings, tcurr_string_count, out tcurr_string_count));
-                        tactions.Add(new List<DelphiMethodStrings>());
-                        break;
+                                    ttempstr = tstrings[j].Trim();
 
-                    case "class function":
-                        tmethods.Add(ParseInterfaceMethod("classfunction", ref tstrings, tcurr_string_count, out tcurr_string_count));
-                        tactions.Add(new List<DelphiMethodStrings>());
-                        break;
+                                    if (ttempstr != "")
+                                    {
+                                        if (ttempstr[0] == '{')
+                                        {
+                                            //Ignore comments containing class name
+                                            while (ttempstr.IndexOf('}') == -1)
+                                            {
+                                                j++;
+                                                ttempstr = tstrings[j].Trim();
+                                            }
+                                        }
+                                        else if (ttempstr != "")
+                                        {
+                                            while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                            {
+                                                j++;
+                                                ttempstr = tstrings[j].Trim();
+                                                tconststr = tconststr + tstrings[j];
+                                            }
 
-                    case "class procedure":
-                        tmethods.Add(ParseInterfaceMethod("classprocedure", ref tstrings, tcurr_string_count, out tcurr_string_count));
-                        tactions.Add(new List<DelphiMethodStrings>());
-                        break;
+                                            tconsts.Add(new DelphiVarStrings(tconststr.Replace("=", ":="), true));
+                                        }
+                                    }
+                                }
+                                break;
 
-                    case "procedure":
-                        tmethods.Add(ParseInterfaceMethod("procedure", ref tstrings, tcurr_string_count, out tcurr_string_count));
-                        tactions.Add(new List<DelphiMethodStrings>());
-                        break;
+                            case "private const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                                {
+                                    tconststr = tstrings[j];
 
-                    case "function":
-                        tmethods.Add(ParseInterfaceMethod("function", ref tstrings, tcurr_string_count, out tcurr_string_count));
-                        tactions.Add(new List<DelphiMethodStrings>());
-                        break;
+                                    ttempstr = tstrings[j].Trim();
 
-                    case "class property": tproperties.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
-                        break;
+                                    if (ttempstr != "")
+                                    {
+                                        if (ttempstr[0] == '{')
+                                        {
+                                            //Ignore comments containing class name
+                                            while (ttempstr.IndexOf('}') == -1)
+                                            {
+                                                j++;
+                                                ttempstr = tstrings[j].Trim();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                            {
+                                                j++;
+                                                ttempstr = tstrings[j].Trim();
+                                                tconststr = tconststr + tstrings[j];
+                                            }
 
-                    case "property": tproperties.Add(new DelphiVarStrings(tstrings[tcurr_string_count], false));
-                        break;
+                                            tconsts.Add(new DelphiVarStrings(tconststr.Replace("=", ":="), true));
+                                        }
+                                    }
+                                }
+                                break;
 
-                    default: break;
+                            case "const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                                {
+                                    tconststr = tstrings[j];
+
+                                    ttempstr = tstrings[j].Trim();
+
+                                    if (ttempstr != "")
+                                    {
+                                        if (ttempstr[0] == '{')
+                                        {
+                                            //Ignore comments containing class name
+                                            while (ttempstr.IndexOf('}') == -1)
+                                            {
+                                                j++;
+                                                ttempstr = tstrings[j].Trim();
+                                            }
+                                        }
+                                        else if (ttempstr != "")
+                                        {
+                                            while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                            {
+                                                j++;
+                                                ttempstr = tstrings[j].Trim();
+                                                tconststr = tconststr + tstrings[j];
+                                            }
+
+                                            tconsts.Add(new DelphiVarStrings(tconststr.Replace("=", ":="), true));
+                                        }
+                                    }
+                                }
+                                break;
+
+                            case "class var": tvars.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
+                                break;
+
+                            case "constructor":
+                                tmethods.Add(ParseInterfaceMethod("constructor", ref tstrings, tcurr_string_count, out tcurr_string_count));
+                                tactions.Add(new List<DelphiMethodStrings>());
+                                break;
+
+                            case "class function":
+                                tmethods.Add(ParseInterfaceMethod("classfunction", ref tstrings, tcurr_string_count, out tcurr_string_count));
+                                tactions.Add(new List<DelphiMethodStrings>());
+                                break;
+
+                            case "class procedure":
+                                tmethods.Add(ParseInterfaceMethod("classprocedure", ref tstrings, tcurr_string_count, out tcurr_string_count));
+                                tactions.Add(new List<DelphiMethodStrings>());
+                                break;
+
+                            case "procedure":
+                                tmethods.Add(ParseInterfaceMethod("procedure", ref tstrings, tcurr_string_count, out tcurr_string_count));
+                                tactions.Add(new List<DelphiMethodStrings>());
+                                break;
+
+                            case "function":
+                                tmethods.Add(ParseInterfaceMethod("function", ref tstrings, tcurr_string_count, out tcurr_string_count));
+                                tactions.Add(new List<DelphiMethodStrings>());
+                                break;
+
+                            case "class property": tproperties.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
+                                break;
+
+                            case "property": tproperties.Add(new DelphiVarStrings(tstrings[tcurr_string_count], false));
+                                break;
+
+                            default: break;
+                        }
+                        tcurr_string_count = FindNextKey(ref tstrings, ref implementKindKeys, tcurr_string_count);
+                    }
                 }
-                tcurr_string_count = FindNextKey(ref tstrings, ref implementKindKeys, tcurr_string_count); ;
+                else
+                {
+                    tcurr_string_count++;
+                }
             }
 
             tout.name = iclassname;
@@ -790,47 +935,99 @@ namespace Translator
                 if (tnext_subsection_pos == -1)
                     tnext_subsection_pos = endImplementation;
 
-                switch (RecognizeKey(istrings[tcurr_string_count], ref implementKindKeys))
-            	{
-                    case "class function":  //Break down function elements
-                                        string tmethodtype = "classfunction";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
-                                        break;
+                string tcommentcheckstr = istrings[tcurr_string_count].Trim();
 
-                    case "class procedure": //Break down function elements
-                                        tmethodtype = "classprocedure";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
-                                        break;
+                if (tcommentcheckstr != "")
+                {
+                    if (tcommentcheckstr[0] == '{')
+                    {
+                        //Ignore comments containing class name
+                        tcurr_string_count++;
+                    }
+                    else
+                    {
+                        switch (RecognizeKey(istrings[tcurr_string_count], ref implementKindKeys))
+                        {
+                            case "class function":  //Break down function elements
+                                string tmethodtype = "classfunction";
+                                ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);
+                                break;
 
-                    case "function":    //Break down function elements
-                                        tmethodtype = "function";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
-                                        break;
+                            case "class procedure": //Break down function elements
+                                tmethodtype = "classprocedure";
+                                ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);
+                                break;
 
-                    case "procedure":   //Break down function elements
-                                        tmethodtype = "procedure";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
-                                        break;
+                            case "function":    //Break down function elements
+                                tmethodtype = "function";
+                                ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);
+                                break;
 
-                    case "constructor": //Break down function elements
-                                        tmethodtype = "constructor";
-                                        ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);                                        
-                                        break;
+                            case "procedure":   //Break down function elements
+                                tmethodtype = "procedure";
+                                ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);
+                                break;
 
-                    case "const":       oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
-                                        break;
+                            case "constructor": //Break down function elements
+                                tmethodtype = "constructor";
+                                ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);
+                                break;
 
-                    case "uses":        ouses.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
-                                        break;
-                    
-                    //Log unrecognized sub section
-                    default:            List<string> tlogmessages = new List<string>();
-                                        tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
-                                        tlogmessages.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
-                                        log(tlogmessages);
-                                        break;
+                            case "const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                                {
+                                    string tconststr = istrings[j];
+
+                                    string ttempstr = istrings[j].Trim();
+
+                                    if (ttempstr != "")
+                                    {
+                                        if (ttempstr[0] == '{')
+                                        {
+                                            //Ignore comments containing class name
+                                            while (ttempstr.IndexOf('}') == -1)
+                                            {
+                                                j++;
+                                                ttempstr = istrings[j].Trim();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (ttempstr != "")
+                                            {
+                                                while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                                {
+                                                    j++;
+                                                    ttempstr = istrings[j].Trim();
+                                                    tconststr = tconststr + istrings[j];
+                                                }
+                                                oconsts.Add(tconststr.Replace("=", ":="));
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+
+
+                            //oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
+                            //break;
+
+                            case "uses": ouses.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos));
+                                break;
+
+                            //Log unrecognized sub section
+                            default: List<string> tlogmessages = new List<string>();
+                                tlogmessages.Add("Interface sub section not recognized " + tcurr_string_count);
+                                tlogmessages.AddRange(GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos));
+                                log(tlogmessages);
+                                break;
+                        }
+                        tcurr_string_count = tnext_subsection_pos;
+                    }
                 }
-                tcurr_string_count = tnext_subsection_pos;
+                else
+                {
+                    tcurr_string_count++;
+                }
             }     
         }
         
@@ -854,6 +1051,28 @@ namespace Translator
             //If there is a var section
             if (tvar_pos != -1)
             {
+                int i = 0;
+                //Check if const is a parameter
+                if (topenbracket_pos != -1)
+                {
+                    while ((tvar_pos <= tclosebracket_pos) && (tvar_pos >= topenbracket_pos))
+                    {
+                        //Look for more consts
+                        tvar_pos = FindNextSymbol(ref istrings, "var", icurr_string_count + i);
+                        i++;
+                    }
+                }
+
+                ////Check if this var comes before "begin". If yes, then this is a sub-section declaration. Otherwise ignore.
+                //if ((tvar_pos != -1) && (tvar_pos < tnext_pos))
+                //    tnext_pos = tvar_pos;
+                //else
+                //    tvar_pos = -1;
+            }
+
+            //If there is a var section
+            if (tvar_pos != -1)
+            {
                 ActionFilter:
                 //Check for Delphi Actions and separate them - they will mess up normal parsing
                 tvarfunctionpos = FindNextSymbol(ref istrings, "function", tvar_pos);
@@ -866,7 +1085,17 @@ namespace Translator
                     int tfuncindex, ii;
 
                     if (tvarfunctionpos != -1)
-                        tfuncindex = tvarfunctionpos;
+                    {
+                        if (tprocedurepos != -1)
+                        {
+                            if (tvarfunctionpos < tprocedurepos)
+                                tfuncindex = tvarfunctionpos;
+                            else
+                                tfuncindex = tprocedurepos;
+                        }
+                        else
+                            tfuncindex = tvarfunctionpos;
+                    }
                     else
                         tfuncindex = tprocedurepos;
 
@@ -912,15 +1141,15 @@ namespace Translator
                     List<string> taction = new List<string>();
                     //tvarfunctionpos++;
                     tend++;
-                    taction = istrings.GetRange(tvarfunctionpos, tend - tvarfunctionpos);
-                    istrings.RemoveRange(tvarfunctionpos, tend - tvarfunctionpos);
+                    taction = istrings.GetRange(tfuncindex, tend - tfuncindex);
+                    istrings.RemoveRange(tfuncindex, tend - tfuncindex);
                     tactions.Add(taction);
 
                     List<string> tblanks = new List<string>();
-                    for (int i = 0; i < tend - tvarfunctionpos; i++)
+                    for (int i = 0; i < tend - tfuncindex; i++)
                         tblanks.Add("");
 
-                    istrings.InsertRange(tvarfunctionpos, tblanks);
+                    istrings.InsertRange(tfuncindex, tblanks);
                     goto ActionFilter;
                 }
 
@@ -1862,6 +2091,28 @@ namespace Translator
             comment = GetComment(istring);
             istring = RemoveComment(istring);
 
+            //Replace , with ~@ for easier parsing
+            bool tcomma = false;
+            for (int i = 0; i < istring.Length; i++)
+            {
+                char tchar = istring[i];
+
+                if (tchar == "'".ToCharArray()[0])
+                {
+                    if (tcomma)
+                        tcomma = false;
+                    else
+                        tcomma = true;
+                }
+                else
+                {
+                    if (!tcomma && tchar == ',')
+                    {
+                        istring.Remove(i, 1);
+                        istring.Insert(i, "~@");
+                    }
+                }
+            }
             if (istring != "")
             {
                 //Check if this a array declaration
@@ -1869,7 +2120,9 @@ namespace Translator
                 string tname = tstr[0].Trim();
                 string tvalue = tstr[1].Trim();
 
+                //Check for Arrays
                 int tIsArray = istring.IndexOf("array");
+                int tOpBracket = istring.IndexOf("(");
 
                 if ((tIsArray != -1) && (istring.IndexOf("[") != -1))
                 {
@@ -1884,10 +2137,22 @@ namespace Translator
                     tname = tname.Replace(" ", "");
                     tlist.Add(new Constant(tname, ttype, tvalue, comment));
                 }
+                //Check for DATA TYPES that are Arrays
+                else if (tOpBracket != -1)
+                {
+                    tstr = tname.Split(':');
+                    tname = tstr[0];
+                    tstr = tstr[1].Split(' ');
+                    ttype = tstr[tstr.GetLength(0) - 1];
+                    tname = tname.Replace("var", "");
+                    tname = tname.Replace(" ", "");
+                    tlist.Add(new Constant(tname, ttype, tvalue, comment));
+                }
                 else
                 {
                     istring = istring.Split(';')[0];
-                    string[] tnames = istring.Split(',');
+
+                    string[] tnames = istring.Split("~@".ToCharArray());
 
                     for (int i = 0; i < tnames.Length; i++)
                     {

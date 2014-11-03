@@ -18,7 +18,7 @@ namespace Translator
         //TestComment
         //Testcomment2
 
-        public DelphiToCSConversion(string iPath, string iOutPath, LogDelegate ilog, ref List<string> iStandardReferences, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences)
+        public DelphiToCSConversion(string iPath, string iOutPath, string iPatchPath, string iOverridePath, LogDelegate ilog, ref List<string> iStandardReferences, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences)
         {
             delphiParsedFiles = new List<Delphi>();
             delphiReferences = new List<ReferenceStruct>();
@@ -31,7 +31,7 @@ namespace Translator
             Log = ilog;
 
             //Do a first run to convert individual files to C#, and gather list of references
-            AnalyzeFolder(iPath, iOutPath, ref delphiReferences, ref delphiParsedFiles, ref iStandardReferences, ref delphiStandardReferences, ref standardCSReferences);
+            AnalyzeFolder(iPath, iOutPath, iPatchPath, iOverridePath, ref delphiReferences, ref delphiParsedFiles, ref iStandardReferences, ref delphiStandardReferences, ref standardCSReferences);
 
             //Replace global strings from references in files
             ResolveReferences(ref delphiParsedFiles, ref delphiReferences);
@@ -82,7 +82,7 @@ namespace Translator
             return new string(' ', iSize);
         }
 
-        private void AnalyzeFolder(string iPath, string iOutPath, ref List<ReferenceStruct> oReferences, ref List<Delphi> oDelphi, ref List<string> iStandardReferences, ref List<string> iDelphiStandardReferences, ref List<List<string>> iStandardCSReferences)
+        private void AnalyzeFolder(string iPath, string iOutPath, string iPatchPath, string iOverridePath, ref List<ReferenceStruct> oReferences, ref List<Delphi> oDelphi, ref List<string> iStandardReferences, ref List<string> iDelphiStandardReferences, ref List<List<string>> iStandardCSReferences)
         {
             string FolderPath = iPath;
             string tdirectory = "";
@@ -92,7 +92,37 @@ namespace Translator
 
             //Get files in folder
             string[] files = Directory.GetFiles(iPath);
-            string[] directories = Directory.GetDirectories(iPath);
+            
+            string[] patchfiles = new string[0];
+
+            if (iPatchPath != "")
+                patchfiles = Directory.GetFiles(iPatchPath);
+
+            string[] overridefiles = new string[0];
+            if (iOverridePath != "") 
+                overridefiles = Directory.GetFiles(iOverridePath);
+
+            for (int i = 0; i < patchfiles.GetLength(0); i++)
+                patchfiles[i] = patchfiles[i].Split('.')[0];
+
+            for (int i = 0; i < patchfiles.GetLength(0); i++)
+                overridefiles[i] = overridefiles[i].Split('.')[0];
+
+            string[] directories = new string[0];
+
+            if (iPath != "")
+                directories = Directory.GetDirectories(iPath);
+
+            string[] patchdirectories = new string[0];
+
+            if (iPatchPath != "") 
+                patchdirectories = Directory.GetDirectories(iPatchPath);
+
+            string[] overridedirectories = new string[0];
+
+            if (iOverridePath != "")
+                overridedirectories  = Directory.GetDirectories(iOverridePath); 
+            
             string tstring = "";
             bool pasFileFound = false;
 
@@ -105,7 +135,17 @@ namespace Translator
             {
                 tstring = files[i];
                 string[] tstrarray = tstring.Split('.');
+                string tfilename = tstrarray[0];
+                string tpatchfile = "", toverridefile = "";
 
+                for (int j = 0; j < patchfiles.Length; j++)
+                    if (patchfiles[j] == tfilename)
+                        tpatchfile = patchfiles[j];
+
+                for (int j = 0; j < overridefiles.Length; j++)
+                    if (overridefiles[j] == tfilename)
+                        toverridefile = overridefiles[j];
+                
                 switch (tstrarray[1])
                 {
                     //Parse VCL file (The dialog is manually recreated as WinForm, so nothing is done here)
@@ -113,7 +153,7 @@ namespace Translator
 
                     //Parse unit
                     case "pas": pasFileFound = true;
-                        oDelphi.Add(Translate.DelphiToCS(tstring, tdirectory, iOutPath, Log, ref global_names, ref globals, ref local_names, ref locals, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences, Log));
+                        oDelphi.Add(Translate.DelphiToCS(tstring, tdirectory, iOutPath, iPatchPath, tpatchfile, iOverridePath, toverridefile, Log, ref global_names, ref globals, ref local_names, ref locals, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences, Log));
                         break;
 
                     //Parse Project files
@@ -186,42 +226,49 @@ namespace Translator
             for (int i = 0; i < directories.GetLength(0); i++)
             {
                 string[] tpath_elements = directories[i].Split('\\');
-                AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], ref oReferences, ref oDelphi, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences);
+                string[] tpatchpath_elements = patchdirectories[i].Split('\\');
+                string[] toverridepath_elements = overridedirectories[i].Split('\\');
+
+                AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], iPatchPath + "\\" + tpatchpath_elements[tpatchpath_elements.GetLength(0) - 1], iOverridePath + "\\" + toverridepath_elements[toverridepath_elements.GetLength(0) - 1], ref oReferences, ref oDelphi, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences);
             }
         }
     }
 
     struct Translate
     {
-        public static Delphi DelphiToCS(string iPath, string idirectory, string iOutPath, LogDelegate ilog, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals, ref List<string> iStandardReferences, ref List<string> iDelphiStandardReferences, ref List<List<string>> iStandardCSReferences, LogDelegate iLog)
+        public static Delphi DelphiToCS(string iPath, string idirectory, string iOutPath, string iPatchPath, string iPatchFile, string iOverridePath, string iOverrideFile, LogDelegate ilog, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals, ref List<string> iStandardReferences, ref List<string> iDelphiStandardReferences, ref List<List<string>> iStandardCSReferences, LogDelegate iLog)
         {
+            Delphi tdelphi = new Delphi();
             List<string> tdelphitext = Utilities.TextFileReader(iPath);
             string[] tpath_elements = iOutPath.Split('\\');
             string[] tfilename_elements = iPath.Split('\\');
-
             string tfilename = tfilename_elements[tfilename_elements.GetLength(0) - 1];
-            //string tdirectory = tfilename_elements[tfilename_elements.GetLength(0) - 2].Replace(" ", "_");
             tfilename = tfilename.Replace(".pas", "");
-
-            Delphi tdelphi= new Delphi();
-
+            //string tdirectory = tfilename_elements[tfilename_elements.GetLength(0) - 2].Replace(" ", "_");
             //Embed path information
             tdelphi.directory = idirectory;
             tdelphi.logsingle = iLog;
             tdelphi.outPath = iOutPath + "\\" + tfilename + ".cs";
 
-            tdelphi.Read(ref tdelphitext, true, "{ --", "-- }", ilog);
+            if (iOverrideFile != "")
+            {
+                Directory.CreateDirectory(iOutPath);
+                File.Copy(iOverridePath + "\\" + iOverrideFile + ".txt", iOutPath + "\\" + tfilename + ".cs");
+            }
+            else
+            {   
+                tdelphi.Read(ref tdelphitext, true, "{ --", "-- }", ilog);
 
-            CSharp tcsharp = new CSharp();
-            tcsharp.file_path = tdelphi.outPath;
-            tcsharp.standard_references = iStandardReferences;
+                CSharp tcsharp = new CSharp();
+                tcsharp.file_path = tdelphi.outPath;
+                tcsharp.standard_references = iStandardReferences;
 
-            string[] tout = tcsharp.Write(ref tdelphi.script, idirectory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref iDelphiStandardReferences, ref iStandardCSReferences).ToArray();
+                string[] tout = tcsharp.Write(ref tdelphi.script, idirectory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref iDelphiStandardReferences, ref iStandardCSReferences).ToArray();
 
-            //Write to file
-            Directory.CreateDirectory(iOutPath);
-            File.WriteAllLines(iOutPath + "\\" + tfilename + ".cs", tout, Encoding.UTF8);
-
+                //Write to file
+                Directory.CreateDirectory(iOutPath);
+                File.WriteAllLines(iOutPath + "\\" + tfilename + ".cs", tout, Encoding.UTF8);
+            }            
             return tdelphi;
         }
 

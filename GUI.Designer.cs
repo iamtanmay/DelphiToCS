@@ -40,15 +40,17 @@
             this.label2 = new System.Windows.Forms.Label();
             this.BoxPatch = new System.Windows.Forms.TextBox();
             this.BtnPatch = new System.Windows.Forms.Button();
+            this.BoxOverride = new System.Windows.Forms.TextBox();
+            this.BtnOverride = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // BtnSource
             // 
-            this.BtnSource.Location = new System.Drawing.Point(12, 9);
+            this.BtnSource.Location = new System.Drawing.Point(3, 9);
             this.BtnSource.Name = "BtnSource";
-            this.BtnSource.Size = new System.Drawing.Size(75, 23);
+            this.BtnSource.Size = new System.Drawing.Size(85, 23);
             this.BtnSource.TabIndex = 0;
-            this.BtnSource.Text = "Source";
+            this.BtnSource.Text = "Input Files";
             this.BtnSource.UseVisualStyleBackColor = true;
             this.BtnSource.Click += new System.EventHandler(this.BtnSource_Click);
             // 
@@ -68,17 +70,17 @@
             // 
             // BtnDest
             // 
-            this.BtnDest.Location = new System.Drawing.Point(12, 45);
+            this.BtnDest.Location = new System.Drawing.Point(3, 45);
             this.BtnDest.Name = "BtnDest";
-            this.BtnDest.Size = new System.Drawing.Size(75, 23);
+            this.BtnDest.Size = new System.Drawing.Size(85, 23);
             this.BtnDest.TabIndex = 2;
-            this.BtnDest.Text = "Destination";
+            this.BtnDest.Text = "Output Files";
             this.BtnDest.UseVisualStyleBackColor = true;
             this.BtnDest.Click += new System.EventHandler(this.BtnDest_Click);
             // 
             // BtnRun
             // 
-            this.BtnRun.Location = new System.Drawing.Point(364, 573);
+            this.BtnRun.Location = new System.Drawing.Point(364, 646);
             this.BtnRun.Name = "BtnRun";
             this.BtnRun.Size = new System.Drawing.Size(75, 23);
             this.BtnRun.TabIndex = 4;
@@ -88,7 +90,7 @@
             // 
             // listBox1
             // 
-            this.listBox1.Location = new System.Drawing.Point(12, 320);
+            this.listBox1.Location = new System.Drawing.Point(12, 393);
             this.listBox1.Name = "listBox1";
             this.listBox1.Size = new System.Drawing.Size(427, 224);
             this.listBox1.TabIndex = 5;
@@ -98,7 +100,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(12, 116);
+            this.label1.Location = new System.Drawing.Point(12, 189);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(353, 17);
             this.label1.TabIndex = 7;
@@ -107,7 +109,7 @@
             // 
             // richTextBox1
             // 
-            this.richTextBox1.Location = new System.Drawing.Point(12, 141);
+            this.richTextBox1.Location = new System.Drawing.Point(12, 214);
             this.richTextBox1.Name = "richTextBox1";
             this.richTextBox1.Size = new System.Drawing.Size(428, 139);
             this.richTextBox1.TabIndex = 8;
@@ -117,7 +119,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(12, 292);
+            this.label2.Location = new System.Drawing.Point(12, 365);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(35, 17);
             this.label2.TabIndex = 9;
@@ -133,18 +135,38 @@
             // 
             // BtnPatch
             // 
-            this.BtnPatch.Location = new System.Drawing.Point(12, 81);
+            this.BtnPatch.Location = new System.Drawing.Point(3, 81);
             this.BtnPatch.Name = "BtnPatch";
-            this.BtnPatch.Size = new System.Drawing.Size(75, 23);
+            this.BtnPatch.Size = new System.Drawing.Size(85, 23);
             this.BtnPatch.TabIndex = 10;
-            this.BtnPatch.Text = "Patch File";
+            this.BtnPatch.Text = "Patch Files";
             this.BtnPatch.UseVisualStyleBackColor = true;
+            this.BtnPatch.Click += new System.EventHandler(this.BtnPatch_Click);
+            // 
+            // BoxOverride
+            // 
+            this.BoxOverride.Location = new System.Drawing.Point(93, 121);
+            this.BoxOverride.Name = "BoxOverride";
+            this.BoxOverride.Size = new System.Drawing.Size(347, 20);
+            this.BoxOverride.TabIndex = 13;
+            // 
+            // BtnOverride
+            // 
+            this.BtnOverride.Location = new System.Drawing.Point(3, 118);
+            this.BtnOverride.Name = "BtnOverride";
+            this.BtnOverride.Size = new System.Drawing.Size(85, 23);
+            this.BtnOverride.TabIndex = 12;
+            this.BtnOverride.Text = "Override Files";
+            this.BtnOverride.UseVisualStyleBackColor = true;
+            this.BtnOverride.Click += new System.EventHandler(this.BtnOverride_Click);
             // 
             // s
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(456, 618);
+            this.ClientSize = new System.Drawing.Size(456, 688);
+            this.Controls.Add(this.BoxOverride);
+            this.Controls.Add(this.BtnOverride);
             this.Controls.Add(this.BoxPatch);
             this.Controls.Add(this.BtnPatch);
             this.Controls.Add(this.label2);
@@ -178,6 +200,8 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox BoxPatch;
         private System.Windows.Forms.Button BtnPatch;
+        private System.Windows.Forms.TextBox BoxOverride;
+        private System.Windows.Forms.Button BtnOverride;
 
     }
 }

@@ -107,6 +107,8 @@ namespace Translator
                 DelphiToCSTranslator.Properties.Settings.Default.OutPath = BoxDest.Text;
             if (BoxPatch.Text != "")
                 DelphiToCSTranslator.Properties.Settings.Default.PatchPath = BoxPatch.Text;
+            if (BoxOverride.Text != "")
+                DelphiToCSTranslator.Properties.Settings.Default.OverridePath = BoxOverride.Text;
             if (richTextBox1.Text != "")
                 DelphiToCSTranslator.Properties.Settings.Default.StdLibraries = richTextBox1.Text;
 
@@ -161,7 +163,29 @@ namespace Translator
                 tStandardCSReferences.Add(tlist);
             }
 
-            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences);
+            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, BoxPatch.Text, BoxOverride.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences);
+        }
+        
+        private void BtnOverride_Click(object sender, EventArgs e)
+        {
+            //Get Folder
+            DialogResult result = folderBrowserDialog1.ShowDialog();
+
+            string tstring = folderBrowserDialog1.SelectedPath;
+
+            if (result == DialogResult.OK)
+                BoxOverride.Text = tstring;
+        }
+
+        private void BtnPatch_Click(object sender, EventArgs e)
+        {
+            //Get Folder
+            DialogResult result = folderBrowserDialog1.ShowDialog();
+
+            string tstring = folderBrowserDialog1.SelectedPath;
+
+            if (result == DialogResult.OK)
+                BoxPatch.Text = tstring;
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -172,6 +196,6 @@ namespace Translator
         private void label2_Click(object sender, EventArgs e)
         {
 
-        }        
+        }
     }
 }
