@@ -84,7 +84,12 @@ namespace Translator
             string tstring = folderBrowserDialog1.SelectedPath;
 
             if (result == DialogResult.OK)
+            {
                 BoxSource.Text = tstring;
+                BoxPatch.Text = System.IO.Directory.GetParent(tstring) + "\\Patch";
+                BoxOverride.Text = System.IO.Directory.GetParent(tstring) + "\\Override"; ;
+                BoxDest.Text = System.IO.Directory.GetParent(tstring) + "\\Output"; ;
+            }
         }
 
         private void BtnDest_Click(object sender, EventArgs e)

@@ -136,17 +136,34 @@ namespace Translator
                 tstring = files[i];
                 string[] tstrarray = tstring.Split('.');
                 string tfilename = tstrarray[0];
+                string tfileextension = tstrarray[1];
+
+                tstrarray = tfilename.Split("\\".ToCharArray());
+                tfilename = tstrarray[tstrarray.Length - 1];
+
                 string tpatchfile = "", toverridefile = "";
 
                 for (int j = 0; j < patchfiles.Length; j++)
+                {
+                    patchfiles[j] = patchfiles[j].Replace(".txt", "");
+                    tstrarray = patchfiles[j].Split("\\".ToCharArray());
+                    patchfiles[j] = tstrarray[tstrarray.Length - 1];
+
                     if (patchfiles[j] == tfilename)
                         tpatchfile = patchfiles[j];
+                }
 
                 for (int j = 0; j < overridefiles.Length; j++)
+                {
+                    overridefiles[j] = overridefiles[j].Replace(".cs", "");
+                    tstrarray = overridefiles[j].Split("\\".ToCharArray());
+                    overridefiles[j] = tstrarray[tstrarray.Length - 1];
+
                     if (overridefiles[j] == tfilename)
                         toverridefile = overridefiles[j];
-                
-                switch (tstrarray[1])
+                }
+
+                switch (tfileextension)
                 {
                     //Parse VCL file (The dialog is manually recreated as WinForm, so nothing is done here)
                     case "dfm": break;
@@ -226,10 +243,26 @@ namespace Translator
             for (int i = 0; i < directories.GetLength(0); i++)
             {
                 string[] tpath_elements = directories[i].Split('\\');
-                string[] tpatchpath_elements = patchdirectories[i].Split('\\');
-                string[] toverridepath_elements = overridedirectories[i].Split('\\');
 
-                AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], iPatchPath + "\\" + tpatchpath_elements[tpatchpath_elements.GetLength(0) - 1], iOverridePath + "\\" + toverridepath_elements[toverridepath_elements.GetLength(0) - 1], ref oReferences, ref oDelphi, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences);
+                string[] tpatchpath_elements = new string[0];
+                string tcurr_patch_path = "";
+
+                if (patchdirectories.Length > 0)
+                {
+                    tpatchpath_elements = patchdirectories[i].Split('\\');
+                    tcurr_patch_path = iPatchPath + "\\" + tpatchpath_elements[tpatchpath_elements.GetLength(0) - 1];
+                }
+
+                string[] toverridepath_elements = new string[0];
+                string tcurr_override_path = "";
+
+                if (overridedirectories.Length > 0)
+                {
+                    toverridepath_elements = overridedirectories[i].Split('\\');
+                    tcurr_override_path = iOverridePath + "\\" + toverridepath_elements[toverridepath_elements.GetLength(0) - 1];
+                }
+
+                AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], tcurr_patch_path, tcurr_override_path, ref oReferences, ref oDelphi, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences);
             }
         }
     }
@@ -253,7 +286,7 @@ namespace Translator
             if (iOverrideFile != "")
             {
                 Directory.CreateDirectory(iOutPath);
-                File.Copy(iOverridePath + "\\" + iOverrideFile + ".txt", iOutPath + "\\" + tfilename + ".cs");
+                File.Copy(iOverridePath + "\\" + iOverrideFile + ".cs", iOutPath + "\\" + tfilename + ".cs", true);
             }
             else
             {   

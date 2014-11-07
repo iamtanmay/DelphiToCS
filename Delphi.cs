@@ -531,7 +531,7 @@ namespace Translator
         }
 
         private DelphiMethodStrings ParseInterfaceMethod(string imethodtype, ref List<string> iFiltered_strings, int icurr_string_count, out int oend_pos)
-       {
+        {
             bool toverload = false, tvirtual = false, tabstract = false, tstatic = false;
             int tnext_pos = FindEndOfFunctionTitle(ref iFiltered_strings, icurr_string_count);//FindNextKey(ref iFiltered_strings, ref classKeys, icurr_string_count);
 
@@ -715,11 +715,18 @@ namespace Translator
                                         }
                                         else if (ttempstr != "")
                                         {
-                                            while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                            bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+
+                                            while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
                                             {
                                                 j++;
                                                 ttempstr = tstrings[j].Trim();
                                                 tconststr = tconststr + tstrings[j];
+
+                                                if (ttempstr != "")
+                                                    tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                else
+                                                    tsemicolonfound = false;
                                             }
 
                                             tconsts.Add(new DelphiVarStrings(tconststr.Replace("=", ":="), true));
@@ -747,11 +754,18 @@ namespace Translator
                                         }
                                         else if (ttempstr != "")
                                         {
-                                            while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                            bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+
+                                            while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
                                             {
                                                 j++;
                                                 ttempstr = tstrings[j].Trim();
                                                 tconststr = tconststr + tstrings[j];
+
+                                                if (ttempstr != "")
+                                                    tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                else
+                                                    tsemicolonfound = false;
                                             }
 
                                             tconsts.Add(new DelphiVarStrings(tconststr.Replace("=", ":="), true));
@@ -777,13 +791,20 @@ namespace Translator
                                                 ttempstr = tstrings[j].Trim();
                                             }
                                         }
-                                        else
+                                        else if (ttempstr != "")
                                         {
-                                            while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                            bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+
+                                            while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
                                             {
                                                 j++;
                                                 ttempstr = tstrings[j].Trim();
                                                 tconststr = tconststr + tstrings[j];
+
+                                                if (ttempstr != "")
+                                                    tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                else
+                                                    tsemicolonfound = false;
                                             }
 
                                             tconsts.Add(new DelphiVarStrings(tconststr.Replace("=", ":="), true));
@@ -811,11 +832,18 @@ namespace Translator
                                         }
                                         else if (ttempstr != "")
                                         {
-                                            while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                            bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+
+                                            while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
                                             {
                                                 j++;
                                                 ttempstr = tstrings[j].Trim();
                                                 tconststr = tconststr + tstrings[j];
+
+                                                if (ttempstr != "")
+                                                    tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                else
+                                                    tsemicolonfound = false;
                                             }
 
                                             tconsts.Add(new DelphiVarStrings(tconststr.Replace("=", ":="), true));
@@ -852,10 +880,12 @@ namespace Translator
                                 tactions.Add(new List<DelphiMethodStrings>());
                                 break;
 
-                            case "class property": tproperties.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
+                            case "class property":  if (tstrings[tcurr_string_count].Trim()[0] != '/')
+                                    tproperties.Add(new DelphiVarStrings(tstrings[tcurr_string_count], true));
                                 break;
 
-                            case "property": tproperties.Add(new DelphiVarStrings(tstrings[tcurr_string_count], false));
+                            case "property":    if (tstrings[tcurr_string_count].Trim()[0] != '/') 
+                                    tproperties.Add(new DelphiVarStrings(tstrings[tcurr_string_count], false));
                                 break;
 
                             default: break;
@@ -994,11 +1024,17 @@ namespace Translator
                                         {
                                             if (ttempstr != "")
                                             {
-                                                while ((ttempstr[ttempstr.Length - 1] != ';') && (ttempstr.IndexOf("//") == -1))
+                                                bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                while ( !tsemicolonfound  && (ttempstr.IndexOf("//") == -1))
                                                 {
                                                     j++;
                                                     ttempstr = istrings[j].Trim();
                                                     tconststr = tconststr + istrings[j];
+
+                                                    if (ttempstr != "")
+                                                        tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                    else
+                                                        tsemicolonfound = false;
                                                 }
                                                 oconsts.Add(tconststr.Replace("=", ":="));
                                             }
@@ -1533,9 +1569,21 @@ namespace Translator
 
         static private string RecognizeKey(string istring, ref string[] ikeys)
 		{
+
+            string pattern = "";
+
+            //for (int i = 0; i < iElementList.GetLength(0); i++)
+            //{
+            //    pattern = "\\b" + iElementList[i] + "\\b";
+            //    istring = Regex.Replace(istring, pattern, iSubstitutesList[i]);
+            //}
+
            	for (int i=0; i < ikeys.GetLength(0); i++)
            	{
-           		if (istring.IndexOf(ikeys[i]) != -1)
+                pattern = "\\b" + ikeys[i] + "\\b";
+                Match tmatch = Regex.Match(istring, pattern);
+
+           		if (tmatch.Success)//(istring.IndexOf(ikeys[i]) != -1)
            			return ikeys[i].Trim();
            	}
            	return "";
@@ -1868,14 +1916,47 @@ namespace Translator
 
                 for (int ii = from_pos + 1; ii < till_pos; ii++)
                 {
-                    string tvar_str = iMethodStrings[ii];
-                    string[] tvar_arr = tvar_str.Split('=');
+                    string tvar_str = iMethodStrings[ii];   
+                    string ttempstr = iMethodStrings[ii].Trim();
 
-                    tvar_arr[0].Trim();
-                    tvar_arr[1] = tvar_arr[1].Replace(";", "");
-                    tvar_arr[1].Trim();
+                    if (ttempstr != "")
+                    {
+                        if (ttempstr[0] == '{')
+                        {
+                            //Ignore comments containing class name
+                            while (ttempstr.IndexOf('}') == -1)
+                            {
+                                ii++;
+                                ttempstr = iMethodStrings[ii].Trim();
+                            }
+                        }
+                        else if (ttempstr != "")
+                        {
+                            bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
 
-                    tconsts.Add(new Constant(tvar_arr[0], tvar_arr[1]));
+                            while ( !tsemicolonfound && (ttempstr.IndexOf("//") == -1))
+                            {
+                                ii++;
+                                ttempstr = iMethodStrings[ii].Trim();
+                                tvar_str = tvar_str + iMethodStrings[ii];
+
+                                if (ttempstr != "")
+                                    tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                else
+                                    tsemicolonfound = false;
+                            }
+
+                            tvar_str = tvar_str.Replace("=", ":=");
+
+                            string[] tvar_arr = tvar_str.Split('=');
+                            
+                            tvar_arr[0] = tvar_arr[0].Trim();
+                            tvar_arr[1] = tvar_arr[1].Replace(";", "");
+                            tvar_arr[1] = tvar_arr[1].Trim();
+
+                            tconsts.Add(new Constant(tvar_arr[0], tvar_arr[1]));
+                        }
+                    }
                 }
             }
 
@@ -1898,19 +1979,31 @@ namespace Translator
                 for (int ii = from_pos + 1; ii < till_pos; ii++)
                 {
                     string tvar_str = iMethodStrings[ii];
+                    string ttempstr = iMethodStrings[ii].Trim();
 
-
-                    if (tvar_str != "")
+                    if (ttempstr != "")
                     {
-                        if (tvar_str.Trim() != "")
-                            tvars.AddRange(StringToVariable(tvar_str));
-                        //string[] tvar_arr = tvar_str.Split(':');
+                        if (ttempstr[0] == '{')
+                        {
+                            //Ignore comments containing class name
+                            while (ttempstr.IndexOf('}') == -1)
+                            {
+                                ii++;
+                                ttempstr = iMethodStrings[ii].Trim();
+                            }
+                        }
+                        else if (ttempstr != "")
+                        {
+                            if (tvar_str.Trim() != "")
+                                tvars.AddRange(StringToVariable(tvar_str));
+                            //string[] tvar_arr = tvar_str.Split(':');
 
-                        //tvar_arr[0].Trim();
-                        //tvar_arr[1] = tvar_arr[1].Replace(";", "");
-                        //tvar_arr[1].Trim();
+                            //tvar_arr[0].Trim();
+                            //tvar_arr[1] = tvar_arr[1].Replace(";", "");
+                            //tvar_arr[1].Trim();
 
-                        //tvars.Add(new Variable(tvar_arr[0], tvar_arr[1], false));
+                            //tvars.Add(new Variable(tvar_arr[0], tvar_arr[1], false));
+                        }
                     }
                 }
             }
@@ -2138,7 +2231,7 @@ namespace Translator
                     tlist.Add(new Constant(tname, ttype, tvalue, comment));
                 }
                 //Check for DATA TYPES that are Arrays
-                else if (tOpBracket != -1)
+                else if (tOpBracket != -1 && ((istring.IndexOf("low(") == -1) && (istring.IndexOf("high(") == -1)))
                 {
                     tstr = tname.Split(':');
                     tname = tstr[0];
