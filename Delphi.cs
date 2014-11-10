@@ -147,6 +147,7 @@ namespace Translator
         //Divide subsection kinds
         public static string[] interfaceKindKeys = {"class","record","procedure","function", "interface" };
         public static string[] implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
+        public static string[] const_implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const", "var", "begin" };
 
         //Divide method commands
         public static string[] methodKeys = {"var","begin","label","end","try","catch","finally" };
@@ -280,7 +281,49 @@ namespace Translator
                                     if (tendRange == -1)
                                         tendRange = endInterface;
                                     
-                                    oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tendRange)); break;
+                                    //oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tendRange)); break;
+
+                                    string tconststr = "", ttempstr = "";
+                                    for (int j = tcurr_string_count + 1; j < tendRange && j < istrings.Count; j++)
+                                    {
+                                        tconststr = istrings[j];
+
+                                        ttempstr = istrings[j].Trim();
+
+                                        if (ttempstr != "")
+                                        {
+                                            if (ttempstr[0] == '{')
+                                            {
+                                                //Ignore comments containing class name
+                                                while (ttempstr.IndexOf('}') == -1)
+                                                {
+                                                    j++;
+                                                    ttempstr = istrings[j].Trim();
+                                                }
+                                            }
+                                            else if (ttempstr != "" && ttempstr[0] != '/')
+                                            {
+                                                bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+
+                                                while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
+                                                {
+                                                    j++;
+                                                    ttempstr = istrings[j].Trim();
+                                                    tconststr = tconststr + istrings[j];
+
+                                                    if (ttempstr != "")
+                                                        tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                    else
+                                                        tsemicolonfound = false;
+                                                }
+
+                                                oconsts.Add(tconststr.Replace("=", ":="));
+                                            }
+                                        }
+                                    }
+                                    break;
+
+
 
                     case "type":    tendRange = tnext_subsection_pos;
 
@@ -331,16 +374,16 @@ namespace Translator
 
         private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int istartpos, int inext_subsection_pos)
         {
-            int tnext_subsection_pos = -1, tcurr_string_count = istartpos;
+            int tnext_subsection_pos = inext_subsection_pos, tcurr_string_count = istartpos;
             string tclassname = "";
 
-            if (inext_subsection_pos == -1)
-                inext_subsection_pos = endInterface;
-            if (inext_subsection_pos == -1)
-                inext_subsection_pos = istrings.Count;
+            if (tnext_subsection_pos == -1)
+                tnext_subsection_pos = endInterface;
+            if (tnext_subsection_pos == -1)
+                tnext_subsection_pos = istrings.Count;
 
             //Interface sub sectionsm
-            while ((tcurr_string_count < inext_subsection_pos) && (tcurr_string_count < endInterface) && (tcurr_string_count != -1))
+            while ((tcurr_string_count < tnext_subsection_pos) && (tcurr_string_count < endInterface) && (tcurr_string_count != -1))
             {
                 //Ignore comments and empty lines
                 if ((istrings[tcurr_string_count] != "") && !(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
@@ -696,7 +739,13 @@ namespace Translator
                             case "strict private": //ignore
                                 break;
 
-                            case "class const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                            case "class const":
+                                tnext_subsection_pos = FindNextKey(ref tstrings, ref const_implementKindKeys, tcurr_string_count);
+                                
+                                if (tnext_subsection_pos == -1)
+                                    tnext_subsection_pos = endInterface;
+                                
+                                for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < tstrings.Count; j++)
                                 {
                                     tconststr = tstrings[j];
 
@@ -713,7 +762,7 @@ namespace Translator
                                                 ttempstr = tstrings[j].Trim();
                                             }
                                         }
-                                        else if (ttempstr != "")
+                                        else if (ttempstr != "" && ttempstr[0] != '/')
                                         {
                                             bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
 
@@ -735,7 +784,13 @@ namespace Translator
                                 }
                                 break;
 
-                            case "public const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                            case "public const":
+                                tnext_subsection_pos = FindNextKey(ref tstrings, ref const_implementKindKeys, tcurr_string_count);
+
+                                if (tnext_subsection_pos == -1)
+                                    tnext_subsection_pos = endInterface;
+
+                                for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < tstrings.Count; j++)
                                 {
                                     tconststr = tstrings[j];
 
@@ -752,7 +807,7 @@ namespace Translator
                                                 ttempstr = tstrings[j].Trim();
                                             }
                                         }
-                                        else if (ttempstr != "")
+                                        else if (ttempstr != "" && ttempstr[0] != '/')
                                         {
                                             bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
 
@@ -774,7 +829,13 @@ namespace Translator
                                 }
                                 break;
 
-                            case "private const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                            case "private const":
+                                tnext_subsection_pos = FindNextKey(ref tstrings, ref const_implementKindKeys, tcurr_string_count);
+
+                                if (tnext_subsection_pos == -1)
+                                    tnext_subsection_pos = endInterface;
+
+                                for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < tstrings.Count; j++)
                                 {
                                     tconststr = tstrings[j];
 
@@ -791,7 +852,7 @@ namespace Translator
                                                 ttempstr = tstrings[j].Trim();
                                             }
                                         }
-                                        else if (ttempstr != "")
+                                        else if (ttempstr != "" && ttempstr[0] != '/')
                                         {
                                             bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
 
@@ -813,7 +874,13 @@ namespace Translator
                                 }
                                 break;
 
-                            case "const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                            case "const":
+                                tnext_subsection_pos = FindNextKey(ref tstrings, ref const_implementKindKeys, tcurr_string_count);
+
+                                if (tnext_subsection_pos == -1)
+                                    tnext_subsection_pos = endInterface;
+
+                                for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < tstrings.Count; j++)
                                 {
                                     tconststr = tstrings[j];
 
@@ -830,7 +897,7 @@ namespace Translator
                                                 ttempstr = tstrings[j].Trim();
                                             }
                                         }
-                                        else if (ttempstr != "")
+                                        else if (ttempstr != "" && ttempstr[0] != '/')
                                         {
                                             bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
 
@@ -958,7 +1025,7 @@ namespace Translator
             int tcurr_string_count = startImplementation, tnext_subsection_pos = -1;
 
             //mplementation sub sections
-            while (tcurr_string_count != -1)
+            while (tcurr_string_count != -1 && tcurr_string_count < endImplementation)
             {
                 tnext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tcurr_string_count);
 
@@ -1003,7 +1070,12 @@ namespace Translator
                                 ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);
                                 break;
 
-                            case "const": for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1; j++)
+                            case "const": tnext_subsection_pos = FindNextKey(ref istrings, ref const_implementKindKeys, tcurr_string_count);
+                                
+                                if (tnext_subsection_pos == -1)
+                                    tnext_subsection_pos = endImplementation;
+                                
+                                for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < istrings.Count; j++)
                                 {
                                     string tconststr = istrings[j];
 
@@ -1022,7 +1094,7 @@ namespace Translator
                                         }
                                         else
                                         {
-                                            if (ttempstr != "")
+                                            if (ttempstr != "" && ttempstr[0] != '/')
                                             {
                                                 bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
                                                 while ( !tsemicolonfound  && (ttempstr.IndexOf("//") == -1))
@@ -1473,7 +1545,7 @@ namespace Translator
 	    		Section_Bookmarks.Add(startImplementation);
 
 	    		//If there is no other section after "implementation", then process
-	    		endImplementation = FindNextSection(ref istrings, startImplementation);
+                endImplementation = FindNextSymbol(ref istrings, "end.", startImplementation, true);//FindNextSection(ref istrings, startImplementation);
 	    		if (endImplementation == -1)
 	    		{
 	        		return;
@@ -1529,6 +1601,9 @@ namespace Translator
 
         static private int FindNextKey(ref List<string> istrings, ref string[] ikeys, int istartpos)
         {
+            if (istartpos < 0)
+                return -1;
+
             for (int i = istartpos + 1; i < istrings.Count; i++)
             {
                 if (Check_If_StringList_Elements_Exist_In_String(istrings[i], ref ikeys) != -1)
@@ -1807,7 +1882,12 @@ namespace Translator
                                                            
 	    static public int FindStringInList(string ifind, ref List<string> iarray, int iindex, bool imatchCase)
 		{
-	    	for (int i = iindex; i < iarray.Count; i++)
+            int i = iindex;
+
+            if (i < 0)
+                i = 1;
+
+	    	for (; i < iarray.Count; i++)
 	    	{
 	    		string tstring;
 
@@ -1930,10 +2010,9 @@ namespace Translator
                                 ttempstr = iMethodStrings[ii].Trim();
                             }
                         }
-                        else if (ttempstr != "")
+                        else if (ttempstr != "" && ttempstr[0] != '/')
                         {
                             bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
-
                             while ( !tsemicolonfound && (ttempstr.IndexOf("//") == -1))
                             {
                                 ii++;
@@ -1976,7 +2055,7 @@ namespace Translator
                 if (const_start == -1)
                     body_start = var_start;
 
-                for (int ii = from_pos + 1; ii < till_pos; ii++)
+                for (int ii = from_pos + 1; ii < till_pos && ii < iMethodStrings.Count; ii++)
                 {
                     string tvar_str = iMethodStrings[ii];
                     string ttempstr = iMethodStrings[ii].Trim();
@@ -1992,10 +2071,32 @@ namespace Translator
                                 ttempstr = iMethodStrings[ii].Trim();
                             }
                         }
-                        else if (ttempstr != "")
+                        else if (ttempstr != "" && ttempstr[0] != '/')
                         {
+                            string tvarcomment = "";
+                            string[] tvarcommentarr = tvar_str.Split("//".ToCharArray());
+
+                            if (tvarcommentarr.Length > 1)
+                            {
+                                tvar_str = tvarcommentarr[0];
+                                tvarcomment = tvarcommentarr[1];
+                            }
+
+                            while (tvar_str.IndexOf(':') == -1)
+                            {
+                                ii++;
+                                tvar_str = tvar_str + iMethodStrings[ii];
+                                tvarcommentarr = tvar_str.Split("//".ToCharArray());
+
+                                if (tvarcommentarr.Length > 1)
+                                {
+                                    tvar_str = tvarcommentarr[0];
+                                    tvarcomment = tvarcomment + tvarcommentarr[1];
+                                }
+                            }
+
                             if (tvar_str.Trim() != "")
-                                tvars.AddRange(StringToVariable(tvar_str));
+                                tvars.AddRange(StringToVariable(tvar_str, tvarcomment));
                             //string[] tvar_arr = tvar_str.Split(':');
 
                             //tvar_arr[0].Trim();
@@ -2009,7 +2110,12 @@ namespace Translator
             }
 
             if ((body_start != -1) && (iMethodStrings.Count > 0))
-                iMethodStrings.RemoveRange(0, begin_start - body_start);
+            {
+                if (begin_start - body_start >= iMethodStrings.Count)
+                    iMethodStrings = new List<string>();
+                else
+                    iMethodStrings.RemoveRange(0, begin_start - body_start);
+            }
 
             //name, parameters, type, IsVirtual, IsAbstract, IsStatic, variables, commands
             Function tfunc = new Function(iname, tparams, ireturntype, tisVirtual, tisAbstract, tIsStatic, tconsts, tvars, iMethodStrings);
@@ -2260,8 +2366,9 @@ namespace Translator
         {
             Constant tout;
             string tname = "", tvalue = "", ttype = "";
+            string ttest = iconst.Trim();
 
-            if (iconst.Trim() != "")
+            if (ttest != "" && ttest != "end" && ttest != "end.")
             {
                 string[] tstr = iconst.Split('=');
                 tname = tstr[0].Trim();
@@ -2353,13 +2460,18 @@ namespace Translator
 
         private List<Variable> StringToVariable(string istring)
         {
+            return StringToVariable(istring, "");
+        }
+
+        private List<Variable> StringToVariable(string istring, string icomment)
+        {
             List<Variable> tlist = new List<Variable>();
 
             if (istring.Trim() != "implementation")
             {
                 string ttype = "", comment = "";
 
-                comment = GetComment(istring);
+                comment = icomment + GetComment(istring);
                 istring = RemoveComment(istring);
 
                 if (istring.Trim() != "")
