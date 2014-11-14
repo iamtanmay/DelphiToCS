@@ -42,6 +42,16 @@
             this.BtnPatch = new System.Windows.Forms.Button();
             this.BoxOverride = new System.Windows.Forms.TextBox();
             this.BtnOverride = new System.Windows.Forms.Button();
+            this.label3 = new System.Windows.Forms.Label();
+            this.BoxThreads = new System.Windows.Forms.TextBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.BoxThreadingEnabled = new System.Windows.Forms.CheckBox();
+            this.BoxIL = new System.Windows.Forms.TextBox();
+            this.ButtonIL = new System.Windows.Forms.Button();
+            this.BoxWriteIL = new System.Windows.Forms.CheckBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.BoxReadIL = new System.Windows.Forms.CheckBox();
+            this.label6 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // BtnSource
@@ -90,9 +100,9 @@
             // 
             // listBox1
             // 
-            this.listBox1.Location = new System.Drawing.Point(12, 393);
+            this.listBox1.Location = new System.Drawing.Point(12, 442);
             this.listBox1.Name = "listBox1";
-            this.listBox1.Size = new System.Drawing.Size(427, 224);
+            this.listBox1.Size = new System.Drawing.Size(427, 175);
             this.listBox1.TabIndex = 5;
             this.listBox1.Text = "";
             // 
@@ -100,7 +110,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(12, 189);
+            this.label1.Location = new System.Drawing.Point(11, 255);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(353, 17);
             this.label1.TabIndex = 7;
@@ -109,7 +119,7 @@
             // 
             // richTextBox1
             // 
-            this.richTextBox1.Location = new System.Drawing.Point(12, 214);
+            this.richTextBox1.Location = new System.Drawing.Point(11, 280);
             this.richTextBox1.Name = "richTextBox1";
             this.richTextBox1.Size = new System.Drawing.Size(428, 139);
             this.richTextBox1.TabIndex = 8;
@@ -119,7 +129,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(12, 365);
+            this.label2.Location = new System.Drawing.Point(9, 422);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(35, 17);
             this.label2.TabIndex = 9;
@@ -160,11 +170,109 @@
             this.BtnOverride.UseVisualStyleBackColor = true;
             this.BtnOverride.Click += new System.EventHandler(this.BtnOverride_Click);
             // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(37, 220);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(69, 13);
+            this.label3.TabIndex = 14;
+            this.label3.Text = "Max Threads";
+            this.label3.Click += new System.EventHandler(this.label3_Click);
+            // 
+            // BoxThreads
+            // 
+            this.BoxThreads.Location = new System.Drawing.Point(112, 217);
+            this.BoxThreads.Name = "BoxThreads";
+            this.BoxThreads.Size = new System.Drawing.Size(15, 20);
+            this.BoxThreads.TabIndex = 15;
+            this.BoxThreads.Text = "1";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(9, 191);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(97, 13);
+            this.label4.TabIndex = 16;
+            this.label4.Text = "Threading Enabled";
+            // 
+            // BoxThreadingEnabled
+            // 
+            this.BoxThreadingEnabled.AutoSize = true;
+            this.BoxThreadingEnabled.Location = new System.Drawing.Point(114, 191);
+            this.BoxThreadingEnabled.Name = "BoxThreadingEnabled";
+            this.BoxThreadingEnabled.Size = new System.Drawing.Size(15, 14);
+            this.BoxThreadingEnabled.TabIndex = 17;
+            this.BoxThreadingEnabled.UseVisualStyleBackColor = true;
+            // 
+            // BoxIL
+            // 
+            this.BoxIL.Location = new System.Drawing.Point(93, 157);
+            this.BoxIL.Name = "BoxIL";
+            this.BoxIL.Size = new System.Drawing.Size(347, 20);
+            this.BoxIL.TabIndex = 19;
+            // 
+            // ButtonIL
+            // 
+            this.ButtonIL.Location = new System.Drawing.Point(3, 154);
+            this.ButtonIL.Name = "ButtonIL";
+            this.ButtonIL.Size = new System.Drawing.Size(85, 23);
+            this.ButtonIL.TabIndex = 18;
+            this.ButtonIL.Text = "IL Output";
+            this.ButtonIL.UseVisualStyleBackColor = true;
+            // 
+            // BoxWriteIL
+            // 
+            this.BoxWriteIL.AutoSize = true;
+            this.BoxWriteIL.Location = new System.Drawing.Point(221, 191);
+            this.BoxWriteIL.Name = "BoxWriteIL";
+            this.BoxWriteIL.Size = new System.Drawing.Size(15, 14);
+            this.BoxWriteIL.TabIndex = 21;
+            this.BoxWriteIL.UseVisualStyleBackColor = true;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(150, 190);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(62, 13);
+            this.label5.TabIndex = 20;
+            this.label5.Text = "Write IL out";
+            // 
+            // BoxReadIL
+            // 
+            this.BoxReadIL.AutoSize = true;
+            this.BoxReadIL.Location = new System.Drawing.Point(332, 191);
+            this.BoxReadIL.Name = "BoxReadIL";
+            this.BoxReadIL.Size = new System.Drawing.Size(15, 14);
+            this.BoxReadIL.TabIndex = 23;
+            this.BoxReadIL.UseVisualStyleBackColor = true;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(261, 191);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(56, 13);
+            this.label6.TabIndex = 22;
+            this.label6.Text = "Read IL in";
+            // 
             // s
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(456, 688);
+            this.Controls.Add(this.BoxReadIL);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.BoxWriteIL);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.BoxIL);
+            this.Controls.Add(this.ButtonIL);
+            this.Controls.Add(this.BoxThreadingEnabled);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.BoxThreads);
+            this.Controls.Add(this.label3);
             this.Controls.Add(this.BoxOverride);
             this.Controls.Add(this.BtnOverride);
             this.Controls.Add(this.BoxPatch);
@@ -202,6 +310,16 @@
         private System.Windows.Forms.Button BtnPatch;
         private System.Windows.Forms.TextBox BoxOverride;
         private System.Windows.Forms.Button BtnOverride;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.TextBox BoxThreads;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.CheckBox BoxThreadingEnabled;
+        private System.Windows.Forms.TextBox BoxIL;
+        private System.Windows.Forms.Button ButtonIL;
+        private System.Windows.Forms.CheckBox BoxWriteIL;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.CheckBox BoxReadIL;
+        private System.Windows.Forms.Label label6;
 
     }
 }

@@ -22,7 +22,9 @@ namespace Translator
     public partial class s : Form
     {
         private int index;
+        public string logtext = "";
         private List<LogEntry> LogEntries { get; set; }
+        public bool readIL = false, writeIL = false;
 
         List<string> standardDelphiReferences = new List<string>();
         List<string> standardCSReferences = new List<string>();
@@ -44,7 +46,13 @@ namespace Translator
             //Dispatcher is needed because Threads cannot change Main UI data. 
             //Dispatcher transfers data to main thread to apply to UI
             //LogEntry tlogEntry = new LogEntry(index++, imessage);
+
             listBox1.Text += DateTime.Now + Indent(4) + imessage + Environment.NewLine;
+            //if(Thread.CurrentThread.IsThreadPoolThread)
+            //{
+            //    listBox1.Text = logtext;
+            //    logtext = "";
+            //}
             //Dispatcher.CurrentDispatcher.BeginInvoke((Action)(() => LogEntries.Add(tlogEntry)));
         }
 
@@ -89,6 +97,7 @@ namespace Translator
                 BoxPatch.Text = System.IO.Directory.GetParent(tstring) + "\\Patch";
                 BoxOverride.Text = System.IO.Directory.GetParent(tstring) + "\\Override"; ;
                 BoxDest.Text = System.IO.Directory.GetParent(tstring) + "\\Output"; ;
+                BoxIL.Text = System.IO.Directory.GetParent(tstring) + "\\IL"; ;
             }
         }
 
@@ -105,6 +114,15 @@ namespace Translator
 
         private void BtnRun_Click(object sender, EventArgs e)
         {
+            int tmaxthreads = 1;
+            int tboxthreads = int.Parse(BoxThreads.Text);
+
+            readIL = BoxReadIL.Checked;
+            writeIL = BoxWriteIL.Checked;
+
+            if (tboxthreads > tmaxthreads)
+                tmaxthreads = tboxthreads;
+
             //Save last used settings
             if (BoxSource.Text != "")
                 DelphiToCSTranslator.Properties.Settings.Default.InPath = BoxSource.Text;
@@ -114,6 +132,8 @@ namespace Translator
                 DelphiToCSTranslator.Properties.Settings.Default.PatchPath = BoxPatch.Text;
             if (BoxOverride.Text != "")
                 DelphiToCSTranslator.Properties.Settings.Default.OverridePath = BoxOverride.Text;
+            if (BoxIL.Text != "")
+                DelphiToCSTranslator.Properties.Settings.Default.ILPath = BoxIL.Text;
             if (richTextBox1.Text != "")
                 DelphiToCSTranslator.Properties.Settings.Default.StdLibraries = richTextBox1.Text;
 
@@ -168,7 +188,7 @@ namespace Translator
                 tStandardCSReferences.Add(tlist);
             }
 
-            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, BoxPatch.Text, BoxOverride.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences);
+            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, BoxPatch.Text, BoxOverride.Text, BoxIL.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences, tmaxthreads, this, BoxThreadingEnabled.Checked);
         }
         
         private void BtnOverride_Click(object sender, EventArgs e)
@@ -199,6 +219,11 @@ namespace Translator
         }
 
         private void label2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label3_Click(object sender, EventArgs e)
         {
 
         }

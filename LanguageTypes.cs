@@ -58,6 +58,7 @@ namespace Translator
         }
 
         //Evaluate the possible type for the Constant based on value
+
         public Constant(string iname, string ivalue)
         {
             string ttype = CheckType(ivalue.Trim());

@@ -3,6 +3,7 @@ using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace Translator
 {
@@ -10,7 +11,9 @@ namespace Translator
     {
         public string value;
         public bool isStatic;
-
+        
+        public DelphiVarStrings()
+        { }
         public DelphiVarStrings(string ivalue, bool iisStatic)
         {
             value = ivalue;
@@ -28,8 +31,6 @@ namespace Translator
         public List<DelphiVarStrings> properties;
         public List<DelphiVarStrings> variables;
         public List<DelphiVarStrings> consts;
-
-
 
         public DelphiClassStrings()
         {
@@ -85,7 +86,8 @@ namespace Translator
 
         public List<string> body;
         public int const_start, var_start, begin_start;
-
+        public DelphiMethodStrings()
+        { }
         public DelphiMethodStrings(string iheader, List<string> ibody)
         {
             header = iheader;
@@ -108,7 +110,8 @@ namespace Translator
         public string outPath;
 
         public Script script;
-        
+        public s form;
+
     	//Enums, consts, types
     	public Class classLocals, classGlobals;
         public List<Constant> localConsts, globalConsts;
@@ -157,11 +160,16 @@ namespace Translator
 
         List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
         List<string> Section_Names;
+        
+        public Delphi()
+        {
+        }
 
     	//ireadheader is a flag if header is to be read. iheaderstart is normally "{ --" in Zinsser Delphi units, and iheaderend is "-- }" 
-        public void Read(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend, LogDelegate ilog)
+        public void Read(ref List<string> istrings, bool ireadheader, string iheaderstart, string iheaderend, LogDelegate ilog, ref s tform)
         {
         	//Initialise
+            form = tform;
             script = new Script();
             logsingle = ilog;
 
@@ -2276,7 +2284,9 @@ namespace Translator
             else
             {
                 //Be sad :-(
-                logsingle("Bad Enum value ! " + iconst + "," + iindex + " in " + iwholestring + " file: " + outPath);
+                string[] tparams = new string[1];
+                tparams[0] = "Bad Enum value ! " + iconst + "," + iindex + " in " + iwholestring + " file: " + outPath;
+                //form.Invoke(logsingle, tparams);
                 return new Constant();
             }
         }
@@ -2616,8 +2626,8 @@ namespace Translator
 
         public void log(List<string> imessages)
         {
-            for (int i = 0; i < imessages.Count; i++)
-                logsingle(imessages[i]);//Console.WriteLine(imessages[i]);
+            //for (int i = 0; i < imessages.Count; i++)
+                //logsingle(imessages[i]);//Console.WriteLine(imessages[i]);
         }
     }    
 }
