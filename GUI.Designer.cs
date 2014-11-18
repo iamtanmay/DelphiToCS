@@ -52,6 +52,8 @@
             this.label5 = new System.Windows.Forms.Label();
             this.BoxReadIL = new System.Windows.Forms.CheckBox();
             this.label6 = new System.Windows.Forms.Label();
+            this.BoxGenerateProjects = new System.Windows.Forms.CheckBox();
+            this.label7 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // BtnSource
@@ -173,16 +175,16 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(37, 220);
+            this.label3.Location = new System.Drawing.Point(18, 220);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(69, 13);
+            this.label3.Size = new System.Drawing.Size(46, 13);
             this.label3.TabIndex = 14;
-            this.label3.Text = "Max Threads";
+            this.label3.Text = "Threads";
             this.label3.Click += new System.EventHandler(this.label3_Click);
             // 
             // BoxThreads
             // 
-            this.BoxThreads.Location = new System.Drawing.Point(112, 217);
+            this.BoxThreads.Location = new System.Drawing.Point(73, 220);
             this.BoxThreads.Name = "BoxThreads";
             this.BoxThreads.Size = new System.Drawing.Size(15, 20);
             this.BoxThreads.TabIndex = 15;
@@ -191,16 +193,16 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(9, 191);
+            this.label4.Location = new System.Drawing.Point(9, 189);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(97, 13);
+            this.label4.Size = new System.Drawing.Size(55, 13);
             this.label4.TabIndex = 16;
-            this.label4.Text = "Threading Enabled";
+            this.label4.Text = "Threading";
             // 
             // BoxThreadingEnabled
             // 
             this.BoxThreadingEnabled.AutoSize = true;
-            this.BoxThreadingEnabled.Location = new System.Drawing.Point(114, 191);
+            this.BoxThreadingEnabled.Location = new System.Drawing.Point(73, 189);
             this.BoxThreadingEnabled.Name = "BoxThreadingEnabled";
             this.BoxThreadingEnabled.Size = new System.Drawing.Size(15, 14);
             this.BoxThreadingEnabled.TabIndex = 17;
@@ -225,7 +227,7 @@
             // BoxWriteIL
             // 
             this.BoxWriteIL.AutoSize = true;
-            this.BoxWriteIL.Location = new System.Drawing.Point(221, 191);
+            this.BoxWriteIL.Location = new System.Drawing.Point(183, 189);
             this.BoxWriteIL.Name = "BoxWriteIL";
             this.BoxWriteIL.Size = new System.Drawing.Size(15, 14);
             this.BoxWriteIL.TabIndex = 21;
@@ -234,16 +236,16 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(150, 190);
+            this.label5.Location = new System.Drawing.Point(133, 190);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(62, 13);
+            this.label5.Size = new System.Drawing.Size(44, 13);
             this.label5.TabIndex = 20;
-            this.label5.Text = "Write IL out";
+            this.label5.Text = "Write IL";
             // 
             // BoxReadIL
             // 
             this.BoxReadIL.AutoSize = true;
-            this.BoxReadIL.Location = new System.Drawing.Point(332, 191);
+            this.BoxReadIL.Location = new System.Drawing.Point(183, 219);
             this.BoxReadIL.Name = "BoxReadIL";
             this.BoxReadIL.Size = new System.Drawing.Size(15, 14);
             this.BoxReadIL.TabIndex = 23;
@@ -252,17 +254,37 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(261, 191);
+            this.label6.Location = new System.Drawing.Point(132, 220);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(56, 13);
+            this.label6.Size = new System.Drawing.Size(45, 13);
             this.label6.TabIndex = 22;
-            this.label6.Text = "Read IL in";
+            this.label6.Text = "Read IL";
+            // 
+            // BoxGenerateProjects
+            // 
+            this.BoxGenerateProjects.AutoSize = true;
+            this.BoxGenerateProjects.Location = new System.Drawing.Point(322, 188);
+            this.BoxGenerateProjects.Name = "BoxGenerateProjects";
+            this.BoxGenerateProjects.Size = new System.Drawing.Size(15, 14);
+            this.BoxGenerateProjects.TabIndex = 25;
+            this.BoxGenerateProjects.UseVisualStyleBackColor = true;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(243, 189);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(73, 13);
+            this.label7.TabIndex = 24;
+            this.label7.Text = "Convert .dproj";
             // 
             // s
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(456, 688);
+            this.Controls.Add(this.BoxGenerateProjects);
+            this.Controls.Add(this.label7);
             this.Controls.Add(this.BoxReadIL);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.BoxWriteIL);
@@ -287,7 +309,7 @@
             this.Controls.Add(this.BoxSource);
             this.Controls.Add(this.BtnSource);
             this.Name = "s";
-            this.Text = "GUI";
+            this.Text = "Delphi2CS";
             this.Load += new System.EventHandler(this.GUI_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -320,6 +342,8 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.CheckBox BoxReadIL;
         private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.CheckBox BoxGenerateProjects;
+        private System.Windows.Forms.Label label7;
 
     }
 }

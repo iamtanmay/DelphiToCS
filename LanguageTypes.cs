@@ -1,10 +1,24 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Text;
+using System.Linq;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System.Xml.Serialization;
+using System.Xml;
 
 namespace Translator
 {
     public class Variable
     {
-        public string name, type, value, comment;
+        [System.Xml.Serialization.XmlAttributeAttribute("Name")]
+        public string name;
+        [System.Xml.Serialization.XmlAttributeAttribute("Type")]
+        public string type;
+        [System.Xml.Serialization.XmlAttributeAttribute("Value")]
+        public string value;
+        [System.Xml.Serialization.XmlAttributeAttribute("Comment")]
+        public string comment;
+        [System.Xml.Serialization.XmlAttributeAttribute("isStatic")]
         public bool isStatic;
 
         public Variable()
@@ -92,7 +106,12 @@ namespace Translator
 
     public class Property : Variable
     {
-        public string read, write;
+        [System.Xml.Serialization.XmlAttributeAttribute("Get")]
+        public string read;
+        [System.Xml.Serialization.XmlAttributeAttribute("Set")]
+        public string write;
+        public Property()
+        { }
         public Property(string iname, string itype, string iread, string iwrite, bool iisStatic)
         {
             name = iname.Trim();
@@ -105,6 +124,7 @@ namespace Translator
 
     public class Enum
     {
+        [System.Xml.Serialization.XmlAttributeAttribute("Name")]
         public string name;
         public List<Constant> enums;
         public Enum()
@@ -122,12 +142,22 @@ namespace Translator
 
     public class Function
     {
+        [System.Xml.Serialization.XmlAttributeAttribute("Name")]
         public string name;
-        public bool isVirtual, isAbstract, isStatic;
-        public List<Variable> parameters, variables;
+        [System.Xml.Serialization.XmlAttributeAttribute("Return")]
+        public string returnType = "void";
+
+        [System.Xml.Serialization.XmlAttributeAttribute("isVirtual")]
+        public bool isVirtual;
+        [System.Xml.Serialization.XmlAttributeAttribute("isAbstract")]
+        public bool isAbstract;
+        [System.Xml.Serialization.XmlAttributeAttribute("isStatic")]
+        public bool isStatic;
+
+        public List<Variable> parameters;
+        public List<Variable> variables;
         public List<Constant> constants;
         public List<string> commands;
-        public string returnType = "void";
 
         public Function()
         {
@@ -159,11 +189,16 @@ namespace Translator
             commands = icommands;
         }
     }
-    
+
     public class Class
     {
         //type = record, class or interface
-    	public string name, baseclass, type;
+        [System.Xml.Serialization.XmlAttributeAttribute("Name")]
+        public string name;
+        [System.Xml.Serialization.XmlAttributeAttribute("Type")]
+        public string type;
+        [System.Xml.Serialization.XmlAttributeAttribute("Base")]
+        public string baseclass;
         public List<Variable> variables;
         public List<Constant> constants;
         public List<Enum> enums;
@@ -184,7 +219,7 @@ namespace Translator
             actions = new List<List<Function>>();
         }
     }
-    
+
     public class Interface:Class
     {
         public Interface() : base()
@@ -194,6 +229,7 @@ namespace Translator
 
     public class Script
     {
+        [System.Xml.Serialization.XmlAttributeAttribute("Header")]
         public List<string> header;
     	public List<string> includes;
         public List<Class> classes;

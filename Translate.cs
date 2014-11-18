@@ -359,10 +359,12 @@ namespace Translator
                 XmlSerializer x;
                 
                 x = new XmlSerializer(typeof(Translator.Delphi));
+                XmlSerializerNamespaces ns = new XmlSerializerNamespaces();
+                ns.Add("", "");
 
                 using (var writer = XmlWriter.Create(iOutPath + "\\" + filename + ".xml"))
                 {
-                    x.Serialize(writer, tdelphi);
+                    x.Serialize(writer, tdelphi, ns);
                 }
 
                 //File.WriteAllLines(iOutPath + "\\" + filename + ".txt", tout, Encoding.UTF8);

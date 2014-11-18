@@ -24,7 +24,7 @@ namespace Translator
         private int index;
         public string logtext = "";
         private List<LogEntry> LogEntries { get; set; }
-        public bool readIL = false, writeIL = false;
+        public bool readIL = false, writeIL = false, genProj = false;
 
         List<string> standardDelphiReferences = new List<string>();
         List<string> standardCSReferences = new List<string>();
@@ -119,6 +119,7 @@ namespace Translator
 
             readIL = BoxReadIL.Checked;
             writeIL = BoxWriteIL.Checked;
+            genProj = BoxGenerateProjects.Checked;
 
             if (tboxthreads > tmaxthreads)
                 tmaxthreads = tboxthreads;

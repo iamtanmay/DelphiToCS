@@ -7,6 +7,7 @@ using System.Windows.Forms;
 
 namespace Translator
 {
+    [Serializable()]
     public class DelphiVarStrings
     {
         public string value;
@@ -21,11 +22,13 @@ namespace Translator
         }
     }
 
+    [Serializable()]
     public class DelphiClassStrings
     {
         public string name;
         public string type;
         public string baseclass;
+
         public List<DelphiMethodStrings> methods;
         public List<List<DelphiMethodStrings>> actions = new List<List<DelphiMethodStrings>>();
         public List<DelphiVarStrings> properties;
@@ -78,6 +81,7 @@ namespace Translator
         }
     }
 
+    [Serializable()]
     public class DelphiMethodStrings
     {
         public string header ="";
@@ -102,63 +106,96 @@ namespace Translator
         }
     }
 
+
     public class Delphi
     {
     	//Output
+        [System.Xml.Serialization.XmlAttributeAttribute("Name")]
         public string name;
+        [System.Xml.Serialization.XmlAttributeAttribute("Directory")]
         public string directory;
+        [System.Xml.Serialization.XmlAttributeAttribute("OutPath")]
         public string outPath;
 
         public Script script;
+
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         public s form;
 
     	//Enums, consts, types
-    	public Class classLocals, classGlobals;
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        public Class classLocals, classGlobals;
+        
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         public List<Constant> localConsts, globalConsts;
-    	public List<Enum> localEnums, globalEnums;
-    	public List<TypeAlias> localTypes, globalTypes;
-    	
-    	public List<string> interfaceUses, implementationUses;
+        
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        public List<Enum> localEnums, globalEnums;
+        
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        public List<TypeAlias> localTypes, globalTypes;
+
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        public List<string> interfaceUses, implementationUses;
         
     	//Log 
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         public LogDelegate logsingle;
     	
         //Bookmarks
     	//Sections
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         private int startHeader = -1, endHeader = -1, startInterface = -1, endInterface = -1, startVar = -1, endVar = -1, startImplementation = -1, endImplementation = -1;    	
 
     	//Subsections
-    	private List<int> startUses, endUses, startClassInterface, endClassInterface, startClassImplementation, endClassImplementation, startConsts, endConsts, startEnums, endEnums, startTypes, endTypes;
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        private List<int> startUses, endUses, startClassInterface, endClassInterface, startClassImplementation, endClassImplementation, startConsts, endConsts, startEnums, endEnums, startTypes, endTypes;
     	
     	
     	//Raw strings
     	//Header, class names, SubSection names, Uses interface, Uses implementation, (Global and Local): consts, enums, types and vars 
-    	private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal;
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal;
 
     	//Raw text for the classes
-    	private List<DelphiClassStrings> classDefinitions;
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        private List<DelphiClassStrings> classDefinitions;
+        
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         private List<List<string>> classImplementations;
 
     	
     	//Keywords
         //Divide script sections
-        public static string[] sectionKeys = {"var","implementation","interface" };
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        public static string[] sectionKeys = { "var", "implementation", "interface" };
 
     	//Divide section subsections
-    	public static string[] subsectionKeys = {"type","const","uses"};
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        public static string[] subsectionKeys = { "type", "const", "uses" };
 
         //Divide subsection kinds
-        public static string[] interfaceKindKeys = {"class","record","procedure","function", "interface" };
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        public static string[] interfaceKindKeys = { "class", "record", "procedure", "function", "interface" };
+        
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         public static string[] implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
+        
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         public static string[] const_implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const", "var", "begin" };
 
         //Divide method commands
-        public static string[] methodKeys = {"var","begin","label","end","try","catch","finally" };
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        public static string[] methodKeys = { "var", "begin", "label", "end", "try", "catch", "finally" };
     	
         //Divide class defintion
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         public static string[] classKeys = { "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
 
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         List<int> Section_Bookmarks, EnumLocalStarts, EnumLocalEnds, EnumGlobalEnds;
+
+        [System.Xml.Serialization.XmlIgnoreAttribute]
         List<string> Section_Names;
         
         public Delphi()
@@ -1018,7 +1055,6 @@ namespace Translator
 
             return tout;
         }
-
 
         private void ParseVar(ref List<string> istrings, ref List<string> ovars)
         {

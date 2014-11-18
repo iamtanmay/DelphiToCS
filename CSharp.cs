@@ -13,7 +13,6 @@ namespace Translator {
         public LogDelegate logsingle;
         public string file_path = "";
 
-
         //Substitute standard C# reference for standard reference of other language
         public void ProcessReference(string ilibrary, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
         {
