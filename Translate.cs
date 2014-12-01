@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Serialization;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 namespace Translator
@@ -19,6 +20,13 @@ namespace Translator
         public List<string> delphiStandardReferences;
         public List<List<string>> standardCSReferences;
         public LogDelegate Log;
+
+        public List<string> projPaths = new List<string>();
+        public List<string> projGUIDs = new List<string>();
+        public List<string> projNames = new List<string>();
+        public List<List<string>> projRefs = new List<List<string>>();
+        public List<XmlDocument> projects = new List<XmlDocument>();
+
 
         public DelphiToCSConversion(string iPath, string iOutPath, string iPatchPath, string iOverridePath, string iILPath, LogDelegate ilog, ref List<string> iStandardReferences, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences, int imaxthreads, s iform, bool ithreadingEnabled)
         {
@@ -188,7 +196,10 @@ namespace Translator
                     case "dpk": //Translate.DPK2Vcproj(tstring); 
                         break;
 
-                    case "dproj": //Translate.Dproj2Vcproj(tstring); 
+                    case "dproj":   if (iform.genProj) //Translate.Dproj2Vcproj(tstring); 
+                                    {
+                                        GenerateCSproj(tstring, iOutPath, iform.csproj);
+                                    }
                         break;
 
                     default: break;
@@ -290,6 +301,92 @@ namespace Translator
 
                 AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], tcurr_patch_path, tcurr_override_path, iILPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], ref oReferences, ref oDelphi, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences, iform);
             }
+        }
+
+        public void GenerateCSproj(string ipath, string ioutpath, XmlDocument icsproj)
+        {
+            //Get output path
+            string[] tpath_elements = ioutpath.Split('\\');
+            string[] tfilename_elements = ipath.Split('\\');
+            string tfilename = tfilename_elements[tfilename_elements.GetLength(0) - 1];
+            tfilename = tfilename.Replace(".dproj", "");
+            ioutpath = ioutpath + "\\" + tfilename + ".csproj";
+
+            //Read raw XML
+            StreamReader tdprojstream = new StreamReader(ipath);
+            //Add <xml> tag
+            string tline = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" + tdprojstream.ReadToEnd();
+
+            //Read as XML
+            XmlDocument tdproj = new XmlDocument();
+            tdproj.LoadXml(tline);
+
+            XmlDocument tcsproj = new XmlDocument();
+            tcsproj = icsproj;
+
+            int tsource_childnodecount = tdproj.ChildNodes[1].ChildNodes.Count;
+            int tchildnodecount = tcsproj.ChildNodes[1].ChildNodes.Count;
+
+            //Get all includes from .dproj
+            List<XmlNode> tincludes = new List<XmlNode>();
+
+            //int ii = 0;
+            //for (ii = 0; ii < tchildnodecount && (tcsproj.ChildNodes[1].ChildNodes[ii].Name != "ItemGroup"); ii++)
+            //{
+            //}
+            //The position to insert the references is hardcoded in the template
+            int ii = 7;
+
+            for (int i = 0; i < tsource_childnodecount; i++)
+            {   
+                XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[i];
+                if (tnode.Name == "ItemGroup")
+                {
+                    for (int j = 0; j < tnode.ChildNodes.Count; j++)
+                    {
+                        XmlNode tsubnode = tnode.ChildNodes[j];
+
+                        //Write all includes to new .csproj
+                        if (tsubnode.Name == "DCCReference")
+                            tcsproj.ChildNodes[1].ChildNodes[ii].AppendChild(tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
+                    }
+                }
+            }
+
+
+            //Convert XML to string
+            string txmlstring = "";
+            using (var stringWriter = new StringWriter())
+            using (var xmlTextWriter = XmlWriter.Create(stringWriter))
+            {
+                tcsproj.WriteTo(xmlTextWriter);
+                xmlTextWriter.Flush();
+                txmlstring = stringWriter.GetStringBuilder().ToString();
+            }
+
+            //Replace Delphi specific text to CS
+            string pattern = "\\b" + "DCCReference" + "\\b";
+            txmlstring = Regex.Replace(txmlstring, pattern, "Compile");
+
+            pattern = "\\b" + ".dcp" + "\\b";
+            txmlstring = Regex.Replace(txmlstring, pattern, ".proj");
+
+            pattern = "\\b" + ".pas" + "\\b";
+            txmlstring = Regex.Replace(txmlstring, pattern, ".cs");
+
+            //Write new .csproj out
+            tcsproj.LoadXml(txmlstring);
+            tcsproj.Save(ioutpath);
+        }
+
+        public static Stream GenerateStreamFromString(string s)
+        {
+            MemoryStream stream = new MemoryStream();
+            StreamWriter writer = new StreamWriter(stream);
+            writer.Write(s);
+            writer.Flush();
+            stream.Position = 0;
+            return stream;
         }
     }
 

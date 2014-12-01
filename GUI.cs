@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using System.Windows.Forms;
 using System.Collections.ObjectModel;
+using System.Xml;
 
 namespace Translator
 {
@@ -25,6 +26,10 @@ namespace Translator
         public string logtext = "";
         private List<LogEntry> LogEntries { get; set; }
         public bool readIL = false, writeIL = false, genProj = false;
+
+        public string csprojtext;
+        public XmlDocument csproj;
+        public List<string> assemblyinfo;
 
         List<string> standardDelphiReferences = new List<string>();
         List<string> standardCSReferences = new List<string>();
@@ -95,9 +100,10 @@ namespace Translator
             {
                 BoxSource.Text = tstring;
                 BoxPatch.Text = System.IO.Directory.GetParent(tstring) + "\\Patch";
-                BoxOverride.Text = System.IO.Directory.GetParent(tstring) + "\\Override"; ;
-                BoxDest.Text = System.IO.Directory.GetParent(tstring) + "\\Output"; ;
-                BoxIL.Text = System.IO.Directory.GetParent(tstring) + "\\IL"; ;
+                BoxOverride.Text = System.IO.Directory.GetParent(tstring) + "\\Override";
+                BoxDest.Text = System.IO.Directory.GetParent(tstring) + "\\Output";
+                BoxIL.Text = System.IO.Directory.GetParent(tstring) + "\\IL";
+                BoxTemplate.Text = System.IO.Directory.GetParent(tstring) + "";
             }
         }
 
@@ -188,6 +194,22 @@ namespace Translator
                 }
                 tStandardCSReferences.Add(tlist);
             }
+            
+            assemblyinfo = new List<string>();
+            using (StreamReader tstream = new StreamReader(BoxTemplate.Text + "\\assemblyinfo.txt"))
+            {
+                string line;
+                while ((line = tstream.ReadLine()) != null)
+                    assemblyinfo.Add(line); 
+            }
+
+            using (StreamReader tstream = new StreamReader(BoxTemplate.Text + "\\CSPROJ.txt"))
+            {
+                csprojtext = tstream.ReadToEnd();
+            }
+
+            csproj = new XmlDocument();
+            csproj.LoadXml(csprojtext);
 
             delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, BoxPatch.Text, BoxOverride.Text, BoxIL.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences, tmaxthreads, this, BoxThreadingEnabled.Checked);
         }
