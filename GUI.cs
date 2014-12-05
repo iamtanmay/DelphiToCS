@@ -104,6 +104,7 @@ namespace Translator
                 BoxDest.Text = System.IO.Directory.GetParent(tstring) + "\\Output";
                 BoxIL.Text = System.IO.Directory.GetParent(tstring) + "\\IL";
                 BoxTemplate.Text = System.IO.Directory.GetParent(tstring) + "";
+                BoxGroupProj.Text = tstring + "\\ZAProjects.groupproj";
             }
         }
 
@@ -141,6 +142,8 @@ namespace Translator
                 DelphiToCSTranslator.Properties.Settings.Default.OverridePath = BoxOverride.Text;
             if (BoxIL.Text != "")
                 DelphiToCSTranslator.Properties.Settings.Default.ILPath = BoxIL.Text;
+            if (BoxGroupProj.Text != "")
+                DelphiToCSTranslator.Properties.Settings.Default.GroupProjPath = BoxGroupProj.Text;
             if (richTextBox1.Text != "")
                 DelphiToCSTranslator.Properties.Settings.Default.StdLibraries = richTextBox1.Text;
 
@@ -211,7 +214,7 @@ namespace Translator
             csproj = new XmlDocument();
             csproj.LoadXml(csprojtext);
 
-            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, BoxPatch.Text, BoxOverride.Text, BoxIL.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences, tmaxthreads, this, BoxThreadingEnabled.Checked);
+            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, BoxPatch.Text, BoxOverride.Text, BoxIL.Text, BoxGroupProj.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences, tmaxthreads, this, BoxThreadingEnabled.Checked);
         }
         
         private void BtnOverride_Click(object sender, EventArgs e)

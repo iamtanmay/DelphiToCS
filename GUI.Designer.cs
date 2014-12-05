@@ -56,6 +56,8 @@
             this.label7 = new System.Windows.Forms.Label();
             this.BoxTemplate = new System.Windows.Forms.TextBox();
             this.button1 = new System.Windows.Forms.Button();
+            this.BoxGroupProj = new System.Windows.Forms.TextBox();
+            this.ButtonGroupProj = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // BtnSource
@@ -142,14 +144,14 @@
             // 
             // BoxPatch
             // 
-            this.BoxPatch.Location = new System.Drawing.Point(93, 84);
+            this.BoxPatch.Location = new System.Drawing.Point(93, 123);
             this.BoxPatch.Name = "BoxPatch";
             this.BoxPatch.Size = new System.Drawing.Size(347, 20);
             this.BoxPatch.TabIndex = 11;
             // 
             // BtnPatch
             // 
-            this.BtnPatch.Location = new System.Drawing.Point(3, 81);
+            this.BtnPatch.Location = new System.Drawing.Point(3, 120);
             this.BtnPatch.Name = "BtnPatch";
             this.BtnPatch.Size = new System.Drawing.Size(85, 23);
             this.BtnPatch.TabIndex = 10;
@@ -159,14 +161,14 @@
             // 
             // BoxOverride
             // 
-            this.BoxOverride.Location = new System.Drawing.Point(93, 121);
+            this.BoxOverride.Location = new System.Drawing.Point(93, 160);
             this.BoxOverride.Name = "BoxOverride";
             this.BoxOverride.Size = new System.Drawing.Size(347, 20);
             this.BoxOverride.TabIndex = 13;
             // 
             // BtnOverride
             // 
-            this.BtnOverride.Location = new System.Drawing.Point(3, 118);
+            this.BtnOverride.Location = new System.Drawing.Point(3, 157);
             this.BtnOverride.Name = "BtnOverride";
             this.BtnOverride.Size = new System.Drawing.Size(85, 23);
             this.BtnOverride.TabIndex = 12;
@@ -212,14 +214,14 @@
             // 
             // BoxIL
             // 
-            this.BoxIL.Location = new System.Drawing.Point(93, 157);
+            this.BoxIL.Location = new System.Drawing.Point(93, 196);
             this.BoxIL.Name = "BoxIL";
             this.BoxIL.Size = new System.Drawing.Size(347, 20);
             this.BoxIL.TabIndex = 19;
             // 
             // ButtonIL
             // 
-            this.ButtonIL.Location = new System.Drawing.Point(3, 154);
+            this.ButtonIL.Location = new System.Drawing.Point(3, 193);
             this.ButtonIL.Name = "ButtonIL";
             this.ButtonIL.Size = new System.Drawing.Size(85, 23);
             this.ButtonIL.TabIndex = 18;
@@ -282,25 +284,43 @@
             // 
             // BoxTemplate
             // 
-            this.BoxTemplate.Location = new System.Drawing.Point(92, 194);
+            this.BoxTemplate.Location = new System.Drawing.Point(92, 233);
             this.BoxTemplate.Name = "BoxTemplate";
             this.BoxTemplate.Size = new System.Drawing.Size(347, 20);
             this.BoxTemplate.TabIndex = 27;
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(2, 191);
+            this.button1.Location = new System.Drawing.Point(2, 230);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(85, 23);
             this.button1.TabIndex = 26;
             this.button1.Text = "Templates";
             this.button1.UseVisualStyleBackColor = true;
             // 
+            // BoxGroupProj
+            // 
+            this.BoxGroupProj.Location = new System.Drawing.Point(92, 85);
+            this.BoxGroupProj.Name = "BoxGroupProj";
+            this.BoxGroupProj.Size = new System.Drawing.Size(347, 20);
+            this.BoxGroupProj.TabIndex = 29;
+            // 
+            // ButtonGroupProj
+            // 
+            this.ButtonGroupProj.Location = new System.Drawing.Point(2, 82);
+            this.ButtonGroupProj.Name = "ButtonGroupProj";
+            this.ButtonGroupProj.Size = new System.Drawing.Size(85, 23);
+            this.ButtonGroupProj.TabIndex = 28;
+            this.ButtonGroupProj.Text = "GroupProj";
+            this.ButtonGroupProj.UseVisualStyleBackColor = true;
+            // 
             // s
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(454, 741);
+            this.Controls.Add(this.BoxGroupProj);
+            this.Controls.Add(this.ButtonGroupProj);
             this.Controls.Add(this.BoxTemplate);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.BoxGenerateProjects);
@@ -366,6 +386,8 @@
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.TextBox BoxTemplate;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.TextBox BoxGroupProj;
+        private System.Windows.Forms.Button ButtonGroupProj;
 
     }
 }

@@ -21,14 +21,13 @@ namespace Translator
         public List<List<string>> standardCSReferences;
         public LogDelegate Log;
 
-        public List<string> projPaths = new List<string>();
-        public List<string> projGUIDs = new List<string>();
-        public List<string> projNames = new List<string>();
+        public Dictionary<string, string> projPaths = new Dictionary<string, string>();
+        public Dictionary<string, string> projGUIDs = new Dictionary<string, string>();
         public List<List<string>> projRefs = new List<List<string>>();
-        public List<XmlDocument> projects = new List<XmlDocument>();
+        public Dictionary<string, XmlDocument> projects = new Dictionary<string, XmlDocument>();
 
 
-        public DelphiToCSConversion(string iPath, string iOutPath, string iPatchPath, string iOverridePath, string iILPath, LogDelegate ilog, ref List<string> iStandardReferences, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences, int imaxthreads, s iform, bool ithreadingEnabled)
+        public DelphiToCSConversion(string iPath, string iOutPath, string iPatchPath, string iOverridePath, string iILPath, string iGroupProjPath, LogDelegate ilog, ref List<string> iStandardReferences, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences, int imaxthreads, s iform, bool ithreadingEnabled)
         {
             threadingEnabled = ithreadingEnabled;
             delphiParsedFiles = new List<Translate>();
@@ -42,8 +41,77 @@ namespace Translator
             Log = ilog;
 
             maxthreads = imaxthreads;
+
+            //Cache all the relative Project paths
+            //Read raw XML
+            StreamReader tdprojstream = new StreamReader(iGroupProjPath);
+            //Add <xml> tag
+            string tline = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" + tdprojstream.ReadToEnd();
+
+            //Read as XML
+            XmlDocument tdproj = new XmlDocument();
+            tdproj.LoadXml(tline);
+
+            int tsource_childnodecount = tdproj.ChildNodes[1].ChildNodes.Count;
+
+            for (int i = 0; i < tsource_childnodecount; i++)
+            {
+                XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[i];
+                if (tnode.Name == "ItemGroup")
+                {
+                    for (int j = 0; j < tnode.ChildNodes.Count; j++)
+                    {
+                        XmlNode tsubnode = tnode.ChildNodes[j];
+
+                        //Write all includes to new .csproj
+                        if (tsubnode.Name == "Projects")
+                        {
+                            string tprojpath = tsubnode.Attributes["Include"].Value;
+                            string[] tprojpatharr = tprojpath.Split('\\');
+                            string tprojname = tprojpatharr[tprojpatharr.Length-1].Split('.')[0];
+                            tprojpath = tprojpath.Replace("dproj", "csproj");
+                            projPaths.Add(tprojname, tprojpath);
+                        }
+                    }
+                }
+            }
+
             //Do a first run to convert individual files to C#, and gather list of references
             AnalyzeFolder(iPath, iOutPath, iPatchPath, iOverridePath, iILPath, ref delphiReferences, ref delphiParsedFiles, ref iStandardReferences, ref delphiStandardReferences, ref standardCSReferences, iform);
+
+            //Add project paths and GUIDs to csproj files
+            foreach (KeyValuePair<string, XmlDocument> pair in projects)
+            {
+                tdproj = pair.Value;
+
+                tsource_childnodecount = tdproj.ChildNodes[1].ChildNodes.Count;
+
+                for (int i = 0; i < tsource_childnodecount; i++)
+                {
+                    XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[i];
+                    if (tnode.Name == "ItemGroup")
+                    {
+                        for (int j = 0; j < tnode.ChildNodes.Count; j++)
+                        {
+                            XmlNode tsubnode = tnode.ChildNodes[j];
+
+                            //Write all includes to new .csproj
+                            if (tsubnode.Name == "Projects")
+                            {
+                                string tprojpath = tsubnode.Attributes["Include"].Value;
+                                string[] tprojpatharr = tprojpath.Split('\\');
+                                string tprojname = tprojpatharr[tprojpatharr.Length - 1].Split('.')[0];
+                                tprojpath = tprojpath.Replace("dproj", "csproj");
+                                projPaths.Add(tprojname, tprojpath);
+                            }
+                        }
+                    }
+                }
+            }
+
+            //Write csproj files
+
+            //Write sln file
 
             //Replace global strings from references in files
             ResolveReferences(ref delphiParsedFiles, ref delphiReferences);
@@ -198,7 +266,7 @@ namespace Translator
 
                     case "dproj":   if (iform.genProj) //Translate.Dproj2Vcproj(tstring); 
                                     {
-                                        GenerateCSproj(tstring, iOutPath, iform.csproj);
+                                        ReadProj(tstring, iOutPath, iform.csproj);
                                     }
                         break;
 
@@ -303,7 +371,7 @@ namespace Translator
             }
         }
 
-        public void GenerateCSproj(string ipath, string ioutpath, XmlDocument icsproj)
+        public void ReadProj(string ipath, string ioutpath, XmlDocument icsproj)
         {
             //Get output path
             string[] tpath_elements = ioutpath.Split('\\');
@@ -330,16 +398,17 @@ namespace Translator
             //Get all includes from .dproj
             List<XmlNode> tincludes = new List<XmlNode>();
 
-            //int ii = 0;
-            //for (ii = 0; ii < tchildnodecount && (tcsproj.ChildNodes[1].ChildNodes[ii].Name != "ItemGroup"); ii++)
-            //{
-            //}
             //The position to insert the references is hardcoded in the template
-            int ii = 7;
+            int ii = 5;
+
+            XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[0];
+
+            projGUIDs.Add(tfilename, tnode.Attributes["ProjectGuid"].Value);
 
             for (int i = 0; i < tsource_childnodecount; i++)
             {   
-                XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[i];
+                tnode = tdproj.ChildNodes[1].ChildNodes[i];
+                
                 if (tnode.Name == "ItemGroup")
                 {
                     for (int j = 0; j < tnode.ChildNodes.Count; j++)
@@ -348,7 +417,21 @@ namespace Translator
 
                         //Write all includes to new .csproj
                         if (tsubnode.Name == "DCCReference")
-                            tcsproj.ChildNodes[1].ChildNodes[ii].AppendChild(tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
+                        {
+                            string tinclude = tsubnode.Attributes["Include"].Value;
+                            string tincludeextension = tinclude.Split('.')[1];
+                            if (tincludeextension == "dcp")
+                            {
+                                XmlNode tnewnode = tcsproj.CreateNode("element", "ProjectReference", "");
+                                tnewnode.InnerText = "290";
+
+                                tcsproj.ChildNodes[1].ChildNodes[ii+1].AppendChild(tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
+                            }
+                            if (tincludeextension == "pas")
+                            {
+                                tcsproj.ChildNodes[1].ChildNodes[ii].AppendChild(tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
+                            }
+                        }
                     }
                 }
             }
@@ -374,9 +457,10 @@ namespace Translator
             pattern = "\\b" + ".pas" + "\\b";
             txmlstring = Regex.Replace(txmlstring, pattern, ".cs");
 
-            //Write new .csproj out
+            //Save new .csproj out
             tcsproj.LoadXml(txmlstring);
-            tcsproj.Save(ioutpath);
+            projects.Add(tfilename, tcsproj);
+            //tcsproj.Save(ioutpath);
         }
 
         public static Stream GenerateStreamFromString(string s)
@@ -401,10 +485,6 @@ namespace Translator
         public List<List<string>> iStandardCSReferences;
         public LogDelegate iLog;
         public s form;
-
-        //public Translate()
-        //{ 
-        //}
 
         public Translate(string tPath, string tdirectory, string tOutPath, string tPatchPath, string tPatchFile, string tOverridePath, string tOverrideFile, LogDelegate tlog, List<string> tStandardReferences, List<string> tDelphiStandardReferences, List<List<string>> tStandardCSReferences, LogDelegate tLog, ref s iform)
         {
