@@ -69,6 +69,7 @@ namespace Translator
         private void GUI_Load(object sender, EventArgs e)
         {
             standardDelphiReferences = new List<string> { "+DelphiStandardWrapper", "-Example_DelphiLibrary_To_Remove","Generics.Collections / System.Collections.Generic", "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
+            List<string> tignoreDelphiLibraries = new List<string> { "rtl", "vcl"};
             
             //Load last used settings
             if (DelphiToCSTranslator.Properties.Settings.Default.InPath != "")
@@ -87,6 +88,15 @@ namespace Translator
                     richTextBox1.Text += s;
                     richTextBox1.Text += Environment.NewLine;
                 });
+
+            if (DelphiToCSTranslator.Properties.Settings.Default.IgnoreLibraries != "")
+                richTextBox2.Text = DelphiToCSTranslator.Properties.Settings.Default.IgnoreLibraries;
+            else
+                tignoreDelphiLibraries.ForEach(s =>
+            {
+                richTextBox2.Text += s;
+                richTextBox2.Text += Environment.NewLine;
+            });
         }
 
         private void BtnSource_Click(object sender, EventArgs e)
@@ -146,6 +156,8 @@ namespace Translator
                 DelphiToCSTranslator.Properties.Settings.Default.GroupProjPath = BoxGroupProj.Text;
             if (richTextBox1.Text != "")
                 DelphiToCSTranslator.Properties.Settings.Default.StdLibraries = richTextBox1.Text;
+            if (richTextBox2.Text != "")
+                DelphiToCSTranslator.Properties.Settings.Default.IgnoreLibraries = richTextBox2.Text;
 
             string[] tstrArr = richTextBox1.Text.Split(Environment.NewLine.ToCharArray());
             standardDelphiReferences = new List<string>();
@@ -197,6 +209,15 @@ namespace Translator
                 }
                 tStandardCSReferences.Add(tlist);
             }
+
+            //Get the ignore libraries list
+            tstrArr = richTextBox2.Text.Split(Environment.NewLine.ToCharArray());
+
+            List<string> tdelphiIgnoreReferences = new List<string>();
+
+            for (int i = 0; i < tstrArr.Length; i++)
+                tdelphiIgnoreReferences.Add(tstrArr[i]);
+            
             
             assemblyinfo = new List<string>();
             using (StreamReader tstream = new StreamReader(BoxTemplate.Text + "\\assemblyinfo.txt"))
@@ -214,7 +235,7 @@ namespace Translator
             csproj = new XmlDocument();
             csproj.LoadXml(csprojtext);
 
-            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, BoxPatch.Text, BoxOverride.Text, BoxIL.Text, BoxGroupProj.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences, tmaxthreads, this, BoxThreadingEnabled.Checked);
+            delphiToCSConversion = new DelphiToCSConversion(BoxSource.Text, BoxDest.Text, BoxPatch.Text, BoxOverride.Text, BoxIL.Text, BoxGroupProj.Text, Log, ref standardReferences, ref standardDelphiReferences, ref tStandardCSReferences, ref tdelphiIgnoreReferences, tmaxthreads, this, BoxThreadingEnabled.Checked);
         }
         
         private void BtnOverride_Click(object sender, EventArgs e)

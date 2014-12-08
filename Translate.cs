@@ -26,8 +26,10 @@ namespace Translator
         public List<List<string>> projRefs = new List<List<string>>();
         public Dictionary<string, XmlDocument> projects = new Dictionary<string, XmlDocument>();
 
+        //The position to insert the references is hardcoded in the template
+        int CSProj_XMLTemplate_IncludeChildRank = 5;
 
-        public DelphiToCSConversion(string iPath, string iOutPath, string iPatchPath, string iOverridePath, string iILPath, string iGroupProjPath, LogDelegate ilog, ref List<string> iStandardReferences, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences, int imaxthreads, s iform, bool ithreadingEnabled)
+        public DelphiToCSConversion(string iPath, string iOutPath, string iPatchPath, string iOverridePath, string iILPath, string iGroupProjPath, LogDelegate ilog, ref List<string> iStandardReferences, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences, ref List<string> idelphiIgnoreReferences, int imaxthreads, s iform, bool ithreadingEnabled)
         {
             threadingEnabled = ithreadingEnabled;
             delphiParsedFiles = new List<Translate>();
@@ -49,69 +51,98 @@ namespace Translator
             string tline = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" + tdprojstream.ReadToEnd();
 
             //Read as XML
-            XmlDocument tdproj = new XmlDocument();
-            tdproj.LoadXml(tline);
+            XmlDocument tcsproj = new XmlDocument();
+            tcsproj.LoadXml(tline);
 
-            int tsource_childnodecount = tdproj.ChildNodes[1].ChildNodes.Count;
+            int tsource_childnodecount = tcsproj.ChildNodes[1].ChildNodes.Count;
+            
+            //Add default Delphi Units (to be ignored)
+            for (int i = 0; i < idelphiIgnoreReferences.Count; i++)
+            {
+                projPaths.Add(idelphiIgnoreReferences[i], "..\\");
+                projGUIDs.Add(idelphiIgnoreReferences[i], Guid.NewGuid().ToString());
+            }
 
             for (int i = 0; i < tsource_childnodecount; i++)
             {
-                XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[i];
+                XmlNode tnode = tcsproj.ChildNodes[1].ChildNodes[i];
                 if (tnode.Name == "ItemGroup")
                 {
                     for (int j = 0; j < tnode.ChildNodes.Count; j++)
                     {
                         XmlNode tsubnode = tnode.ChildNodes[j];
 
-                        //Write all includes to new .csproj
+                        //Get all relative project paths
                         if (tsubnode.Name == "Projects")
                         {
                             string tprojpath = tsubnode.Attributes["Include"].Value;
                             string[] tprojpatharr = tprojpath.Split('\\');
                             string tprojname = tprojpatharr[tprojpatharr.Length-1].Split('.')[0];
-                            tprojpath = tprojpath.Replace("dproj", "csproj");
+                            List<string> tstrlist = new List<string>(tprojpatharr);
+
+                            tprojpath = "";
+                            for (int jj = 0; jj < tstrlist.Count - 1;jj++ )
+                                tprojpath = tprojpath + '\\' + tstrlist[jj];
+
                             projPaths.Add(tprojname, tprojpath);
                         }
                     }
                 }
             }
 
+
             //Do a first run to convert individual files to C#, and gather list of references
             AnalyzeFolder(iPath, iOutPath, iPatchPath, iOverridePath, iILPath, ref delphiReferences, ref delphiParsedFiles, ref iStandardReferences, ref delphiStandardReferences, ref standardCSReferences, iform);
 
-            //Add project paths and GUIDs to csproj files
+            //Add project paths and GUIDs to csproj files and write them out
             foreach (KeyValuePair<string, XmlDocument> pair in projects)
             {
-                tdproj = pair.Value;
+                tcsproj = pair.Value;
+                int tcompile_childnodecount = tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank].ChildNodes.Count;
+                int treference_childnodecount = tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes.Count;
 
-                tsource_childnodecount = tdproj.ChildNodes[1].ChildNodes.Count;
+                //Path and GUID of current project
+                string tprojectpath = projPaths[pair.Key];
+                string tprojectGUID = projGUIDs[pair.Key];
 
-                for (int i = 0; i < tsource_childnodecount; i++)
+                //Add project path to filename in compile list
+                for (int i = 0; i < tcompile_childnodecount; i++)
                 {
-                    XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[i];
-                    if (tnode.Name == "ItemGroup")
-                    {
-                        for (int j = 0; j < tnode.ChildNodes.Count; j++)
-                        {
-                            XmlNode tsubnode = tnode.ChildNodes[j];
-
-                            //Write all includes to new .csproj
-                            if (tsubnode.Name == "Projects")
-                            {
-                                string tprojpath = tsubnode.Attributes["Include"].Value;
-                                string[] tprojpatharr = tprojpath.Split('\\');
-                                string tprojname = tprojpatharr[tprojpatharr.Length - 1].Split('.')[0];
-                                tprojpath = tprojpath.Replace("dproj", "csproj");
-                                projPaths.Add(tprojname, tprojpath);
-                            }
-                        }
-                    }
+                    string tstringval = tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank].ChildNodes[i].Attributes["Include"].Value;
+                    tstringval = tprojectpath + '\\' + tstringval;
+                    tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank].ChildNodes[i].Attributes["Include"].Value = tstringval;
                 }
+
+                //Add project path and GUID to filename in project references list
+                for (int i = 0; i < treference_childnodecount; i++)
+                {
+                    try
+                    {
+                        string tstringval = tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].Attributes["Include"].Value;
+                        string tref_projectpath = projPaths[tstringval];
+                        string tref_projectGUID = projGUIDs[tstringval];
+
+                        tref_projectpath = tref_projectpath + '\\' + tstringval + ".csproj";
+                        tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].ChildNodes[0].InnerText = tref_projectGUID;
+                        tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].ChildNodes[1].InnerText = tref_projectpath;
+                    }
+                    catch
+                    { }
+                }
+
+                //Write .csproj XMLDocuments to disk
+                string toutfolder = iOutPath + tprojectpath.Substring(3);
+                string txml_outpath = toutfolder + pair.Key + ".csproj";
+
+                //Create directory
+                if (!System.IO.Directory.Exists(toutfolder))
+                    System.IO.Directory.CreateDirectory(toutfolder);
+
+                //Write out file
+                tcsproj.Save(txml_outpath);
             }
 
-            //Write csproj files
-
-            //Write sln file
+            //Write .sln to disk
 
             //Replace global strings from references in files
             ResolveReferences(ref delphiParsedFiles, ref delphiReferences);
@@ -398,12 +429,9 @@ namespace Translator
             //Get all includes from .dproj
             List<XmlNode> tincludes = new List<XmlNode>();
 
-            //The position to insert the references is hardcoded in the template
-            int ii = 5;
-
             XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[0];
 
-            projGUIDs.Add(tfilename, tnode.Attributes["ProjectGuid"].Value);
+            projGUIDs.Add(tfilename, tnode.InnerText);
 
             for (int i = 0; i < tsource_childnodecount; i++)
             {   
@@ -419,17 +447,26 @@ namespace Translator
                         if (tsubnode.Name == "DCCReference")
                         {
                             string tinclude = tsubnode.Attributes["Include"].Value;
-                            string tincludeextension = tinclude.Split('.')[1];
+                            string[] tincludearr = tinclude.Split('.');
+                            string tincludeextension = tincludearr[1];
                             if (tincludeextension == "dcp")
                             {
-                                XmlNode tnewnode = tcsproj.CreateNode("element", "ProjectReference", "");
-                                tnewnode.InnerText = "290";
+                                XmlElement tnewnode = tcsproj.CreateElement("ProjectReference", "");
+                                tnewnode.SetAttribute("Include", tincludearr[0]);
+                                XmlElement tname = tcsproj.CreateElement("Name");
+                                tname.InnerText = tincludearr[0];
+                                XmlElement tproject = tcsproj.CreateElement("Project");
+                                tproject.InnerText = "";
+                                tnewnode.AppendChild(tproject);
+                                tnewnode.AppendChild(tname);
 
-                                tcsproj.ChildNodes[1].ChildNodes[ii+1].AppendChild(tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
+                                tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].AppendChild(tnewnode);//tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
                             }
                             if (tincludeextension == "pas")
                             {
-                                tcsproj.ChildNodes[1].ChildNodes[ii].AppendChild(tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
+                                XmlElement tnewnode = tcsproj.CreateElement("Compile", "");
+                                tnewnode.SetAttribute("Include", tincludearr[0]+".cs");
+                                tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank].AppendChild(tnewnode);//tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
                             }
                         }
                     }

@@ -58,6 +58,8 @@
             this.button1 = new System.Windows.Forms.Button();
             this.BoxGroupProj = new System.Windows.Forms.TextBox();
             this.ButtonGroupProj = new System.Windows.Forms.Button();
+            this.richTextBox2 = new System.Windows.Forms.RichTextBox();
+            this.label8 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // BtnSource
@@ -74,14 +76,14 @@
             // 
             this.BoxSource.Location = new System.Drawing.Point(93, 12);
             this.BoxSource.Name = "BoxSource";
-            this.BoxSource.Size = new System.Drawing.Size(347, 20);
+            this.BoxSource.Size = new System.Drawing.Size(379, 20);
             this.BoxSource.TabIndex = 1;
             // 
             // BoxDest
             // 
             this.BoxDest.Location = new System.Drawing.Point(93, 48);
             this.BoxDest.Name = "BoxDest";
-            this.BoxDest.Size = new System.Drawing.Size(347, 20);
+            this.BoxDest.Size = new System.Drawing.Size(379, 20);
             this.BoxDest.TabIndex = 3;
             // 
             // BtnDest
@@ -106,9 +108,9 @@
             // 
             // listBox1
             // 
-            this.listBox1.Location = new System.Drawing.Point(12, 517);
+            this.listBox1.Location = new System.Drawing.Point(482, 249);
             this.listBox1.Name = "listBox1";
-            this.listBox1.Size = new System.Drawing.Size(427, 175);
+            this.listBox1.Size = new System.Drawing.Size(551, 450);
             this.listBox1.TabIndex = 5;
             this.listBox1.Text = "";
             // 
@@ -116,7 +118,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(11, 330);
+            this.label1.Location = new System.Drawing.Point(11, 229);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(353, 17);
             this.label1.TabIndex = 7;
@@ -125,9 +127,9 @@
             // 
             // richTextBox1
             // 
-            this.richTextBox1.Location = new System.Drawing.Point(11, 355);
+            this.richTextBox1.Location = new System.Drawing.Point(11, 249);
             this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(428, 139);
+            this.richTextBox1.Size = new System.Drawing.Size(460, 245);
             this.richTextBox1.TabIndex = 8;
             this.richTextBox1.Text = "";
             // 
@@ -135,7 +137,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(9, 497);
+            this.label2.Location = new System.Drawing.Point(478, 228);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(35, 17);
             this.label2.TabIndex = 9;
@@ -146,7 +148,7 @@
             // 
             this.BoxPatch.Location = new System.Drawing.Point(93, 123);
             this.BoxPatch.Name = "BoxPatch";
-            this.BoxPatch.Size = new System.Drawing.Size(347, 20);
+            this.BoxPatch.Size = new System.Drawing.Size(379, 20);
             this.BoxPatch.TabIndex = 11;
             // 
             // BtnPatch
@@ -161,14 +163,14 @@
             // 
             // BoxOverride
             // 
-            this.BoxOverride.Location = new System.Drawing.Point(93, 160);
+            this.BoxOverride.Location = new System.Drawing.Point(572, 15);
             this.BoxOverride.Name = "BoxOverride";
-            this.BoxOverride.Size = new System.Drawing.Size(347, 20);
+            this.BoxOverride.Size = new System.Drawing.Size(461, 20);
             this.BoxOverride.TabIndex = 13;
             // 
             // BtnOverride
             // 
-            this.BtnOverride.Location = new System.Drawing.Point(3, 157);
+            this.BtnOverride.Location = new System.Drawing.Point(482, 12);
             this.BtnOverride.Name = "BtnOverride";
             this.BtnOverride.Size = new System.Drawing.Size(85, 23);
             this.BtnOverride.TabIndex = 12;
@@ -179,7 +181,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(18, 304);
+            this.label3.Location = new System.Drawing.Point(100, 193);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(46, 13);
             this.label3.TabIndex = 14;
@@ -188,16 +190,16 @@
             // 
             // BoxThreads
             // 
-            this.BoxThreads.Location = new System.Drawing.Point(73, 304);
+            this.BoxThreads.Location = new System.Drawing.Point(155, 190);
             this.BoxThreads.Name = "BoxThreads";
             this.BoxThreads.Size = new System.Drawing.Size(15, 20);
             this.BoxThreads.TabIndex = 15;
-            this.BoxThreads.Text = "1";
+            this.BoxThreads.Text = "8";
             // 
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(9, 273);
+            this.label4.Location = new System.Drawing.Point(9, 193);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(55, 13);
             this.label4.TabIndex = 16;
@@ -206,7 +208,9 @@
             // BoxThreadingEnabled
             // 
             this.BoxThreadingEnabled.AutoSize = true;
-            this.BoxThreadingEnabled.Location = new System.Drawing.Point(73, 273);
+            this.BoxThreadingEnabled.Checked = true;
+            this.BoxThreadingEnabled.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.BoxThreadingEnabled.Location = new System.Drawing.Point(73, 193);
             this.BoxThreadingEnabled.Name = "BoxThreadingEnabled";
             this.BoxThreadingEnabled.Size = new System.Drawing.Size(15, 14);
             this.BoxThreadingEnabled.TabIndex = 17;
@@ -214,14 +218,14 @@
             // 
             // BoxIL
             // 
-            this.BoxIL.Location = new System.Drawing.Point(93, 196);
+            this.BoxIL.Location = new System.Drawing.Point(572, 51);
             this.BoxIL.Name = "BoxIL";
-            this.BoxIL.Size = new System.Drawing.Size(347, 20);
+            this.BoxIL.Size = new System.Drawing.Size(461, 20);
             this.BoxIL.TabIndex = 19;
             // 
             // ButtonIL
             // 
-            this.ButtonIL.Location = new System.Drawing.Point(3, 193);
+            this.ButtonIL.Location = new System.Drawing.Point(482, 48);
             this.ButtonIL.Name = "ButtonIL";
             this.ButtonIL.Size = new System.Drawing.Size(85, 23);
             this.ButtonIL.TabIndex = 18;
@@ -231,7 +235,9 @@
             // BoxWriteIL
             // 
             this.BoxWriteIL.AutoSize = true;
-            this.BoxWriteIL.Location = new System.Drawing.Point(183, 273);
+            this.BoxWriteIL.Checked = true;
+            this.BoxWriteIL.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.BoxWriteIL.Location = new System.Drawing.Point(235, 193);
             this.BoxWriteIL.Name = "BoxWriteIL";
             this.BoxWriteIL.Size = new System.Drawing.Size(15, 14);
             this.BoxWriteIL.TabIndex = 21;
@@ -240,7 +246,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(133, 274);
+            this.label5.Location = new System.Drawing.Point(185, 194);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(44, 13);
             this.label5.TabIndex = 20;
@@ -249,7 +255,9 @@
             // BoxReadIL
             // 
             this.BoxReadIL.AutoSize = true;
-            this.BoxReadIL.Location = new System.Drawing.Point(183, 303);
+            this.BoxReadIL.Checked = true;
+            this.BoxReadIL.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.BoxReadIL.Location = new System.Drawing.Point(308, 193);
             this.BoxReadIL.Name = "BoxReadIL";
             this.BoxReadIL.Size = new System.Drawing.Size(15, 14);
             this.BoxReadIL.TabIndex = 23;
@@ -258,7 +266,7 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(132, 304);
+            this.label6.Location = new System.Drawing.Point(257, 194);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(45, 13);
             this.label6.TabIndex = 22;
@@ -267,7 +275,9 @@
             // BoxGenerateProjects
             // 
             this.BoxGenerateProjects.AutoSize = true;
-            this.BoxGenerateProjects.Location = new System.Drawing.Point(322, 272);
+            this.BoxGenerateProjects.Checked = true;
+            this.BoxGenerateProjects.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.BoxGenerateProjects.Location = new System.Drawing.Point(415, 193);
             this.BoxGenerateProjects.Name = "BoxGenerateProjects";
             this.BoxGenerateProjects.Size = new System.Drawing.Size(15, 14);
             this.BoxGenerateProjects.TabIndex = 25;
@@ -276,7 +286,7 @@
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(243, 273);
+            this.label7.Location = new System.Drawing.Point(336, 193);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(73, 13);
             this.label7.TabIndex = 24;
@@ -284,14 +294,14 @@
             // 
             // BoxTemplate
             // 
-            this.BoxTemplate.Location = new System.Drawing.Point(92, 233);
+            this.BoxTemplate.Location = new System.Drawing.Point(571, 88);
             this.BoxTemplate.Name = "BoxTemplate";
-            this.BoxTemplate.Size = new System.Drawing.Size(347, 20);
+            this.BoxTemplate.Size = new System.Drawing.Size(461, 20);
             this.BoxTemplate.TabIndex = 27;
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(2, 230);
+            this.button1.Location = new System.Drawing.Point(481, 85);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(85, 23);
             this.button1.TabIndex = 26;
@@ -302,7 +312,7 @@
             // 
             this.BoxGroupProj.Location = new System.Drawing.Point(92, 85);
             this.BoxGroupProj.Name = "BoxGroupProj";
-            this.BoxGroupProj.Size = new System.Drawing.Size(347, 20);
+            this.BoxGroupProj.Size = new System.Drawing.Size(379, 20);
             this.BoxGroupProj.TabIndex = 29;
             // 
             // ButtonGroupProj
@@ -314,11 +324,31 @@
             this.ButtonGroupProj.Text = "GroupProj";
             this.ButtonGroupProj.UseVisualStyleBackColor = true;
             // 
+            // richTextBox2
+            // 
+            this.richTextBox2.Location = new System.Drawing.Point(11, 531);
+            this.richTextBox2.Name = "richTextBox2";
+            this.richTextBox2.Size = new System.Drawing.Size(460, 168);
+            this.richTextBox2.TabIndex = 30;
+            this.richTextBox2.Text = "";
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label8.Location = new System.Drawing.Point(12, 511);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(182, 17);
+            this.label8.TabIndex = 31;
+            this.label8.Text = "Delphi library ignore list";
+            // 
             // s
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(454, 741);
+            this.ClientSize = new System.Drawing.Size(1045, 741);
+            this.Controls.Add(this.label8);
+            this.Controls.Add(this.richTextBox2);
             this.Controls.Add(this.BoxGroupProj);
             this.Controls.Add(this.ButtonGroupProj);
             this.Controls.Add(this.BoxTemplate);
@@ -388,6 +418,8 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.TextBox BoxGroupProj;
         private System.Windows.Forms.Button ButtonGroupProj;
+        private System.Windows.Forms.RichTextBox richTextBox2;
+        private System.Windows.Forms.Label label8;
 
     }
 }
