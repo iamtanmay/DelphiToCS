@@ -60,7 +60,7 @@ namespace Translator
             for (int i = 0; i < idelphiIgnoreReferences.Count; i++)
             {
                 projPaths.Add(idelphiIgnoreReferences[i], "..\\");
-                projGUIDs.Add(idelphiIgnoreReferences[i], Guid.NewGuid().ToString());
+                projGUIDs.Add(idelphiIgnoreReferences[i], "{" + Guid.NewGuid().ToString() + "}");
             }
 
             for (int i = 0; i < tsource_childnodecount; i++)
@@ -132,7 +132,7 @@ namespace Translator
 
                 //Write .csproj XMLDocuments to disk
                 string toutfolder = iOutPath + tprojectpath.Substring(3);
-                string txml_outpath = toutfolder + pair.Key + ".csproj";
+                string txml_outpath = toutfolder + '\\' + pair.Key + ".csproj";
 
                 //Create directory
                 if (!System.IO.Directory.Exists(toutfolder))
@@ -343,6 +343,10 @@ namespace Translator
                 globalsFile.Add(Indent(4) + "}");
                 globalsFile.Add("}");
 
+                //Create directory
+                if (!System.IO.Directory.Exists(iOutPath))
+                    System.IO.Directory.CreateDirectory(iOutPath);
+
                 File.WriteAllLines(iOutPath + "\\" + "NamespaceGlobals.cs", globalsFile, Encoding.UTF8);
 
                 //Save Global and Local element names
@@ -421,7 +425,15 @@ namespace Translator
             tdproj.LoadXml(tline);
 
             XmlDocument tcsproj = new XmlDocument();
-            tcsproj = icsproj;
+            string txmlstring = "";
+            using (var stringWriter = new StringWriter())
+            using (var xmlTextWriter = XmlWriter.Create(stringWriter))
+            {
+                icsproj.WriteTo(xmlTextWriter);
+                xmlTextWriter.Flush();
+                txmlstring = stringWriter.GetStringBuilder().ToString();
+            }
+            tcsproj.LoadXml(txmlstring);
 
             int tsource_childnodecount = tdproj.ChildNodes[1].ChildNodes.Count;
             int tchildnodecount = tcsproj.ChildNodes[1].ChildNodes.Count;
@@ -429,9 +441,30 @@ namespace Translator
             //Get all includes from .dproj
             List<XmlNode> tincludes = new List<XmlNode>();
 
-            XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[0];
+            XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[0].ChildNodes[7];
+            string tprojtype = tnode.InnerText;
 
+            //Project type
+            if (tprojtype == "Application")
+            {
+                tprojtype = "WinExe";
+
+                XmlElement tnewnode = tcsproj.CreateElement("ProjectTypeGuids", "http://schemas.microsoft.com/developer/msbuild/2003");
+                tnewnode.InnerText = "{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}";
+                tcsproj.ChildNodes[1].AppendChild(tnewnode);
+            }
+            else
+                tprojtype = "Library";
+
+            tcsproj.ChildNodes[1].ChildNodes[0].ChildNodes[3].InnerText = tprojtype;
+
+            //Project GUID
+            tnode = tdproj.ChildNodes[1].ChildNodes[0].ChildNodes[0];
+            tcsproj.ChildNodes[1].ChildNodes[0].ChildNodes[2].InnerText = tnode.InnerText;
             projGUIDs.Add(tfilename, tnode.InnerText);
+
+            //AssemblyName
+            tcsproj.ChildNodes[1].ChildNodes[0].ChildNodes[5].InnerText = tfilename;
 
             for (int i = 0; i < tsource_childnodecount; i++)
             {   
@@ -451,11 +484,11 @@ namespace Translator
                             string tincludeextension = tincludearr[1];
                             if (tincludeextension == "dcp")
                             {
-                                XmlElement tnewnode = tcsproj.CreateElement("ProjectReference", "");
+                                XmlElement tnewnode = tcsproj.CreateElement("ProjectReference", "http://schemas.microsoft.com/developer/msbuild/2003");
                                 tnewnode.SetAttribute("Include", tincludearr[0]);
-                                XmlElement tname = tcsproj.CreateElement("Name");
+                                XmlElement tname = tcsproj.CreateElement("Name", "http://schemas.microsoft.com/developer/msbuild/2003");
                                 tname.InnerText = tincludearr[0];
-                                XmlElement tproject = tcsproj.CreateElement("Project");
+                                XmlElement tproject = tcsproj.CreateElement("Project", "http://schemas.microsoft.com/developer/msbuild/2003");
                                 tproject.InnerText = "";
                                 tnewnode.AppendChild(tproject);
                                 tnewnode.AppendChild(tname);
@@ -464,7 +497,7 @@ namespace Translator
                             }
                             if (tincludeextension == "pas")
                             {
-                                XmlElement tnewnode = tcsproj.CreateElement("Compile", "");
+                                XmlElement tnewnode = tcsproj.CreateElement("Compile", "http://schemas.microsoft.com/developer/msbuild/2003");
                                 tnewnode.SetAttribute("Include", tincludearr[0]+".cs");
                                 tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank].AppendChild(tnewnode);//tcsproj.ImportNode(tdproj.ChildNodes[1].ChildNodes[i].ChildNodes[j], true));
                             }
@@ -475,7 +508,7 @@ namespace Translator
 
 
             //Convert XML to string
-            string txmlstring = "";
+            txmlstring = "";
             using (var stringWriter = new StringWriter())
             using (var xmlTextWriter = XmlWriter.Create(stringWriter))
             {
@@ -493,6 +526,9 @@ namespace Translator
 
             pattern = "\\b" + ".pas" + "\\b";
             txmlstring = Regex.Replace(txmlstring, pattern, ".cs");
+
+            //pattern = "\\b" + "xmlns=\"\"" + "\\b";
+            //txmlstring = Regex.Replace(txmlstring, pattern, "");
 
             //Save new .csproj out
             tcsproj.LoadXml(txmlstring);
