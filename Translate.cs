@@ -29,6 +29,9 @@ namespace Translator
         //The position to insert the references is hardcoded in the template
         int CSProj_XMLTemplate_IncludeChildRank = 5;
 
+        //Source folder
+        public string source_path;
+
         public DelphiToCSConversion(string iPath, string iOutPath, string iPatchPath, string iOverridePath, string iILPath, string iGroupProjPath, LogDelegate ilog, ref List<string> iStandardReferences, ref List<string> idelphiStandardReferences, ref List<List<string>> istandardCSReferences, ref List<string> idelphiIgnoreReferences, int imaxthreads, s iform, bool ithreadingEnabled)
         {
             threadingEnabled = ithreadingEnabled;
@@ -43,6 +46,7 @@ namespace Translator
             Log = ilog;
 
             maxthreads = imaxthreads;
+            source_path = iPath;
 
             //Cache all the relative Project paths
             //Read raw XML
@@ -59,7 +63,7 @@ namespace Translator
             //Add default Delphi Units (to be ignored)
             for (int i = 0; i < idelphiIgnoreReferences.Count; i++)
             {
-                projPaths.Add(idelphiIgnoreReferences[i], "..\\");
+                projPaths.Add(idelphiIgnoreReferences[i], "\\");
                 projGUIDs.Add(idelphiIgnoreReferences[i], "{" + Guid.NewGuid().ToString() + "}");
             }
 
@@ -81,7 +85,7 @@ namespace Translator
                             List<string> tstrlist = new List<string>(tprojpatharr);
 
                             tprojpath = "";
-                            for (int jj = 0; jj < tstrlist.Count - 1;jj++ )
+                            for (int jj = 0; jj < tstrlist.Count - 1;jj++ ) 
                                 tprojpath = tprojpath + '\\' + tstrlist[jj];
 
                             projPaths.Add(tprojname, tprojpath);
@@ -102,8 +106,19 @@ namespace Translator
                 int treference_childnodecount = tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes.Count;
 
                 //Path and GUID of current project
-                string tprojectpath = projPaths[pair.Key];
-                string tprojectGUID = projGUIDs[pair.Key];
+                string tprojectpath, tprojectGUID;
+
+                //Upper case, lower case bpl and library names
+                try
+                {
+                    tprojectpath = projPaths[pair.Key];
+                    tprojectGUID = projGUIDs[pair.Key];
+                }
+                catch
+                {
+                    tprojectpath = projPaths[pair.Key.ToLower()];
+                    tprojectGUID = projGUIDs[pair.Key.ToLower()];
+                }
 
                 //Add project path to filename in compile list
                 for (int i = 0; i < tcompile_childnodecount; i++)
@@ -116,18 +131,23 @@ namespace Translator
                 //Add project path and GUID to filename in project references list
                 for (int i = 0; i < treference_childnodecount; i++)
                 {
+                    string tstringval = tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].Attributes["Include"].Value;
+                    string tref_projectpath, tref_projectGUID;
+
                     try
                     {
-                        string tstringval = tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].Attributes["Include"].Value;
-                        string tref_projectpath = projPaths[tstringval];
-                        string tref_projectGUID = projGUIDs[tstringval];
-
-                        tref_projectpath = tref_projectpath + '\\' + tstringval + ".csproj";
-                        tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].ChildNodes[0].InnerText = tref_projectGUID;
-                        tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].ChildNodes[1].InnerText = tref_projectpath;
+                        tref_projectpath = projPaths[tstringval];
+                        tref_projectGUID = projGUIDs[tstringval];
                     }
                     catch
-                    { }
+                    {
+                        tref_projectpath = projPaths[tstringval.ToLower()];
+                        tref_projectGUID = projGUIDs[tstringval.ToLower()];
+                    }
+
+                    tref_projectpath = tref_projectpath + '\\' + tstringval + ".csproj";
+                    tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].ChildNodes[0].InnerText = tref_projectGUID;
+                    tcsproj.ChildNodes[1].ChildNodes[CSProj_XMLTemplate_IncludeChildRank + 1].ChildNodes[i].ChildNodes[1].InnerText = tref_projectpath;
                 }
 
                 //Write .csproj XMLDocuments to disk
@@ -283,10 +303,15 @@ namespace Translator
                     case "pas": pasFileFound = true;
                             Translate ttranslate; 
                             
-                            if (iform.writeIL)
-                                ttranslate = new Translate(tstring, tdirectory, iILPath, iPatchPath, tpatchfile, iOverridePath, toverridefile, Log, iStandardReferences, iDelphiStandardReferences, standardCSReferences, Log, ref iform);
-                            else
-                                ttranslate = new Translate(tstring, tdirectory, iOutPath, iPatchPath, tpatchfile, iOverridePath, toverridefile, Log, iStandardReferences, iDelphiStandardReferences, standardCSReferences, Log, ref iform);
+                            //if (iform.writeIL)
+
+                            ttranslate = new Translate(tstring, tdirectory, iILPath, iOutPath, iPatchPath, tpatchfile, iOverridePath, toverridefile, Log, iStandardReferences, iDelphiStandardReferences, standardCSReferences, Log, ref iform);
+                            
+                            if (toverridefile != "")
+                            {
+                                Directory.CreateDirectory(iOutPath);
+                                File.Copy(iOverridePath + "\\" + toverridefile + ".cs", iOutPath + "\\" + tfilename + ".cs", true);
+                            }
 
                             oDelphi.Add(ttranslate);                        
                             break;
@@ -305,17 +330,39 @@ namespace Translator
                 }
             }
 
+
+
             if (threadingEnabled)
                 Parallel.ForEach(oDelphi, new ParallelOptions { MaxDegreeOfParallelism = maxthreads }, currentFile =>
                 {
                     Object tobject = null;
-                    currentFile.ReadDelphi(tobject);
+
+                    if (currentFile.overriden == false)
+                    {
+                        if (iform.writeIL)
+                            currentFile.ReadDelphi(tobject);
+                        else
+                            currentFile.ReadIL(tobject);
+
+                        if (currentFile.overriden == false)
+                            currentFile.WriteCS(tobject);
+                    }
                 });
             else
                 for (int i = 0; i < oDelphi.Count; i++)
                 {
                     Object tobject = null;
-                    oDelphi[i].ReadDelphi(tobject);
+
+                    if (oDelphi[i].overriden == false)
+                    {
+                        if (iform.writeIL)
+                            oDelphi[i].ReadDelphi(tobject);
+                        else
+                            oDelphi[i].ReadIL(tobject);
+
+                        if (oDelphi[i].overriden == false)
+                            oDelphi[i].WriteCS(tobject);
+                    }
                 }
 
             if (pasFileFound)
@@ -357,27 +404,6 @@ namespace Translator
                 treference.globals = global_names;
                 treference.locals = local_names;
                 oReferences.Add(treference);
-
-                ////String replace the local globals used across all files in the directory
-                //files = Directory.GetFiles(iPath);
-
-                //for (int i = 0; i < files.GetLength(0); i++)
-                //{
-                //    tstring = files[i];
-                //    string[] tstrarray = tstring.Split('.');
-
-                //    switch (tstrarray[1])
-                //    {
-                //        //String replace in *.cs files
-                //        case "cs":
-                //            List<string> ttext = Utilities.TextFileReader(tstring);
-                //            Translate.GlobalsRename(tdirectory + "_Locals.", ref ttext, local_names);
-                //            File.WriteAllLines(tstring, ttext, Encoding.UTF8);
-                //            break;
-
-                //        default: break;
-                //    }
-                //}
             }
 
             for (int i = 0; i < directories.GetLength(0); i++)
@@ -415,6 +441,13 @@ namespace Translator
             tfilename = tfilename.Replace(".dproj", "");
             ioutpath = ioutpath + "\\" + tfilename + ".csproj";
 
+            //If Project path is not included, add project path
+            string trelativepath = ipath.Replace(source_path, "");
+            trelativepath = ".." + trelativepath;
+
+            if (!projPaths.ContainsKey(tfilename))
+                projPaths.Add(tfilename, trelativepath);
+
             //Read raw XML
             StreamReader tdprojstream = new StreamReader(ipath);
             //Add <xml> tag
@@ -442,7 +475,15 @@ namespace Translator
             List<XmlNode> tincludes = new List<XmlNode>();
 
             XmlNode tnode = tdproj.ChildNodes[1].ChildNodes[0].ChildNodes[7];
-            string tprojtype = tnode.InnerText;
+            string tprojtype = "Library";
+
+            try
+            {
+                tprojtype = tnode.InnerText;
+            }
+            catch
+            {
+            }
 
             //Project type
             if (tprojtype == "Application")
@@ -552,87 +593,110 @@ namespace Translator
         public Delphi IL;
         public CSharp CS;
         public string filename;
-        public string iPath, idirectory, iOutPath, iPatchPath, iPatchFile, iOverridePath, iOverrideFile;
-        public LogDelegate ilog;
-        public List<string> oglobal_names, oglobals, olocal_names, olocals, iStandardReferences, iDelphiStandardReferences;
-        public List<List<string>> iStandardCSReferences;
-        public LogDelegate iLog;
+        public string path, directory, outPath, patchPath, patchFile, overridePath, overrideFile, outPathCS;
+        public LogDelegate log;
+        public List<string> oglobal_names, oglobals, olocal_names, olocals, StandardReferences, DelphiStandardReferences;
+        public List<List<string>> StandardCSReferences;
+        public LogDelegate Log;
+        public bool overriden = false;
         public s form;
 
-        public Translate(string tPath, string tdirectory, string tOutPath, string tPatchPath, string tPatchFile, string tOverridePath, string tOverrideFile, LogDelegate tlog, List<string> tStandardReferences, List<string> tDelphiStandardReferences, List<List<string>> tStandardCSReferences, LogDelegate tLog, ref s iform)
+        public Translate(string iPath, string idirectory, string iOutPath, string ioutPathCS, string iPatchPath, string iPatchFile, string iOverridePath, string iOverrideFile, LogDelegate ilog, List<string> iStandardReferences, List<string> iDelphiStandardReferences, List<List<string>> iStandardCSReferences, LogDelegate iLog, ref s iform)
         {
             form = iform;
-            iPath = tPath;
-            idirectory = tdirectory; 
-            iOutPath = tOutPath; 
-            iPatchPath = tPatchPath; 
-            iPatchFile = tPatchFile; 
-            iOverridePath = tOverridePath; 
-            iOverrideFile = tOverrideFile; 
-            ilog = tlog;
+            path = iPath;
+            directory = idirectory; 
+            outPath = iOutPath;
+            outPathCS = ioutPathCS;
+            patchPath = iPatchPath; 
+            patchFile = iPatchFile; 
+            overridePath = iOverridePath; 
+            overrideFile = iOverrideFile; 
+            log = ilog;
             oglobal_names = new List<string>();//tglobal_names; 
             oglobals = new List<string>(); //tglobals; 
             olocal_names = new List<string>(); //tlocal_names; 
             olocals = new List<string>(); //tlocals; 
-            iStandardReferences = tStandardReferences; 
-            iDelphiStandardReferences = tDelphiStandardReferences; 
-            iStandardCSReferences = tStandardCSReferences; 
-            iLog = tLog;
+            StandardReferences = iStandardReferences; 
+            DelphiStandardReferences = iDelphiStandardReferences; 
+            StandardCSReferences = iStandardCSReferences; 
+            Log = iLog;
         }
 
         public void ReadDelphi(Object threadContext)
         {
             Delphi tdelphi = new Delphi();
-            List<string> tdelphitext = Utilities.TextFileReader(iPath);
-            string[] tpath_elements = iOutPath.Split('\\');
-            string[] tfilename_elements = iPath.Split('\\');
+            List<string> tdelphitext = Utilities.TextFileReader(path);
+            string[] tpath_elements = outPath.Split('\\');
+            string[] tfilename_elements = path.Split('\\');
             string tfilename = tfilename_elements[tfilename_elements.GetLength(0) - 1];
             tfilename = tfilename.Replace(".pas", "");
             filename = tfilename;
-            //string tdirectory = tfilename_elements[tfilename_elements.GetLength(0) - 2].Replace(" ", "_");
-            //Embed path information
-            tdelphi.directory = idirectory;
-            tdelphi.logsingle = iLog;
-            tdelphi.outPath = iOutPath + "\\" + tfilename + ".cs";
 
-            if (iOverrideFile != "")
+            //Embed path information
+            tdelphi.directory = directory;
+            tdelphi.logsingle = Log;
+            tdelphi.outPath = outPath + "\\" + tfilename + ".cs";
+
+            if (overrideFile == "")
             {
-                Directory.CreateDirectory(iOutPath);
-                File.Copy(iOverridePath + "\\" + iOverrideFile + ".cs", iOutPath + "\\" + tfilename + ".cs", true);
-            }
-            else
-            {   
-                tdelphi.Read(ref tdelphitext, true, "{ --", "-- }", ilog, ref form);
+                tdelphi.Read(ref tdelphitext, true, "{ --", "-- }", log, ref form);
                 //Write to file
-                Directory.CreateDirectory(iOutPath);
+                Directory.CreateDirectory(outPath);
 
                 XmlSerializer x;
-                
+
                 x = new XmlSerializer(typeof(Translator.Delphi));
                 XmlSerializerNamespaces ns = new XmlSerializerNamespaces();
                 ns.Add("", "");
 
-                using (var writer = XmlWriter.Create(iOutPath + "\\" + filename + ".xml"))
-                {
+                using (var writer = XmlWriter.Create(outPath + "\\" + filename + ".xml"))
                     x.Serialize(writer, tdelphi, ns);
-                }
 
-                //File.WriteAllLines(iOutPath + "\\" + filename + ".txt", tout, Encoding.UTF8);
+                IL = tdelphi;
             }
-            IL = tdelphi;
+            else
+                overriden = true;
+        }
+
+        public void ReadIL(Object threadContext)
+        {
+            Delphi tdelphi = new Delphi();
+            string[] tpath_elements = outPath.Split('\\');
+            string[] tfilename_elements = path.Split('\\');
+            string tfilename = tfilename_elements[tfilename_elements.GetLength(0) - 1];
+            tfilename = tfilename.Replace(".pas", "");
+            filename = tfilename;
+
+            //Embed path information
+            tdelphi.directory = directory;
+            tdelphi.logsingle = Log;
+            tdelphi.outPath = outPath + "\\" + tfilename + ".cs";
+
+            if (overrideFile == "")
+            {
+                XmlSerializer x = new XmlSerializer(typeof(Translator.Delphi));
+
+                using (var reader = XmlReader.Create(outPath + "\\" + filename + ".xml"))
+                    tdelphi = (Translator.Delphi) x.Deserialize(reader);
+
+                IL = tdelphi;
+            }
+            else
+                overriden = true;
         }
 
         public void WriteCS(Object threadContext)
         {
             CS = new CSharp();
-            CS.file_path = IL.outPath;
-            CS.standard_references = iStandardReferences;
+            CS.file_path = outPathCS;
+            CS.standard_references = StandardReferences;
 
-            string[] tout = CS.Write(ref IL.script, idirectory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref iDelphiStandardReferences, ref iStandardCSReferences).ToArray();
+            string[] tout = CS.Write(ref IL.script, directory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref DelphiStandardReferences, ref StandardCSReferences).ToArray();
 
             //Write to file
-            Directory.CreateDirectory(iOutPath);
-            File.WriteAllLines(iOutPath + "\\" + filename + ".cs", tout, Encoding.UTF8);
+            Directory.CreateDirectory(outPathCS);
+            File.WriteAllLines(outPathCS + "\\" + filename + ".cs", tout, Encoding.UTF8);
         }
 
         public void DPK2Vcproj(string iPath)

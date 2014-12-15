@@ -68,8 +68,15 @@ namespace Translator
 
         private void GUI_Load(object sender, EventArgs e)
         {
-            standardDelphiReferences = new List<string> { "+DelphiStandardWrapper", "-Example_DelphiLibrary_To_Remove","Generics.Collections / System.Collections.Generic", "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
-            List<string> tignoreDelphiLibraries = new List<string> { "rtl", "vcl"};
+            standardDelphiReferences = new List<string> { "+DelphiStandardWrapper", "-Example_DelphiLibrary_To_Remove","Generics.Collections / System.Collections.Generic", 
+            "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
+
+            List<string> tignoreDelphiLibraries = new List<string> { "dclOfficeXP", "adortl150", "bdertl150", "cxDataD15", "cxEditorsD15", "cxExportD15", "cxExtEditorsD15", "cxGridD15", 
+            "cxLibraryD15", "cxPageControlD15", "cxTreeListD15", "dbrtl150", "DbxCommonDriver150", "dcldb150", "dcloffice2k150", "dclofficexp150", "dclstd150", "dclturbodb6d15", 
+            "dclZipForgeD15", "designide150", "dsnap150", "dxCoreD15", "dxGDIPlusD15", "dxThemeD15", "IndyCore150", "IndyProtocols150", "IndySystem150", "inet150", "rtl150", "tee9150", 
+            "vcl150", "vclactnband150", "vcldb150", "vcldesigner150", "vclimg150", "vclsmp150", "vclx150", "vclZipForgeD15", "xmlrtl150", "adortl", "bdertl", "DbxCommonDriver", "dcldb", 
+            "dclOffice2k", "dclOfficExp", "dclstd", "designide", "dsnap", "IndyCore", "IndyProtocols", "IndySystem", "inet", "rtl", "tee9", "vcl", "vclactnband", "vcldb", 
+            "vcldesigner", "vclimg",  "VclDesigner", "VclImg", "VclSmp", "vclx", "xmlrtl", "dbrtl", "tee", "DatasetDataProviderLib", "vclAbsDBd15", "vclabsdbd15", "turbodb6d15"};
             
             //Load last used settings
             if (DelphiToCSTranslator.Properties.Settings.Default.InPath != "")
