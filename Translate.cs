@@ -63,10 +63,13 @@ namespace Translator
             //Add default Delphi Units (to be ignored)
             for (int i = 0; i < idelphiIgnoreReferences.Count; i++)
             {
-                projPaths.Add(idelphiIgnoreReferences[i], "\\");
-                projGUIDs.Add(idelphiIgnoreReferences[i], "{" + Guid.NewGuid().ToString() + "}");
+                string tnewGUID = "{" + Guid.NewGuid().ToString() + "}";
+                projPaths.Add(idelphiIgnoreReferences[i], "\\..\\" + idelphiIgnoreReferences[i] + "\\");
+                projGUIDs.Add(idelphiIgnoreReferences[i], tnewGUID);
+                projects.Add(idelphiIgnoreReferences[i], CreateEmptyProj(idelphiIgnoreReferences[i], tnewGUID, iform.csproj));
             }
 
+            //Get all relative project paths
             for (int i = 0; i < tsource_childnodecount; i++)
             {
                 XmlNode tnode = tcsproj.ChildNodes[1].ChildNodes[i];
@@ -76,7 +79,6 @@ namespace Translator
                     {
                         XmlNode tsubnode = tnode.ChildNodes[j];
 
-                        //Get all relative project paths
                         if (tsubnode.Name == "Projects")
                         {
                             string tprojpath = tsubnode.Attributes["Include"].Value;
@@ -94,8 +96,7 @@ namespace Translator
                 }
             }
 
-
-            //Do a first run to convert individual files to C#, and gather list of references
+            //Convert individual files to C#, and gather list of references
             AnalyzeFolder(iPath, iOutPath, iPatchPath, iOverridePath, iILPath, ref delphiReferences, ref delphiParsedFiles, ref iStandardReferences, ref delphiStandardReferences, ref standardCSReferences, iform);
 
             //Add project paths and GUIDs to csproj files and write them out
@@ -443,7 +444,8 @@ namespace Translator
 
             //If Project path is not included, add project path
             string trelativepath = ipath.Replace(source_path, "");
-            trelativepath = ".." + trelativepath;
+            trelativepath = trelativepath.Replace("\\" + tfilename + ".dproj", "");
+            trelativepath = "\\.." + trelativepath;
 
             if (!projPaths.ContainsKey(tfilename))
                 projPaths.Add(tfilename, trelativepath);
@@ -575,6 +577,35 @@ namespace Translator
             tcsproj.LoadXml(txmlstring);
             projects.Add(tfilename, tcsproj);
             //tcsproj.Save(ioutpath);
+        }
+
+        public static XmlDocument CreateEmptyProj(string iName, string iGUID, XmlDocument icsproj)
+        {
+            XmlDocument tcsproj = new XmlDocument();
+            string txmlstring = "";
+            using (var stringWriter = new StringWriter())
+            using (var xmlTextWriter = XmlWriter.Create(stringWriter))
+            {
+                icsproj.WriteTo(xmlTextWriter);
+                xmlTextWriter.Flush();
+                txmlstring = stringWriter.GetStringBuilder().ToString();
+            }
+            tcsproj.LoadXml(txmlstring);
+
+            //Get all includes from .dproj
+            List<XmlNode> tincludes = new List<XmlNode>();
+            
+            //AssemblyName
+            tcsproj.ChildNodes[1].ChildNodes[0].ChildNodes[5].InnerText = iName;
+
+            //Project type
+            string tprojtype = "Library";
+            tcsproj.ChildNodes[1].ChildNodes[0].ChildNodes[3].InnerText = tprojtype;
+
+            //Project GUID
+            tcsproj.ChildNodes[1].ChildNodes[0].ChildNodes[2].InnerText = iGUID;
+
+            return tcsproj;
         }
 
         public static Stream GenerateStreamFromString(string s)

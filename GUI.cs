@@ -76,7 +76,8 @@ namespace Translator
             "dclZipForgeD15", "designide150", "dsnap150", "dxCoreD15", "dxGDIPlusD15", "dxThemeD15", "IndyCore150", "IndyProtocols150", "IndySystem150", "inet150", "rtl150", "tee9150", 
             "vcl150", "vclactnband150", "vcldb150", "vcldesigner150", "vclimg150", "vclsmp150", "vclx150", "vclZipForgeD15", "xmlrtl150", "adortl", "bdertl", "DbxCommonDriver", "dcldb", 
             "dclOffice2k", "dclOfficExp", "dclstd", "designide", "dsnap", "IndyCore", "IndyProtocols", "IndySystem", "inet", "rtl", "tee9", "vcl", "vclactnband", "vcldb", 
-            "vcldesigner", "vclimg",  "VclDesigner", "VclImg", "VclSmp", "vclx", "xmlrtl", "dbrtl", "tee", "DatasetDataProviderLib", "vclAbsDBd15", "vclabsdbd15", "turbodb6d15"};
+            "vcldesigner", "vclimg",  "VclDesigner", "VclImg", "VclSmp", "vclx", "xmlrtl", "dbrtl", "tee", "DatasetDataProviderLib", "vclAbsDBd15", "vclabsdbd15", "turbodb6d15", "CommonXML", 
+            "vclSQLMemTabled14", "XMLDBReaderWriterLib"};
             
             //Load last used settings
             if (DelphiToCSTranslator.Properties.Settings.Default.InPath != "")

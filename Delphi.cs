@@ -428,7 +428,7 @@ namespace Translator
                 tnext_subsection_pos = istrings.Count;
 
             //Interface sub sectionsm
-            while ((tcurr_string_count < tnext_subsection_pos) && (tcurr_string_count < endInterface) && (tcurr_string_count != -1))
+            while ((tcurr_string_count < inext_subsection_pos) && (tcurr_string_count < endInterface) && (tcurr_string_count != -1))
             {
                 //Ignore comments and empty lines
                 if ((istrings[tcurr_string_count] != "") && !(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
