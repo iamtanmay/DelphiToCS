@@ -176,7 +176,7 @@ namespace Translator
 
         //Divide subsection kinds
         [System.Xml.Serialization.XmlIgnoreAttribute]
-        public static string[] interfaceKindKeys = { "class", "record", "procedure", "function", "interface" };
+        public static string[] interfaceKindKeys = { "class function", "class procedure", "class", "record", "procedure", "function", "interface" };
         
         [System.Xml.Serialization.XmlIgnoreAttribute]
         public static string[] implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
@@ -434,7 +434,8 @@ namespace Translator
                 if ((istrings[tcurr_string_count] != "") && !(RecognizeComment(istrings[tcurr_string_count])) && !(RecognizeEmptyLine(istrings[tcurr_string_count])))
                 {
                     DelphiClassStrings tclassdef = new DelphiClassStrings();
-                    switch (RecognizeKey(istrings[tcurr_string_count], ref interfaceKindKeys))
+                    string trecognize_key = RecognizeKey(istrings[tcurr_string_count], ref interfaceKindKeys);
+                    switch (trecognize_key)
                     {
                         case "class":   //Check if it is a forward declaration or alias
                                         string tstring = istrings[tcurr_string_count];
@@ -449,6 +450,19 @@ namespace Translator
                                                 tclassdef.type = "c";
                                                 tclassdef.baseclass = ttemparr[1].Replace("class(", "").Replace(");", "");
                                                 oclassnames.Add(tclassname); 
+                                                oclassdefinitions.Add(tclassdef);
+                                                tcurr_string_count++;
+                                                tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
+                                            }
+                                            //Alias with no baseclass
+                                            else if ((tstring.IndexOf("class;") != -1))
+                                            {
+                                                string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('=');
+                                                tclassname = ttemparr[0];
+                                                tclassdef.name = tclassname;
+                                                tclassdef.type = "c";
+                                                tclassdef.baseclass = "";
+                                                oclassnames.Add(tclassname);
                                                 oclassdefinitions.Add(tclassdef);
                                                 tcurr_string_count++;
                                                 tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
@@ -538,9 +552,21 @@ namespace Translator
                                         break;
 
                         //Check if Enum or Type Alias, else Log unrecognized sub section
-                        default:        //Enum start
+                        default:        
                                         if (istrings[tcurr_string_count].IndexOf('(') != -1)
                                         {
+                                            //Check if a procedure or function
+                                            if (istrings[tcurr_string_count].IndexOf('=') != -1)
+                                            {
+                                                if (trecognize_key == "procedure")
+                                                {
+
+                                                }
+                                                else if (trecognize_key == "function")
+                                            }
+
+                                            //Enum start
+
                                             tnext_subsection_pos = FindNextSymbol(ref istrings, ");", tcurr_string_count);
 
                                             if (tnext_subsection_pos == -1)
@@ -1750,64 +1776,68 @@ namespace Translator
             {
                 string tstr = iline.Replace("property", "").Replace("class", "").Replace(";", "").Trim();
                 tstr_arr = tstr.Split(':');
-                
-                //Add name
-                tout.Add(tstr_arr[0]);
 
-                //Check if read
-                int tread = tstr_arr[1].IndexOf("read");
-                int twrite = tstr_arr[1].IndexOf("write");
+                if (tstr_arr.Length > 1)
+                {
 
-                if ((tread == -1) && (twrite == -1))
-                {
-                    tout.Add(tstr_arr[1].Trim());
-                    tout.Add("null");
-                    tout.Add("null");
-                }
-                else if (tread == -1)
-                {
-                    tstr_arr[1] = tstr_arr[1].Replace("write", ";");
-                    tstr_arr = tstr_arr[1].Split(';');
-                    
-                    //Add type and read
-                    //tout.Add(tstr_arr[0].Trim());
-                    //tout.Add(tstr_arr[1].Trim());
-                    
-                    tout.Add(tstr_arr[0].Trim());
-                    tout.Add("null");
-                    tout.Add(tstr_arr[1].Trim());
-                }
-                else if (twrite == -1)
-                {
-                    tstr_arr[1] = tstr_arr[1].Replace("read", ";");
-                    tstr_arr = tstr_arr[1].Split(';');
+                    //Add name
+                    tout.Add(tstr_arr[0]);
 
-                    //Add type and write
-                    tout.Add(tstr_arr[0].Trim());
-                    tout.Add(tstr_arr[1].Trim());
-                    tout.Add("null");//tstr_arr[1].Trim());
-                }
-                else if (tread > twrite)
-                {
-                    tstr_arr[1] = tstr_arr[1].Replace("write", ";");
-                    tstr_arr[1] = tstr_arr[1].Replace("read", ";");
-                    tstr_arr = tstr_arr[1].Split(';');
+                    //Check if read
+                    int tread = tstr_arr[1].IndexOf("read");
+                    int twrite = tstr_arr[1].IndexOf("write");
 
-                    //Add type, read and write
-                    tout.Add(tstr_arr[0].Trim());
-                    tout.Add(tstr_arr[2].Trim());
-                    tout.Add(tstr_arr[1].Trim());
-                }
-                else
-                {
-                    tstr_arr[1] = tstr_arr[1].Replace("write", ";");
-                    tstr_arr[1] = tstr_arr[1].Replace("read", ";");
-                    tstr_arr = tstr_arr[1].Split(';');
+                    if ((tread == -1) && (twrite == -1))
+                    {
+                        tout.Add(tstr_arr[1].Trim());
+                        tout.Add("null");
+                        tout.Add("null");
+                    }
+                    else if (tread == -1)
+                    {
+                        tstr_arr[1] = tstr_arr[1].Replace("write", ";");
+                        tstr_arr = tstr_arr[1].Split(';');
 
-                    //Add type, read and write
-                    tout.Add(tstr_arr[0].Trim());
-                    tout.Add(tstr_arr[1].Trim());
-                    tout.Add(tstr_arr[2].Trim());
+                        //Add type and read
+                        //tout.Add(tstr_arr[0].Trim());
+                        //tout.Add(tstr_arr[1].Trim());
+
+                        tout.Add(tstr_arr[0].Trim());
+                        tout.Add("null");
+                        tout.Add(tstr_arr[1].Trim());
+                    }
+                    else if (twrite == -1)
+                    {
+                        tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                        tstr_arr = tstr_arr[1].Split(';');
+
+                        //Add type and write
+                        tout.Add(tstr_arr[0].Trim());
+                        tout.Add(tstr_arr[1].Trim());
+                        tout.Add("null");//tstr_arr[1].Trim());
+                    }
+                    else if (tread > twrite)
+                    {
+                        tstr_arr[1] = tstr_arr[1].Replace("write", ";");
+                        tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                        tstr_arr = tstr_arr[1].Split(';');
+
+                        //Add type, read and write
+                        tout.Add(tstr_arr[0].Trim());
+                        tout.Add(tstr_arr[2].Trim());
+                        tout.Add(tstr_arr[1].Trim());
+                    }
+                    else
+                    {
+                        tstr_arr[1] = tstr_arr[1].Replace("write", ";");
+                        tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                        tstr_arr = tstr_arr[1].Split(';');
+
+                        //Add type, read and write
+                        tout.Add(tstr_arr[0].Trim());
+                        tout.Add(tstr_arr[1].Trim());
+                        tout.Add(tstr_arr[2].Trim());
+                    }
                 }
             }
             //Handle variables and constants
@@ -2285,8 +2315,12 @@ namespace Translator
                 for (int j = 0; j < tdefinition.properties.Count; j++)
                 {
                     tdefinition_parts = RecognizeClassDefinition(tdefinition.properties[j].value);
-                    Property tprop = new Property(tdefinition_parts[0], tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition.properties[j].isStatic);
-                    tclass.properties.Add(tprop);
+
+                    if (tdefinition_parts.Count == 4)
+                    {
+                        Property tprop = new Property(tdefinition_parts[0], tdefinition_parts[1], tdefinition_parts[2], tdefinition_parts[3], tdefinition.properties[j].isStatic);
+                        tclass.properties.Add(tprop);
+                    }
                 }
 
                 for (int j = 0; j < tdefinition.methods.Count; j++)
