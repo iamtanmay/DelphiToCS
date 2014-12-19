@@ -155,7 +155,7 @@ namespace Translator
     	//Raw strings
     	//Header, class names, SubSection names, Uses interface, Uses implementation, (Global and Local): consts, enums, types and vars 
         [System.Xml.Serialization.XmlIgnoreAttribute]
-        private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal;
+        private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal, FunctionsGlobal, ProceduresGlobal;
 
     	//Raw text for the classes
         [System.Xml.Serialization.XmlIgnoreAttribute]
@@ -228,6 +228,8 @@ namespace Translator
             EnumsLocal = new List<string>();
             TypesLocal = new List<string>();
             VarsLocal = new List<string>();
+            FunctionsGlobal = new List<string>();
+            ProceduresGlobal = new List<string>();
             
             SubSection_Names = new List<string>();
             Section_Bookmarks = new List<int>();
@@ -263,7 +265,7 @@ namespace Translator
             //Convert Delphi symbols to C# symbols
 			//Beautify(ref istrings);
 
-            ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal);
+            ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal, ref ProceduresGlobal, ref FunctionsGlobal);
             ParseVar(ref istrings, ref VarsGlobal);
             ParseImplementation(ref istrings, ref Uses_Implementation, ref classNames, ref classDefinitions, ref ConstsLocal, ref EnumsLocal, ref TypesLocal);
 
@@ -307,7 +309,7 @@ namespace Translator
         }
         
         //oclassdefinitions is a list of class variables, properties, function and procedure definitions 
-        private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes)
+        private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, ref List<string> oprocedures, ref List<string> ofunctions)
         {
             int tcurr_string_count = FindNextInterfaceSubSection(ref istrings, startInterface), tnext_subsection_pos = -1;
 
@@ -375,7 +377,7 @@ namespace Translator
                                     if (tendRange == -1)
                                         tendRange = endInterface; 
                                     
-                                    ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count, tendRange); break;
+                                    ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, ref oprocedures, ref ofunctions, tcurr_string_count, tendRange); break;
 
                     case "uses":    tendRange = tnext_subsection_pos;
 
@@ -417,7 +419,7 @@ namespace Translator
             return false;
         }
 
-        private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int istartpos, int inext_subsection_pos)
+        private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, ref List<string> oprocedures, ref List<string> ofunctions, int istartpos, int inext_subsection_pos)
         {
             int tnext_subsection_pos = inext_subsection_pos, tcurr_string_count = istartpos;
             string tclassname = "";
@@ -558,28 +560,60 @@ namespace Translator
                                             //Check if a procedure or function
                                             if (istrings[tcurr_string_count].IndexOf('=') != -1)
                                             {
-                                                if (trecognize_key == "procedure")
+                                                if ( (trecognize_key == "procedure") || (trecognize_key == "function"))
                                                 {
+                                                    //Find the end of method on multiple lines
+                                                    int tclose_bracket = istrings[tcurr_string_count].IndexOf(')');
+                                                    int ti = tcurr_string_count;
+                                                    while(tclose_bracket == -1)
+                                                    {
+                                                        ti++;
+                                                        tclose_bracket = istrings[ti].IndexOf(')');
+                                                    }
+                                                    tclose_bracket = ti;
 
+                                                    //Find semicolon after the ')'
+                                                    int tend_semicolon = ti;
+                                                    ti = istrings[tcurr_string_count].IndexOf(';');
+                                                    
+                                                    //If the ; comes before ), then next line is the final line of the method
+                                                    if (ti < tclose_bracket)
+                                                        tend_semicolon = ti;
+
+                                                    //Add all the method lines together and make a string
+                                                    string tmethod_string = "";
+
+                                                    for (ti = tcurr_string_count; ti < tend_semicolon + 1; ti++)
+                                                        tmethod_string += istrings[ti];
+
+                                                    //Procedure
+                                                    if (trecognize_key == "procedure")
+                                                        oprocedures.Add(tmethod_string);
+
+                                                    //Function
+                                                    else
+                                                        ofunctions.Add(tmethod_string);
                                                 }
                                                 else if (trecognize_key == "function")
+                                                {
+                                                }
+                                                else
+                                                {
+                                                }
+                                                
                                             }
 
                                             //Enum start
-
-                                            tnext_subsection_pos = FindNextSymbol(ref istrings, ");", tcurr_string_count);
-
-                                            if (tnext_subsection_pos == -1)
-                                            {
-                                                tcurr_string_count++;
-                                                throw new Exception("Incomplete Enum definition");
-                                            }
                                             else
                                             {
-                                                oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos+1).ToArray())));
-                                                tcurr_string_count++;// = tnext_subsection_pos + 1;
+                                                tnext_subsection_pos = FindNextSymbol(ref istrings, ");", tcurr_string_count);
+
+                                                if (tnext_subsection_pos == -1)
+                                                    throw new Exception("Incomplete Enum definition");
+                                                else
+                                                    oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos + 1).ToArray())));
                                             }
-                                            //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                            tcurr_string_count++;
                                         }
                                         //Type Alias start
                                         else if ((istrings[tcurr_string_count].IndexOf('=') != -1) && (istrings[tcurr_string_count].IndexOf(';') != -1))
@@ -622,6 +656,20 @@ namespace Translator
             bool end_found = false;
             int i = icurr_string_count;
             int bracket_closed = -1;
+            int bracket_open = -1;
+            int first_semicolon = -1;
+
+            first_semicolon = iFiltered_strings[i].IndexOf(';');
+            bracket_open = iFiltered_strings[i].IndexOf('(');
+
+            if ( (first_semicolon == -1) && (bracket_open == -1) )
+                i++;
+
+            bracket_open = iFiltered_strings[i].IndexOf('(');
+
+            if (bracket_open == -1)
+                return -1;
+
             while (!end_found && i < iFiltered_strings.Count)
             {
                 bracket_closed = iFiltered_strings[i].IndexOf(')');
@@ -789,7 +837,7 @@ namespace Translator
 
                 if (tcommentcheckstr != "")
                 {
-                    if (tcommentcheckstr[0] == '{')
+                    if ((tcommentcheckstr[0] == '{') || (tcommentcheckstr[0] == '/'))
                     {
                         //Ignore comments containing class name
                         tcurr_string_count++;
@@ -1366,7 +1414,8 @@ namespace Translator
             //Add all the indented lines in function title
             for (int i = icurr_string_count; i < tnext_pos; i++)
             {
-                tfuncstring = tfuncstring + istrings[i].Trim();
+                string tcomment_free_string = istrings[i].Trim().Split("//".ToCharArray())[0];
+                tfuncstring = tfuncstring + tcomment_free_string;
             }
 
             string[] tclassnamearray = tfuncstring.Split('.');
@@ -2467,8 +2516,26 @@ namespace Translator
                 else if (tvalue.IndexOf("$") != -1)
                 {
                     ttype = "int";
-                    tvalue = tvalue.Replace("$", "");
-                    tvalue = "" + Convert.ToInt32(tvalue, 16);
+                    string[] thex_array = tvalue.Split('+');
+
+                    if (thex_array[0].IndexOf("$") != -1)
+                        thex_array[0] = "" + Convert.ToInt32(thex_array[0].Replace("$", ""), 16);
+
+                    tvalue = thex_array[0];
+
+                    for (int ti = 1; ti < thex_array.Length; ti++)
+                    {
+                        if (thex_array[ti].IndexOf("$") != -1)
+                        {
+                            string thex_temp_string = thex_array[ti].Replace("$", "").Trim();
+                            int ttemp_hex_int_val = Convert.ToInt32(thex_temp_string, 16);
+                            thex_array[ti] = "" + ttemp_hex_int_val;
+                        }
+                        tvalue = tvalue + " + " + thex_array[ti];
+                    }
+
+                    //tvalue = tvalue.Replace("$", "");
+                    //tvalue = "" + Convert.ToInt32(tvalue, 16);
                 }
 
                 //Double
@@ -2673,8 +2740,56 @@ namespace Translator
 
             for (int i = 0; i < ivarsGlobal.Count; i++)
             {
-                if (ivarsGlobal[i].Trim() != "")
-                    tvars.AddRange(StringToVariable(ivarsGlobal[i]));
+                string tvarglobal = ivarsGlobal[i].Trim();
+                string tvarsGlobal_comment = "";
+                if (tvarglobal != "")
+                {
+                    if (tvarglobal.IndexOf("//") != -1)
+                    {
+                        string[] tvarsGlobal_comment_arr = tvarglobal.Split("//".ToCharArray());
+
+                        tvarglobal = tvarsGlobal_comment_arr[0];
+
+                        if (tvarsGlobal_comment_arr.Length > 1)
+                            tvarsGlobal_comment = tvarsGlobal_comment_arr[1];
+                    }
+                    else if (tvarglobal.IndexOf('{') != -1)
+                    {
+                        int tclosing_comment_bracket = -1;
+                        int ti = i;
+                        tvarglobal = ivarsGlobal[ti].Trim();
+                        tclosing_comment_bracket = tvarglobal.IndexOf('}');
+
+                        while (tclosing_comment_bracket == -1)
+                        {
+                            ti++;
+                            tvarglobal = ivarsGlobal[ti].Trim();
+                            tclosing_comment_bracket = tvarglobal.IndexOf('}');
+                        }
+                        tclosing_comment_bracket = ti;
+                        string[] trest_string_arr = tvarglobal.Split('}');
+                        tvarglobal = "";
+
+                        for(ti=i; ti<tclosing_comment_bracket; ti++)
+                        {
+                            tvarglobal = tvarglobal + ivarsGlobal[ti].Trim();
+                        }
+
+                        tvarglobal = tvarglobal + trest_string_arr[0];
+                        if (trest_string_arr.Length > 1)
+                            tvarglobal = trest_string_arr[1];
+                        else
+                        {
+                            tvarglobal = ivarsGlobal[tclosing_comment_bracket + 1];
+                            i = tclosing_comment_bracket;
+                        }
+
+                    }
+                    else
+                    {
+                    }
+                    tvars.AddRange(StringToVariable(tvarglobal, tvarsGlobal_comment));
+                }
             }
 
             oclassGlobals = new Class();
