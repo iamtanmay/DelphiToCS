@@ -155,7 +155,10 @@ namespace Translator
     	//Raw strings
     	//Header, class names, SubSection names, Uses interface, Uses implementation, (Global and Local): consts, enums, types and vars 
         [System.Xml.Serialization.XmlIgnoreAttribute]
-        private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal, FunctionsGlobal, ProceduresGlobal;
+        private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal, Delegates;
+
+        [System.Xml.Serialization.XmlIgnoreAttribute]
+        private List<Function> FunctionsGlobal, ProceduresGlobal, FunctionsLocal, ProceduresLocal;
 
     	//Raw text for the classes
         [System.Xml.Serialization.XmlIgnoreAttribute]
@@ -228,8 +231,11 @@ namespace Translator
             EnumsLocal = new List<string>();
             TypesLocal = new List<string>();
             VarsLocal = new List<string>();
-            FunctionsGlobal = new List<string>();
-            ProceduresGlobal = new List<string>();
+            Delegates = new List<string>();
+            FunctionsGlobal = new List<Function>();
+            ProceduresGlobal = new List<Function>();
+            FunctionsLocal = new List<Function>();
+            ProceduresLocal = new List<Function>();
             
             SubSection_Names = new List<string>();
             Section_Bookmarks = new List<int>();
@@ -265,16 +271,18 @@ namespace Translator
             //Convert Delphi symbols to C# symbols
 			//Beautify(ref istrings);
 
-            ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal, ref ProceduresGlobal, ref FunctionsGlobal);
-            ParseVar(ref istrings, ref VarsGlobal);
+            ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref VarsGlobal, ref EnumsGlobal, ref TypesGlobal);
+            //ParseVar(ref istrings, ref VarsGlobal);
             ParseImplementation(ref istrings, ref Uses_Implementation, ref classNames, ref classDefinitions, ref ConstsLocal, ref EnumsLocal, ref TypesLocal);
 
+            //Generate Global procedures and functions
+
             //Generate the text pieces into class objects
-            GenerateGlobalClass("Globals_"+ name, ref classGlobals, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal, ref VarsGlobal);
+            GenerateGlobalClass("Globals_" + name, ref classGlobals, ref ConstsGlobal, ref EnumsGlobal, ref TypesGlobal, ref VarsGlobal, ref ProceduresGlobal, ref FunctionsGlobal);
             script.classes.Add(classGlobals);
             VarsGlobal.Clear();
 
-            GenerateGlobalClass("Locals_"+ name, ref classLocals, ref ConstsLocal, ref EnumsLocal, ref TypesLocal, ref VarsGlobal);
+            GenerateGlobalClass("Locals_" + name, ref classLocals, ref ConstsLocal, ref EnumsLocal, ref TypesLocal, ref VarsGlobal, ref ProceduresLocal, ref FunctionsLocal);
             script.classes.Add(classLocals);
 
             GenerateClasses(ref istrings, ref script.classes, ref classNames, ref classDefinitions, ref classImplementations);
@@ -309,9 +317,11 @@ namespace Translator
         }
         
         //oclassdefinitions is a list of class variables, properties, function and procedure definitions 
-        private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, ref List<string> oprocedures, ref List<string> ofunctions)
+        private void ParseInterface(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> ovars, ref List<string> oenums, ref List<string> otypes)
         {
             int tcurr_string_count = FindNextInterfaceSubSection(ref istrings, startInterface), tnext_subsection_pos = -1;
+
+            //Define Delphi_Global_function_class
 
             //Interface sub sections
             while (tcurr_string_count != -1)
@@ -329,12 +339,10 @@ namespace Translator
                                         tendRange = endInterface;
                                     
                                     //oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tendRange)); break;
-
                                     string tconststr = "", ttempstr = "";
                                     for (int j = tcurr_string_count + 1; j < tendRange && j < istrings.Count; j++)
                                     {
                                         tconststr = istrings[j];
-
                                         ttempstr = istrings[j].Trim();
 
                                         if (ttempstr != "")
@@ -350,21 +358,40 @@ namespace Translator
                                             }
                                             else if (ttempstr != "" && ttempstr[0] != '/')
                                             {
-                                                bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
 
-                                                while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
+                                                //Check if function or procedure
+                                                string tfunctiontype = "";
+
+                                                if (ttempstr.IndexOf("function") != -1)
+                                                    tfunctiontype = "function";
+                                                else if (ttempstr.IndexOf("procedure") != -1)
+                                                    tfunctiontype = "procedure";
+                                                else
+                                                    tfunctiontype = "";
+
+                                                if (tfunctiontype != "")
                                                 {
-                                                    j++;
-                                                    ttempstr = istrings[j].Trim();
-                                                    tconststr = tconststr + istrings[j];
-
-                                                    if (ttempstr != "")
-                                                        tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
-                                                    else
-                                                        tsemicolonfound = false;
+ 
                                                 }
+                                                else
+                                                {
+                                                    //Constant
+                                                    bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
 
-                                                oconsts.Add(tconststr.Replace("=", ":="));
+                                                    while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
+                                                    {
+                                                        j++;
+                                                        ttempstr = istrings[j].Trim();
+                                                        tconststr = tconststr + istrings[j];
+
+                                                        if (ttempstr != "")
+                                                            tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                        else
+                                                            tsemicolonfound = false;
+                                                    }
+
+                                                    oconsts.Add(tconststr.Replace("=", ":="));
+                                                }
                                             }
                                         }
                                     }
@@ -377,7 +404,7 @@ namespace Translator
                                     if (tendRange == -1)
                                         tendRange = endInterface; 
                                     
-                                    ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, ref oprocedures, ref ofunctions, tcurr_string_count, tendRange); break;
+                                    ParseInterfaceTypes(ref istrings, ref ouses, ref oclassnames, ref oclassdefinitions, ref oconsts, ref oenums, ref otypes, tcurr_string_count, tendRange); break;
 
                     case "uses":    tendRange = tnext_subsection_pos;
 
@@ -394,7 +421,119 @@ namespace Translator
         							break;
             	}
                 tcurr_string_count = tnext_subsection_pos;
-            }        
+            }
+
+            DelphiClassStrings tvarclass = new DelphiClassStrings();
+            List<DelphiMethodStrings> tvar_methods = new List<DelphiMethodStrings>();
+            List<List < DelphiMethodStrings >> tvar_actions = new List<List<DelphiMethodStrings>>();
+            List<DelphiVarStrings> tvar_vars = new List<DelphiVarStrings>(), tvar_consts = new List<DelphiVarStrings>(),
+                                    tvar_properties = new List<DelphiVarStrings>();
+
+            if (startVar != -1)
+            {
+                for (int i = startVar + 1; i < startImplementation; i++)
+                {
+                    //Search for functions, procedures, variables declared under the var section
+                    string tvarglobal = istrings[i];
+
+                    string[] tcommentarr = tvarglobal.Split(new string[] { "//" }, StringSplitOptions.None);
+
+                    //Just a comment
+                    if (tcommentarr[0].Trim() == "")
+                    { }
+                    else
+                    {
+                        string tfunction_or_procedure_type = RecognizeKey(tvarglobal, ref interfaceKindKeys);
+
+                        //Take care of procedures & functions
+                        if ((tfunction_or_procedure_type == "procedure") || (tfunction_or_procedure_type == "function"))
+                        {
+                            //Get the whole function declaration string
+                            string tfunction_declaration_string = tvarglobal;
+                            int topenbracketcount = 0;
+                            int tcurr_line = i;
+
+                            //Iterate till closing bracket is found for the declaration
+                            if (tvarglobal.IndexOf('(') != -1)
+                            {
+                                topenbracketcount++;
+                                while (topenbracketcount > 0)
+                                {
+                                    string tcurr_line_string = istrings[tcurr_line];
+                                    string[] tcomment_split = tcurr_line_string.Split("//".ToCharArray());
+                                    string tcomment = "";
+
+                                    if (tcomment_split.Length > 1)
+                                    {
+                                        tcomment = tcomment_split[1];
+                                        tcurr_line_string = tcomment_split[0] + "/*" + tcomment + "*/";
+                                    }
+
+                                    tfunction_declaration_string = tfunction_declaration_string + tcurr_line_string;
+
+                                    if (tcurr_line_string.IndexOf(')') != -1)
+                                        topenbracketcount--;
+
+                                    if (topenbracketcount > 0)
+                                        tcurr_line++;
+                                }
+                            }
+                            else
+                                tfunction_declaration_string = tfunction_declaration_string.Replace("function", "function()").Replace("procedure", "procedure()");
+
+                            string[] twords = tvarglobal.Trim().Split(" ".ToCharArray());
+                            string tmethodtype = twords[0];
+                            Function tfunction = new Function();
+
+                            DelphiMethodStrings tmethodstrings;
+                            List<string> tmethoddeclaration = new List<string>();
+
+                            int tend_pos;
+
+                            //If function is declared in standard Delphi syntax
+                            if ((tmethodtype == "procedure") || (tmethodtype == "function"))
+                            {
+                                tmethoddeclaration.Add(tvarglobal);
+                                tmethodstrings = ParseInterfaceMethod(tmethodtype, ref tmethoddeclaration, 0, out tend_pos);
+                            }
+                            //If stdcall syntax is used for declaration
+                            else
+                            {
+                                //Find if its a function or procedure
+                                if (tvarglobal.IndexOf("function") != -1)
+                                    tmethodtype = "function";
+                                else
+                                    tmethodtype = "procedure";
+
+                                //Rearrange the definition to the correct format for declaration
+                                string[] tdeclaration_parts = tvarglobal.Split(new string[] { tmethodtype }, StringSplitOptions.None);
+                                tvarglobal = tdeclaration_parts[0].Replace(':', ' ').Trim() + tdeclaration_parts[1].Replace("stdcall;", "");
+
+                                tmethoddeclaration.Add(tvarglobal);
+                                tmethodstrings = ParseInterfaceMethod(tmethodtype, ref tmethoddeclaration, 0, out tend_pos);
+                            }
+
+                            //Create and add function to outlist
+                            tvar_methods.Add(tmethodstrings);
+                            tvar_actions.Add(new List<DelphiMethodStrings>());
+                        }
+
+                        //Take care of vars, consts and enums
+                        else
+                        {
+                            ovars.Add(istrings[i]);
+                        }
+                    }
+                }
+
+                tvarclass.name = "varclass%" + name;
+                tvarclass.methods = tvar_methods;
+                tvarclass.actions = tvar_actions;
+                tvarclass.variables = tvar_vars;
+                tvarclass.properties = tvar_properties;
+                tvarclass.consts = tvar_consts;
+                oclassdefinitions.Add(tvarclass);
+            }
         }
 
         //Check if a line in class definition is a variable, if it has only two words, divided by ' ' or ':' and if its first character is 'f' or 'F'
@@ -404,22 +543,23 @@ namespace Translator
 
             if ((tarray.GetLength(0) >= 2) && ((tarray[0][0] == 'f') || (tarray[0][0] == 'F')) && (istring.Split(':').GetLength(0) == 2))
                 return true;
+
             return false;
         }
 
         private bool CheckRecordVariable(string istring)
         {
-
             string[] tarray = istring.Trim().Split(@"//".ToCharArray());
             istring = tarray[0];
             tarray = istring.Trim().Split(' ');
 
             if ((tarray.GetLength(0) >= 2) && (istring.Split(':').GetLength(0) == 2))
                 return true;
+
             return false;
         }
 
-        private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, ref List<string> oprocedures, ref List<string> ofunctions, int istartpos, int inext_subsection_pos)
+        private void ParseInterfaceTypes(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassdefinitions, ref List<string> oconsts, ref List<string> oenums, ref List<string> otypes, int istartpos, int inext_subsection_pos)
         {
             int tnext_subsection_pos = inext_subsection_pos, tcurr_string_count = istartpos;
             string tclassname = "";
@@ -585,22 +725,10 @@ namespace Translator
 
                                                     for (ti = tcurr_string_count; ti < tend_semicolon + 1; ti++)
                                                         tmethod_string += istrings[ti];
-
-                                                    //Procedure
-                                                    if (trecognize_key == "procedure")
-                                                        oprocedures.Add(tmethod_string);
-
-                                                    //Function
-                                                    else
-                                                        ofunctions.Add(tmethod_string);
-                                                }
-                                                else if (trecognize_key == "function")
-                                                {
                                                 }
                                                 else
                                                 {
                                                 }
-                                                
                                             }
 
                                             //Enum start
@@ -1130,12 +1258,39 @@ namespace Translator
             return tout;
         }
 
-        private void ParseVar(ref List<string> istrings, ref List<string> ovars)
+        /*private void ParseVar(ref List<string> istrings, ref List<string> ovars)
         {
         	if (startVar != -1)
-        		for (int i = startVar + 1; i < startImplementation; i++)
-        			ovars.Add(istrings[i]);
+                for (int i = startVar + 1; i < startImplementation; i++)
+                {
+                    string tfunction_or_procedure_type = RecognizeKey(tvarglobal, ref interfaceKindKeys);
+
+                    if (tfunction_or_procedure_type == "procedure")
+                        iProcedures.Add(tvarglobal);
+                    else if (tfunction_or_procedure_type == "function")
+                        iFunctions.Add(tvarglobal);
+                    else
+
+                    //Parse functions and procedures
+                    List<Function> tfunctions = new List<Function>();
+
+                    for (int i = 0; i < iFunctions.Count; i++)
+                    {
+                        Function tfunction = new Function();
+                        tfunctions.Add(tfunction);
+                    }
+
+                    for (int i = 0; i < iProcedures.Count; i++)
+                    {
+                        Function tfunction = new Function();
+                        tfunctions.Add(tfunction);
+                    }
+
+
+                    ovars.Add(istrings[i]);
+                }
         }
+        */
 
         //oclassimplementations is a list of class functions and procedures
         private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations, ref List<string> oconsts, ref List<string> oenum, ref List<string> oalias)
@@ -1158,6 +1313,29 @@ namespace Translator
                     {
                         //Ignore comments containing class name
                         tcurr_string_count++;
+                    }
+                    else if (RecognizeConst(istrings[tcurr_string_count]))
+                    {
+                        //Check if Delegate
+                        if ((istrings[tcurr_string_count].IndexOf("function") != -1) || (istrings[tcurr_string_count].IndexOf("function") != -1))
+                            Delegates.Add(istrings[tcurr_string_count]);
+                        //Its a constant
+                        else
+                            oconsts.Add(istrings[tcurr_string_count].Replace("=", ":="));
+                    }
+                    else if (RecognizeVar(istrings[tcurr_string_count]))
+                    {
+                        throw new Exception("Uhhhh..... variable declaration in Implementation Var without initialisation. New case handling required !");
+                    }
+                    else if (RecognizeVarWithVal(istrings[tcurr_string_count]))
+                    {
+                        string tvarstr = "";
+                        string[] tvarstrarr = istrings[tcurr_string_count].Split(':');
+                        tvarstr = tvarstrarr[0];
+                        tvarstrarr = tvarstrarr[1].Split('=');
+                        tvarstr = tvarstr + ":=" + tvarstrarr[1];
+
+                        oconsts.Add(tvarstr);
                     }
                     else
                     {
@@ -1189,10 +1367,10 @@ namespace Translator
                                 break;
 
                             case "const": tnext_subsection_pos = FindNextKey(ref istrings, ref const_implementKindKeys, tcurr_string_count);
-                                
+
                                 if (tnext_subsection_pos == -1)
                                     tnext_subsection_pos = endImplementation;
-                                
+
                                 for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < istrings.Count; j++)
                                 {
                                     string tconststr = istrings[j];
@@ -1215,7 +1393,7 @@ namespace Translator
                                             if (ttempstr != "" && ttempstr[0] != '/')
                                             {
                                                 bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
-                                                while ( !tsemicolonfound  && (ttempstr.IndexOf("//") == -1))
+                                                while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
                                                 {
                                                     j++;
                                                     ttempstr = istrings[j].Trim();
@@ -1247,8 +1425,8 @@ namespace Translator
                                 log(tlogmessages);
                                 break;
                         }
-                        tcurr_string_count = tnext_subsection_pos;
                     }
+                    tcurr_string_count = tnext_subsection_pos;
                 }
                 else
                 {
@@ -1761,6 +1939,47 @@ namespace Translator
             return -1;
         }
 
+        static private bool RecognizeConst(string istring)
+        {
+            if (istring.IndexOf('=') != -1)
+                return true;
+            return false;
+        }
+
+        static private bool RecognizeVarWithVal(string istring)
+        {
+            if ((istring.IndexOf(':') != -1) && (istring.IndexOf('=') != -1))
+                return true;
+            return false;
+        }
+
+        static private bool RecognizeVar(string istring)
+        {
+            int tnumber_of_words = 0;
+
+            string[] twords = istring.Split(' ');
+            tnumber_of_words = twords.Length;
+
+            if (tnumber_of_words != 2)
+                return false;
+
+            if ((istring.IndexOf(':') != -1) && (istring.IndexOf(';') != -1))
+                return true;
+
+            return false;
+        }
+
+        static private int FindWordInString(string istring, string isearch)
+        {
+            string[] twords = istring.Split(' ');
+
+            for (int i = 0; i < twords.Length; i++)
+                if (twords[i] == isearch)
+                    return i;
+
+            return -1;
+        }
+
         static private string RecognizeKey(string istring, ref string[] ikeys)
 		{
 
@@ -1833,8 +2052,8 @@ namespace Translator
                     tout.Add(tstr_arr[0]);
 
                     //Check if read
-                    int tread = tstr_arr[1].IndexOf("read");
-                    int twrite = tstr_arr[1].IndexOf("write");
+                    int tread = FindWordInString(tstr_arr[1], "read");
+                    int twrite = FindWordInString(tstr_arr[1], "write"); //tstr_arr[1].IndexOf(" write ");
 
                     if ((tread == -1) && (twrite == -1))
                     {
@@ -1844,7 +2063,7 @@ namespace Translator
                     }
                     else if (tread == -1)
                     {
-                        tstr_arr[1] = tstr_arr[1].Replace("write", ";");
+                        tstr_arr[1] = tstr_arr[1].Replace(" write ", ";");
                         tstr_arr = tstr_arr[1].Split(';');
 
                         //Add type and read
@@ -1857,7 +2076,7 @@ namespace Translator
                     }
                     else if (twrite == -1)
                     {
-                        tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                        tstr_arr[1] = tstr_arr[1].Replace(" read ", ";");
                         tstr_arr = tstr_arr[1].Split(';');
 
                         //Add type and write
@@ -1867,8 +2086,8 @@ namespace Translator
                     }
                     else if (tread > twrite)
                     {
-                        tstr_arr[1] = tstr_arr[1].Replace("write", ";");
-                        tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                        tstr_arr[1] = tstr_arr[1].Replace(" write ", ";");
+                        tstr_arr[1] = tstr_arr[1].Replace(" read ", ";");
                         tstr_arr = tstr_arr[1].Split(';');
 
                         //Add type, read and write
@@ -1878,8 +2097,8 @@ namespace Translator
                     }
                     else
                     {
-                        tstr_arr[1] = tstr_arr[1].Replace("write", ";");
-                        tstr_arr[1] = tstr_arr[1].Replace("read", ";");
+                        tstr_arr[1] = tstr_arr[1].Replace(" write ", ";");
+                        tstr_arr[1] = tstr_arr[1].Replace(" read ", ";");
                         tstr_arr = tstr_arr[1].Split(';');
 
                         //Add type, read and write
@@ -2677,7 +2896,7 @@ namespace Translator
             return tout;
         }
 
-        private void GenerateGlobalClass(string iname, ref Class oclassGlobals, ref List<string> iconstsGlobal, ref List<string> ienumsGlobal, ref List<string> itypesGlobal, ref List<string> ivarsGlobal)
+        private void GenerateGlobalClass(string iname, ref Class oclassGlobals, ref List<string> iconstsGlobal, ref List<string> ienumsGlobal, ref List<string> itypesGlobal, ref List<string> ivarsGlobal, ref List<Function> iProcedures, ref List<Function> iFunctions)
         {
             List<Constant> tconstants = new List<Constant>();
             List<Variable> tvars = new List<Variable>();
@@ -2776,18 +2995,18 @@ namespace Translator
                         }
 
                         tvarglobal = tvarglobal + trest_string_arr[0];
-                        if (trest_string_arr.Length > 1)
+                        if ((trest_string_arr.Length > 1) && (trest_string_arr[1].Trim() != ""))
                             tvarglobal = trest_string_arr[1];
                         else
                         {
                             tvarglobal = ivarsGlobal[tclosing_comment_bracket + 1];
                             i = tclosing_comment_bracket;
                         }
-
                     }
                     else
                     {
                     }
+
                     tvars.AddRange(StringToVariable(tvarglobal, tvarsGlobal_comment));
                 }
             }
