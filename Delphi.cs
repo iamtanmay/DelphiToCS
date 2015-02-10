@@ -541,7 +541,7 @@ namespace Translator
         {
             string[] tarray = istring.Trim().Split(' ');
 
-            if ((tarray.GetLength(0) >= 2) && ((tarray[0][0] == 'f') || (tarray[0][0] == 'F')) && (istring.Split(':').GetLength(0) == 2))
+            if ((tarray.GetLength(0) >= 2) && ((tarray[0][0] == 'f') || (tarray[0][0] == 'F')) && (istring.Split(':').GetLength(0) == 2) && (istring.IndexOf("function") == -1))
                 return true;
 
             return false;
@@ -1296,10 +1296,15 @@ namespace Translator
         private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations, ref List<string> oconsts, ref List<string> oenum, ref List<string> oalias)
         {
             int tcurr_string_count = startImplementation, tnext_subsection_pos = -1;
+            bool tusesfound = false, tconstfound = false;
+            int tusesfindcounter = 0;
 
             //mplementation sub sections
             while (tcurr_string_count != -1 && tcurr_string_count < endImplementation)
             {
+                if (tusesfound && !tconstfound)
+                    tconstfound = true;
+                
                 tnext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tcurr_string_count);
 
                 if (tnext_subsection_pos == -1)
@@ -1317,7 +1322,7 @@ namespace Translator
                     else if (RecognizeConst(istrings[tcurr_string_count]))
                     {
                         //Check if Delegate
-                        if ((istrings[tcurr_string_count].IndexOf("function") != -1) || (istrings[tcurr_string_count].IndexOf("function") != -1))
+                        if ((istrings[tcurr_string_count].IndexOf("function") != -1) || (istrings[tcurr_string_count].IndexOf("procedure") != -1))
                             Delegates.Add(istrings[tcurr_string_count]);
                         //Its a constant
                         else
@@ -1366,56 +1371,62 @@ namespace Translator
                                 ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);
                                 break;
 
-                            case "const": tnext_subsection_pos = FindNextKey(ref istrings, ref const_implementKindKeys, tcurr_string_count);
-
-                                if (tnext_subsection_pos == -1)
-                                    tnext_subsection_pos = endImplementation;
-
-                                for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < istrings.Count; j++)
+                            case "const": 
+                                if (tusesfound && tconstfound)
                                 {
-                                    string tconststr = istrings[j];
 
-                                    string ttempstr = istrings[j].Trim();
+                                    tnext_subsection_pos = FindNextKey(ref istrings, ref const_implementKindKeys, tcurr_string_count);
 
-                                    if (ttempstr != "")
+                                    if (tnext_subsection_pos == -1)
+                                        tnext_subsection_pos = endImplementation;
+
+                                    for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < istrings.Count; j++)
                                     {
-                                        if (ttempstr[0] == '{')
+                                        string tconststr = istrings[j];
+
+                                        string ttempstr = istrings[j].Trim();
+
+                                        if (ttempstr != "")
                                         {
-                                            //Ignore comments containing class name
-                                            while (ttempstr.IndexOf('}') == -1)
+                                            if (ttempstr[0] == '{')
                                             {
-                                                j++;
-                                                ttempstr = istrings[j].Trim();
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (ttempstr != "" && ttempstr[0] != '/')
-                                            {
-                                                bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
-                                                while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
+                                                //Ignore comments containing class name
+                                                while (ttempstr.IndexOf('}') == -1)
                                                 {
                                                     j++;
                                                     ttempstr = istrings[j].Trim();
-                                                    tconststr = tconststr + istrings[j];
-
-                                                    if (ttempstr != "")
-                                                        tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
-                                                    else
-                                                        tsemicolonfound = false;
                                                 }
-                                                oconsts.Add(tconststr.Replace("=", ":="));
+                                            }
+                                            else
+                                            {
+                                                if (ttempstr != "" && ttempstr[0] != '/')
+                                                {
+                                                    bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                    while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
+                                                    {
+                                                        j++;
+                                                        ttempstr = istrings[j].Trim();
+                                                        tconststr = tconststr + istrings[j];
+
+
+                                                        if (ttempstr != "")
+                                                            tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                        else
+                                                            tsemicolonfound = false;
+                                                    }
+                                                    oconsts.Add(tconststr.Replace("=", ":="));
+                                                }
                                             }
                                         }
                                     }
                                 }
                                 break;
 
-
                             //oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
                             //break;
 
                             case "uses": ouses.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos));
+                                tusesfound = true;
                                 break;
 
                             //Log unrecognized sub section
@@ -1426,13 +1437,26 @@ namespace Translator
                                 break;
                         }
                     }
+
                     tcurr_string_count = tnext_subsection_pos;
+
+                    if (!tusesfound && !tconstfound)
+                        tusesfound = true;
+
+                    if (tconstfound && tusesfound)
+                    {
+                        tconstfound = false;
+                        Array.Resize(ref implementKindKeys, implementKindKeys.Length - 1);
+                    }
+
                 }
                 else
                 {
                     tcurr_string_count++;
                 }
-            }     
+            }
+            Array.Resize(ref implementKindKeys, implementKindKeys.Length + 1);
+            implementKindKeys[implementKindKeys.Length - 1] = "const";
         }
         
         private void ParseImplementationMethod(string imethodtype, int icurr_string_count, ref int inext_subsection_pos, ref List<string> istrings, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations)
@@ -1615,6 +1639,8 @@ namespace Translator
                     tlist.RemoveAt(0);
                     oclassimplementations[i].AddMethodBody(theader, tlist, tvar_pos, tconst_pos, tbegin_pos, tnext_pos);
 
+                    int told_string_count = icurr_string_count;
+
                     //Add the actions
                     for (int j = 0; j < tactions.Count; j++)
                     {
@@ -1681,11 +1707,12 @@ namespace Translator
                         tclassnamearray = tfuncstring.Split('.');
                         treturnarray = tclassnamearray;
 
-                        inext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tnext_pos);
+                        inext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tnext_pos + told_string_count);
 
                         tlist = ParseImplementationMethodBody(tclassname, tactionstrings, ref treturnarray, tfuncstring, imethodtype, tnext_pos, tactionstrings.Count - 1);
                         oclassimplementations[i].AddAction(theader, tlist, tvar_pos, tconst_pos, tbegin_pos);
                     }
+                    icurr_string_count = told_string_count;
                     break;
                 }
             }
@@ -1984,6 +2011,11 @@ namespace Translator
 		{
 
             string pattern = "";
+
+            //Remove comments
+            string tstring = istring.Split('{')[0];
+            tstring = tstring.Split("//".ToCharArray())[0];
+            istring = tstring;
 
             //for (int i = 0; i < iElementList.GetLength(0); i++)
             //{
@@ -2656,7 +2688,7 @@ namespace Translator
                     if (!tcomma && tchar == ',')
                     {
                         istring.Remove(i, 1);
-                        istring.Insert(i, "~@");
+                        istring.Insert(i, "±@");
                     }
                 }
             }
@@ -2665,7 +2697,7 @@ namespace Translator
                 //Check if this a array declaration
                 string[] tstr = istring.Split('=');
                 string tname = tstr[0].Trim();
-                string tvalue = tstr[1].Trim();
+                 string tvalue = tstr[1].Trim();
 
                 //Check for Arrays
                 int tIsArray = istring.IndexOf("array");
@@ -2699,7 +2731,7 @@ namespace Translator
                 {
                     istring = istring.Split(';')[0];
 
-                    string[] tnames = istring.Split("~@".ToCharArray());
+                    string[] tnames = istring.Split("±@".ToCharArray());
 
                     for (int i = 0; i < tnames.Length; i++)
                     {
@@ -2731,6 +2763,32 @@ namespace Translator
                     tvalue.Replace("'", "");
                 }
 
+                //ASCII Hex
+                else if (tvalue.IndexOf("#$") != -1)
+                {
+                    ttype = "string";
+                    tvalue = tvalue.Replace("#$", "+#$");
+                    tvalue = tvalue.Remove(0, 1);
+                    string[] thex_array = tvalue.Split('+');
+
+                    if (thex_array[0].IndexOf("#$") != -1)
+                        thex_array[0] = "(char)" + Convert.ToInt32(thex_array[0].Replace("#$", ""), 16);
+
+                    tvalue = thex_array[0];
+
+                    for (int ti = 1; ti < thex_array.Length; ti++)
+                    {
+                        if (thex_array[ti].IndexOf("#$") != -1)
+                        {
+                            string thex_temp_string = thex_array[ti].Replace("#$", "").Trim();
+                            int ttemp_hex_int_val = Convert.ToInt32(thex_temp_string, 16);
+                            thex_array[ti] = " + (char)" + (char)ttemp_hex_int_val;
+                        }
+                        tvalue = tvalue + thex_array[ti];
+                    }
+                    tvalue = tvalue + ";";
+                }
+
                 //Hex
                 else if (tvalue.IndexOf("$") != -1)
                 {
@@ -2752,9 +2810,6 @@ namespace Translator
                         }
                         tvalue = tvalue + " + " + thex_array[ti];
                     }
-
-                    //tvalue = tvalue.Replace("$", "");
-                    //tvalue = "" + Convert.ToInt32(tvalue, 16);
                 }
 
                 //Double
@@ -2941,7 +2996,12 @@ namespace Translator
                                 goto SemiColonCheck;
                             }
                         Out:
-                            tconstants.AddRange(StringToConstant(tconst));
+                            string tconst_str = tconst.Replace("; ", "±");
+                            string[] tconstants_arr = tconst_str.Split('±');
+
+                            for (int ii = 0; ii < tconstants_arr.Length; ii++)
+                                if (tconstants_arr[ii].Trim() != "")
+                                    tconstants.AddRange(StringToConstant(tconstants_arr[ii] + ";"));
                         }
                     }
                 }

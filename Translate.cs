@@ -98,6 +98,7 @@ namespace Translator
 
             //Convert individual files to C#, and gather list of references
             AnalyzeFolder(iPath, iOutPath, iPatchPath, iOverridePath, iILPath, ref delphiReferences, ref delphiParsedFiles, ref iStandardReferences, ref delphiStandardReferences, ref standardCSReferences, iform);
+            ConvertDelphiFiles(ref delphiParsedFiles, iform);
 
             //Add project paths and GUIDs to csproj files and write them out
             foreach (KeyValuePair<string, XmlDocument> pair in projects)
@@ -331,41 +332,6 @@ namespace Translator
                 }
             }
 
-
-
-            if (threadingEnabled)
-                Parallel.ForEach(oDelphi, new ParallelOptions { MaxDegreeOfParallelism = maxthreads }, currentFile =>
-                {
-                    Object tobject = null;
-
-                    if (currentFile.overriden == false)
-                    {
-                        if (iform.writeIL)
-                            currentFile.ReadDelphi(tobject);
-                        else
-                            currentFile.ReadIL(tobject);
-
-                        if (currentFile.overriden == false)
-                            currentFile.WriteCS(tobject);
-                    }
-                });
-            else
-                for (int i = 0; i < oDelphi.Count; i++)
-                {
-                    Object tobject = null;
-
-                    if (oDelphi[i].overriden == false)
-                    {
-                        if (iform.writeIL)
-                            oDelphi[i].ReadDelphi(tobject);
-                        else
-                            oDelphi[i].ReadIL(tobject);
-
-                        if (oDelphi[i].overriden == false)
-                            oDelphi[i].WriteCS(tobject);
-                    }
-                }
-
             if (pasFileFound)
             {
                 //Create Global and Local classes file
@@ -432,6 +398,46 @@ namespace Translator
                 AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], tcurr_patch_path, tcurr_override_path, iILPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], ref oReferences, ref oDelphi, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences, iform);
             }
         }
+
+
+
+
+        private void ConvertDelphiFiles(ref List<Translate> oDelphi, s iform)
+        {
+            if (threadingEnabled)
+                Parallel.ForEach(oDelphi, new ParallelOptions { MaxDegreeOfParallelism = maxthreads }, currentFile =>
+                {
+                    Object tobject = null;
+
+                    if (currentFile.overriden == false)
+                    {
+                        if (iform.writeIL)
+                            currentFile.ReadDelphi(tobject);
+                        else
+                            currentFile.ReadIL(tobject);
+
+                        if (currentFile.overriden == false)
+                            currentFile.WriteCS(tobject);
+                    }
+                });
+            else
+                for (int i = 0; i < oDelphi.Count; i++)
+                {
+                    Object tobject = null;
+
+                    if (oDelphi[i].overriden == false)
+                    {
+                        if (iform.writeIL)
+                            oDelphi[i].ReadDelphi(tobject);
+                        else
+                            oDelphi[i].ReadIL(tobject);
+
+                        if (oDelphi[i].overriden == false)
+                            oDelphi[i].WriteCS(tobject);
+                    }
+                }
+        }
+
 
         public void ReadProj(string ipath, string ioutpath, XmlDocument icsproj)
         {
