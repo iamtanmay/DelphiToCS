@@ -1296,15 +1296,12 @@ namespace Translator
         private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations, ref List<string> oconsts, ref List<string> oenum, ref List<string> oalias)
         {
             int tcurr_string_count = startImplementation, tnext_subsection_pos = -1;
-            bool tusesfound = false, tconstfound = false;
-            int tusesfindcounter = 0;
+            bool tusesfound = false, tconstfound = false, tkeysresized = false;
+            int tcounter = 0;
 
             //mplementation sub sections
             while (tcurr_string_count != -1 && tcurr_string_count < endImplementation)
-            {
-                if (tusesfound && !tconstfound)
-                    tconstfound = true;
-                
+            {                
                 tnext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tcurr_string_count);
 
                 if (tnext_subsection_pos == -1)
@@ -1372,54 +1369,53 @@ namespace Translator
                                 break;
 
                             case "const": 
-                                if (tusesfound && tconstfound)
+                                tconstfound = true;
+
+                                tnext_subsection_pos = FindNextKey(ref istrings, ref const_implementKindKeys, tcurr_string_count);
+
+                                if (tnext_subsection_pos == -1)
+                                    tnext_subsection_pos = endImplementation;
+
+                                for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < istrings.Count; j++)
                                 {
+                                    string tconststr = istrings[j];
 
-                                    tnext_subsection_pos = FindNextKey(ref istrings, ref const_implementKindKeys, tcurr_string_count);
+                                    string ttempstr = istrings[j].Trim();
 
-                                    if (tnext_subsection_pos == -1)
-                                        tnext_subsection_pos = endImplementation;
-
-                                    for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < istrings.Count; j++)
+                                    if (ttempstr != "")
                                     {
-                                        string tconststr = istrings[j];
-
-                                        string ttempstr = istrings[j].Trim();
-
-                                        if (ttempstr != "")
+                                        if (ttempstr[0] == '{')
                                         {
-                                            if (ttempstr[0] == '{')
+                                            //Ignore comments containing class name
+                                            while (ttempstr.IndexOf('}') == -1)
                                             {
-                                                //Ignore comments containing class name
-                                                while (ttempstr.IndexOf('}') == -1)
+                                                j++;
+                                                ttempstr = istrings[j].Trim();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (ttempstr != "" && ttempstr[0] != '/')
+                                            {
+                                                bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
                                                 {
                                                     j++;
                                                     ttempstr = istrings[j].Trim();
-                                                }
-                                            }
-                                            else
-                                            {
-                                                if (ttempstr != "" && ttempstr[0] != '/')
-                                                {
-                                                    bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
-                                                    while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
-                                                    {
-                                                        j++;
-                                                        ttempstr = istrings[j].Trim();
-                                                        tconststr = tconststr + istrings[j];
+                                                    tconststr = tconststr + istrings[j];
 
 
-                                                        if (ttempstr != "")
-                                                            tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
-                                                        else
-                                                            tsemicolonfound = false;
-                                                    }
-                                                    oconsts.Add(tconststr.Replace("=", ":="));
+                                                    if (ttempstr != "")
+                                                        tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                    else
+                                                        tsemicolonfound = false;
                                                 }
+                                                oconsts.Add(tconststr.Replace("=", ":="));
                                             }
                                         }
                                     }
                                 }
+                                
                                 break;
 
                             //oconsts.AddRange(GetStringSubList(ref istrings, tcurr_string_count + 1, tnext_subsection_pos)); 
@@ -1438,25 +1434,31 @@ namespace Translator
                         }
                     }
 
+                    if (!tkeysresized)
+                        if ((!tusesfound && !tconstfound) || (tusesfound && tcounter > 1))
+                        {
+                            Array.Resize(ref implementKindKeys, implementKindKeys.Length - 1);
+                            tkeysresized = true;
+                        }
+
+                    tnext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tcurr_string_count);
+
+                    if (tnext_subsection_pos == -1)
+                        tnext_subsection_pos = endImplementation;
+
                     tcurr_string_count = tnext_subsection_pos;
-
-                    if (!tusesfound && !tconstfound)
-                        tusesfound = true;
-
-                    if (tconstfound && tusesfound)
-                    {
-                        tconstfound = false;
-                        Array.Resize(ref implementKindKeys, implementKindKeys.Length - 1);
-                    }
-
                 }
                 else
                 {
                     tcurr_string_count++;
                 }
+                tcounter++;
             }
-            Array.Resize(ref implementKindKeys, implementKindKeys.Length + 1);
-            implementKindKeys[implementKindKeys.Length - 1] = "const";
+            if (tkeysresized)
+            {
+                Array.Resize(ref implementKindKeys, implementKindKeys.Length + 1);
+                implementKindKeys[implementKindKeys.Length - 1] = "const";
+            }
         }
         
         private void ParseImplementationMethod(string imethodtype, int icurr_string_count, ref int inext_subsection_pos, ref List<string> istrings, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations)
