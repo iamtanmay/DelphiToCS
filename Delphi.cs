@@ -175,7 +175,7 @@ namespace Translator
 
     	//Divide section subsections
         [System.Xml.Serialization.XmlIgnoreAttribute]
-        public static string[] subsectionKeys = { "type", "const", "uses" };
+        public static string[] subsectionKeys = { "type", "const", "uses", "var" };
 
         //Divide subsection kinds
         [System.Xml.Serialization.XmlIgnoreAttribute]
@@ -397,7 +397,154 @@ namespace Translator
                                     }
                                     break;
 
+                    case "var":     DelphiClassStrings tvarclass = new DelphiClassStrings();
+                                    List<DelphiMethodStrings> tvar_methods = new List<DelphiMethodStrings>();
+                                    List<List<DelphiMethodStrings>> tvar_actions = new List<List<DelphiMethodStrings>>();
+                                    List<DelphiVarStrings> tvar_vars = new List<DelphiVarStrings>(), tvar_consts = new List<DelphiVarStrings>(),
+                                                            tvar_properties = new List<DelphiVarStrings>();
 
+                                    tendRange = tnext_subsection_pos;
+                                    
+                                    if (tendRange == -1)
+                                        tendRange = endInterface;
+
+                                    if (startVar != -1)
+                                    {
+                                        for (int i = startVar + 1; i < tendRange; i++)
+                                        {
+                                            //Search for functions, procedures, variables declared under the var section
+                                            string tvarglobal = istrings[i].Trim();
+
+                                            string[] tcommentarr = tvarglobal.Split(new string[] { "//" }, StringSplitOptions.None);
+
+                                            //Just a comment
+                                            if (tcommentarr[0].Trim() == "")
+                                            { }
+                                            else
+                                            {
+                                                //Check for special incomplete lines e.g    glBlendEquation:
+                                                //                                          procedure(mode: GLenum);
+                                                //                                          stdcall = nil;
+                                                // and join them together
+                                                if (tvarglobal[tvarglobal.Length - 1] == ':')
+                                                {
+                                                    tvarglobal = tvarglobal + " " + istrings[i + 1].Trim();
+                                                    i++;
+                                                }
+
+                                                string tfunction_or_procedure_type = RecognizeKey(tvarglobal, ref interfaceKindKeys);
+
+                                                //Take care of procedures & functions
+                                                if ((tfunction_or_procedure_type == "procedure") || (tfunction_or_procedure_type == "function"))
+                                                {
+                                                    //Get the whole function declaration string
+                                                    string tfunction_declaration_string = "";
+                                                    int topenbracketcount = 0;
+                                                    int tcurr_line = i;
+
+                                                    //Iterate till closing bracket is found for the declaration
+                                                    if (tvarglobal.IndexOf('(') != -1)
+                                                    {
+                                                        topenbracketcount++;
+                                                        while (topenbracketcount > 0)
+                                                        {
+                                                            string tcurr_line_string = istrings[tcurr_line];
+                                                            string[] tcomment_split = tcurr_line_string.Split("//".ToCharArray());
+                                                            string tcomment = "";
+
+                                                            if (tcomment_split.Length > 1)
+                                                            {
+                                                                tcomment = tcomment_split[1];
+                                                                tcurr_line_string = tcomment_split[0] + "/*" + tcomment + "*/";
+                                                            }
+
+                                                            tfunction_declaration_string = tfunction_declaration_string + tcurr_line_string;
+
+                                                            if (tcurr_line_string.IndexOf(')') != -1)
+                                                                topenbracketcount--;
+
+                                                            if (topenbracketcount > 0)
+                                                                tcurr_line++;
+                                                        }
+
+                                                        //If the last character is not a ';' then add the next line too
+                                                        string ttempstring = tfunction_declaration_string.Trim();
+                                                        if (ttempstring[ttempstring.Length - 1] != ';')
+                                                        {
+                                                            tfunction_declaration_string = ttempstring + istrings[tcurr_line + 1];
+                                                            tcurr_line++;
+                                                        }
+
+                                                        i = tcurr_line;
+
+                                                        if (istrings[i + 1].Trim().IndexOf("stdcall = nil;") != -1)
+                                                        {
+                                                            tvarglobal = tvarglobal + " " + istrings[i + 1].Trim().Replace("stdcall = nil;", "stdcall;");
+                                                            i++;
+                                                        }
+                                                    }
+                                                    else
+                                                        tfunction_declaration_string = tvarglobal.Replace("function", "function()").Replace("procedure", "procedure()");
+
+                                                    tvarglobal = tfunction_declaration_string.Trim();
+                                                    string[] twords = tvarglobal.Split(" ".ToCharArray());
+                                                    string tmethodtype = twords[0];
+                                                    Function tfunction = new Function();
+
+                                                    DelphiMethodStrings tmethodstrings;
+                                                    List<string> tmethoddeclaration = new List<string>();
+
+                                                    int tend_pos;
+
+                                                    //If function is declared in standard Delphi syntax
+                                                    if ((tmethodtype == "procedure") || (tmethodtype == "function") || (tmethodtype == "procedure()") || (tmethodtype == "function()"))
+                                                    {
+                                                        if ((tmethodtype == "procedure()") || (tmethodtype == "function()"))
+                                                            if (tvarglobal.IndexOf("stdcall") == -1)
+                                                                tvarglobal = tvarglobal.Replace("function()", "function").Replace("procedure()", "procedure").Replace(";", "();");
+
+                                                        tmethoddeclaration.Add(tvarglobal);
+                                                        tmethodstrings = ParseInterfaceMethod(tmethodtype, ref tmethoddeclaration, 0, out tend_pos);
+                                                    }
+                                                    //If stdcall syntax is used for declaration
+                                                    else
+                                                    {
+                                                        //Find if its a function or procedure
+                                                        if (tvarglobal.IndexOf("function") != -1)
+                                                            tmethodtype = "function";
+                                                        else
+                                                            tmethodtype = "procedure";
+
+                                                        //Rearrange the definition to the correct format for declaration
+                                                        string[] tdeclaration_parts = tvarglobal.Split(new string[] { tmethodtype }, StringSplitOptions.None);
+                                                        tvarglobal = tdeclaration_parts[0].Replace(':', ' ').Trim() + tdeclaration_parts[1].Replace("stdcall;", "");
+
+                                                        tmethoddeclaration.Add(tvarglobal);
+                                                        tmethodstrings = ParseInterfaceMethod(tmethodtype, ref tmethoddeclaration, 0, out tend_pos);
+                                                    }
+
+                                                    //Create and add function to outlist
+                                                    tvar_methods.Add(tmethodstrings);
+                                                    tvar_actions.Add(new List<DelphiMethodStrings>());
+                                                }
+
+                                                //Take care of vars, consts and enums
+                                                else
+                                                {
+                                                    ovars.Add(istrings[i]);
+                                                }
+                                            }
+                                        }
+
+                                        tvarclass.name = "varclass%" + name;
+                                        tvarclass.methods = tvar_methods;
+                                        tvarclass.actions = tvar_actions;
+                                        tvarclass.variables = tvar_vars;
+                                        tvarclass.properties = tvar_properties;
+                                        tvarclass.consts = tvar_consts;
+                                        oclassdefinitions.Add(tvarclass);
+                                    }
+                                    break;
 
                     case "type":    tendRange = tnext_subsection_pos;
 
@@ -421,119 +568,7 @@ namespace Translator
         							break;
             	}
                 tcurr_string_count = tnext_subsection_pos;
-            }
-
-            DelphiClassStrings tvarclass = new DelphiClassStrings();
-            List<DelphiMethodStrings> tvar_methods = new List<DelphiMethodStrings>();
-            List<List < DelphiMethodStrings >> tvar_actions = new List<List<DelphiMethodStrings>>();
-            List<DelphiVarStrings> tvar_vars = new List<DelphiVarStrings>(), tvar_consts = new List<DelphiVarStrings>(),
-                                    tvar_properties = new List<DelphiVarStrings>();
-
-            if (startVar != -1)
-            {
-                for (int i = startVar + 1; i < startImplementation; i++)
-                {
-                    //Search for functions, procedures, variables declared under the var section
-                    string tvarglobal = istrings[i];
-
-                    string[] tcommentarr = tvarglobal.Split(new string[] { "//" }, StringSplitOptions.None);
-
-                    //Just a comment
-                    if (tcommentarr[0].Trim() == "")
-                    { }
-                    else
-                    {
-                        string tfunction_or_procedure_type = RecognizeKey(tvarglobal, ref interfaceKindKeys);
-
-                        //Take care of procedures & functions
-                        if ((tfunction_or_procedure_type == "procedure") || (tfunction_or_procedure_type == "function"))
-                        {
-                            //Get the whole function declaration string
-                            string tfunction_declaration_string = tvarglobal;
-                            int topenbracketcount = 0;
-                            int tcurr_line = i;
-
-                            //Iterate till closing bracket is found for the declaration
-                            if (tvarglobal.IndexOf('(') != -1)
-                            {
-                                topenbracketcount++;
-                                while (topenbracketcount > 0)
-                                {
-                                    string tcurr_line_string = istrings[tcurr_line];
-                                    string[] tcomment_split = tcurr_line_string.Split("//".ToCharArray());
-                                    string tcomment = "";
-
-                                    if (tcomment_split.Length > 1)
-                                    {
-                                        tcomment = tcomment_split[1];
-                                        tcurr_line_string = tcomment_split[0] + "/*" + tcomment + "*/";
-                                    }
-
-                                    tfunction_declaration_string = tfunction_declaration_string + tcurr_line_string;
-
-                                    if (tcurr_line_string.IndexOf(')') != -1)
-                                        topenbracketcount--;
-
-                                    if (topenbracketcount > 0)
-                                        tcurr_line++;
-                                }
-                            }
-                            else
-                                tfunction_declaration_string = tfunction_declaration_string.Replace("function", "function()").Replace("procedure", "procedure()");
-
-                            string[] twords = tvarglobal.Trim().Split(" ".ToCharArray());
-                            string tmethodtype = twords[0];
-                            Function tfunction = new Function();
-
-                            DelphiMethodStrings tmethodstrings;
-                            List<string> tmethoddeclaration = new List<string>();
-
-                            int tend_pos;
-
-                            //If function is declared in standard Delphi syntax
-                            if ((tmethodtype == "procedure") || (tmethodtype == "function"))
-                            {
-                                tmethoddeclaration.Add(tvarglobal);
-                                tmethodstrings = ParseInterfaceMethod(tmethodtype, ref tmethoddeclaration, 0, out tend_pos);
-                            }
-                            //If stdcall syntax is used for declaration
-                            else
-                            {
-                                //Find if its a function or procedure
-                                if (tvarglobal.IndexOf("function") != -1)
-                                    tmethodtype = "function";
-                                else
-                                    tmethodtype = "procedure";
-
-                                //Rearrange the definition to the correct format for declaration
-                                string[] tdeclaration_parts = tvarglobal.Split(new string[] { tmethodtype }, StringSplitOptions.None);
-                                tvarglobal = tdeclaration_parts[0].Replace(':', ' ').Trim() + tdeclaration_parts[1].Replace("stdcall;", "");
-
-                                tmethoddeclaration.Add(tvarglobal);
-                                tmethodstrings = ParseInterfaceMethod(tmethodtype, ref tmethoddeclaration, 0, out tend_pos);
-                            }
-
-                            //Create and add function to outlist
-                            tvar_methods.Add(tmethodstrings);
-                            tvar_actions.Add(new List<DelphiMethodStrings>());
-                        }
-
-                        //Take care of vars, consts and enums
-                        else
-                        {
-                            ovars.Add(istrings[i]);
-                        }
-                    }
-                }
-
-                tvarclass.name = "varclass%" + name;
-                tvarclass.methods = tvar_methods;
-                tvarclass.actions = tvar_actions;
-                tvarclass.variables = tvar_vars;
-                tvarclass.properties = tvar_properties;
-                tvarclass.consts = tvar_consts;
-                oclassdefinitions.Add(tvarclass);
-            }
+            }            
         }
 
         //Check if a line in class definition is a variable, if it has only two words, divided by ' ' or ':' and if its first character is 'f' or 'F'
@@ -1447,12 +1482,12 @@ namespace Translator
                         tnext_subsection_pos = endImplementation;
 
                     tcurr_string_count = tnext_subsection_pos;
+                    tcounter++;
                 }
                 else
                 {
                     tcurr_string_count++;
                 }
-                tcounter++;
             }
             if (tkeysresized)
             {
@@ -2889,8 +2924,8 @@ namespace Translator
         private List<Variable> StringToVariable(string istring, string icomment)
         {
             List<Variable> tlist = new List<Variable>();
-
-            if (istring.Trim() != "implementation")
+            string tfilterstring = istring.Trim();
+            if (tfilterstring != "implementation" && tfilterstring != "type")
             {
                 string ttype = "", comment = "";
 
@@ -2998,6 +3033,11 @@ namespace Translator
                                 goto SemiColonCheck;
                             }
                         Out:
+                            //Check for array
+                            if (tconst.IndexOf(":") != -1)
+                            {
+
+                            }
                             string tconst_str = tconst.Replace("; ", "±");
                             string[] tconstants_arr = tconst_str.Split('±');
 
