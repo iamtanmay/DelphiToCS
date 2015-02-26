@@ -335,42 +335,42 @@ namespace Translator
             if (pasFileFound)
             {
                 //Create Global and Local classes file
-                List<string> globalsFile = new List<string>();
-                string tnamespace = tdirectory.Replace(" ", "_");
-                globalsFile.Add("using " + "System" + ";");
-                globalsFile.Add("using " + "System.Windows" + ";");
-                globalsFile.Add("using " + "System.String" + ";");
-                globalsFile.Add("using " + "System.Collections.Generic" + ";");
-                globalsFile.Add("");
+                //List<string> globalsFile = new List<string>();
+                //string tnamespace = tdirectory.Replace(" ", "_");
+                //globalsFile.Add("using " + "System" + ";");
+                //globalsFile.Add("using " + "System.Windows" + ";");
+                //globalsFile.Add("using " + "System.String" + ";");
+                //globalsFile.Add("using " + "System.Collections.Generic" + ";");
+                //globalsFile.Add("");
 
-                globalsFile.Add("namespace " + tnamespace);
-                globalsFile.Add("{");
-                globalsFile.Add(Indent(4) + "public class " + tnamespace + "_Globals");
-                globalsFile.Add(Indent(4) + "{");
+                //globalsFile.Add("namespace " + tnamespace);
+                //globalsFile.Add("{");
+                //globalsFile.Add(Indent(4) + "public class " + tnamespace + "_Globals");
+                //globalsFile.Add(Indent(4) + "{");
 
-                globalsFile.AddRange(globals);
-                globalsFile.Add(Indent(4) + "}");
+                //globalsFile.AddRange(globals);
+                //globalsFile.Add(Indent(4) + "}");
 
-                globalsFile.Add(Indent(4) + "public class " + tnamespace + "_Locals");
-                globalsFile.Add(Indent(4) + "{");
-                globalsFile.AddRange(locals);
-                globalsFile.Add(Indent(4) + "}");
-                globalsFile.Add("}");
+                //globalsFile.Add(Indent(4) + "public class " + tnamespace + "_Locals");
+                //globalsFile.Add(Indent(4) + "{");
+                //globalsFile.AddRange(locals);
+                //globalsFile.Add(Indent(4) + "}");
+                //globalsFile.Add("}");
 
-                //Create directory
-                if (!System.IO.Directory.Exists(iOutPath))
-                    System.IO.Directory.CreateDirectory(iOutPath);
+                ////Create directory
+                //if (!System.IO.Directory.Exists(iOutPath))
+                //    System.IO.Directory.CreateDirectory(iOutPath);
 
-                File.WriteAllLines(iOutPath + "\\" + "NamespaceGlobals.cs", globalsFile, Encoding.UTF8);
+                //File.WriteAllLines(iOutPath + "\\" + "NamespaceGlobals.cs", globalsFile, Encoding.UTF8);
 
-                //Save Global and Local element names
-                ReferenceStruct treference = new ReferenceStruct();
-                treference.name = tdirectory;
-                treference.globals = new List<string>();
-                treference.locals = new List<string>();
-                treference.globals = global_names;
-                treference.locals = local_names;
-                oReferences.Add(treference);
+                ////Save Global and Local element names
+                //ReferenceStruct treference = new ReferenceStruct();
+                //treference.name = tdirectory;
+                //treference.globals = new List<string>();
+                //treference.locals = new List<string>();
+                //treference.globals = global_names;
+                //treference.locals = local_names;
+                //oReferences.Add(treference);
             }
 
             for (int i = 0; i < directories.GetLength(0); i++)
@@ -729,7 +729,7 @@ namespace Translator
             CS.file_path = outPathCS;
             CS.standard_references = StandardReferences;
 
-            string[] tout = CS.Write(ref IL.script, directory.Replace(" ", "_"), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref DelphiStandardReferences, ref StandardCSReferences).ToArray();
+            string[] tout = CS.Write(IL.script, filename.Replace(".cs", ""), ref oglobal_names, ref oglobals, ref olocal_names, ref olocals, ref DelphiStandardReferences, ref StandardCSReferences).ToArray();
 
             //Write to file
             Directory.CreateDirectory(outPathCS);

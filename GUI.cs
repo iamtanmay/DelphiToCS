@@ -68,8 +68,8 @@ namespace Translator
 
         private void GUI_Load(object sender, EventArgs e)
         {
-            standardDelphiReferences = new List<string> { "+DelphiStandardWrapper", "-Example_DelphiLibrary_To_Remove","Generics.Collections / System.Collections.Generic", 
-            "SysUtils / String System", "System / System", "System.Generics.Collections / System.Collections.Generic", "Windows / System.Windows", "Forms / System.Windows.Forms" };
+            standardDelphiReferences = new List<string> { "+DelphiStandardWrapper", "-System.Generics.Collections", "-Generics.Defaults", "Generics.Collections / System.Collections.Generic", 
+            "SysUtils / String System", "System / System", "Windows / System.Windows", "Forms / System.Windows.Forms" };
 
             List<string> tignoreDelphiLibraries = new List<string> { "dclOfficeXP", "adortl150", "bdertl150", "cxDataD15", "cxEditorsD15", "cxExportD15", "cxExtEditorsD15", "cxGridD15", 
             "cxLibraryD15", "cxPageControlD15", "cxTreeListD15", "dbrtl150", "DbxCommonDriver150", "dcldb150", "dcloffice2k150", "dclofficexp150", "dclstd150", "dclturbodb6d15", 

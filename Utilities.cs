@@ -45,35 +45,100 @@ namespace Translator
                     istring = istring + " " + tarr[i];
                 }
             }
+            else
+            {
+                //Casting
+                string tstring = istring.Trim();
+                tindex = tstring.IndexOf(".VInteger");
+                if (tindex != -1)
+                {
+                    tstring = tstring.Remove(tindex, 9);
+                    int tprevwordstart = tindex;
+                    char tprevletter = tstring[tprevwordstart];
+                    while (tprevletter != '(' & tprevletter!= ' ' & tprevwordstart > 0)
+                    {
+                        tprevwordstart--;
+                        tprevletter = tstring[tprevwordstart];
+                    }
+                    tstring = tstring.Insert(tprevwordstart+1, "(int)");
+                    istring = tstring;
+                }
+                else
+                {
+                    tindex = tstring.IndexOf(".VExtended");
+                    if (tindex != -1)
+                    {
+                        tstring = tstring.Remove(tindex, 10);
+                        int tprevwordstart = tindex;
+                        char tprevletter = tstring[tprevwordstart];
+                        while (tprevletter != '(' & tprevletter != ' ' & tprevwordstart > 0)
+                        {
+                            tprevwordstart--;
+                            tprevletter = tstring[tprevwordstart];
+                        }
+                        tstring = tstring.Insert(tprevwordstart + 1, "(double)");
+                        istring = tstring;
+                    }
+                    else
+                    {
+                        tindex = tstring.IndexOf(".VPWideChar");
+                        if (tindex != -1)
+                        {
+                            tstring = tstring.Remove(tindex, 11);
+                            int tprevwordstart = tindex;
+                            char tprevletter = tstring[tprevwordstart];
+                            while (tprevletter != '(' & tprevletter != ' ' & tprevwordstart > 0)
+                            {
+                                tprevwordstart--;
+                                tprevletter = tstring[tprevwordstart];
+                            }
+                            tstring = tstring.Insert(tprevwordstart + 1, "(string)");
+                            istring = tstring;
+                        }
+                    }
+                }
+            }
             return istring;
         }
 
         public static string[] Delphi_CSRegexTypes = {"TList", "boolean", "Boolean", "integer", "Integer", 
                                                     "word", "Word", "dword", "Dword", "shortstring", "Shortstring", 
-                                                    "Real", "real", "begin", "end;", "end.", "Double", "extended", "Extended", "string", "var"},
+                                                    "Real", "real", "begin", "end;", "end.", "Double", "extended", "Extended", "string", "var", "do", "End;"},
 
             Delphi_CSRegexTypesSubstitutes = { "List", "bool", "bool", "int", "int", 
                                             "uint", "uint", "uint", "uint", "string", "string", 
-                                            "double", "double", "{", "}", "", "double", "double", "double", "delphistring", "ref"},
+                                            "double", "double", "{", "}", "", "double", "double", "double", "delphistring", "ref", ")", "}"},
 
             Delphi_CSNonRegexTypes = { "#", "'", " and ", " or ", 
-                                  "xor ", "not ", "=", "low(Integer)", "EXIT(", ":==", "<>", "shr", "shl", 
-                                  "\n", "if", "then", "FreeAndNil", "TList<", "self.", "(self)", ".Delete(", "end;", "Assigned("},
+                                  "xor ", "not ", "=", "low(Integer)", "EXIT(", "EXIT;", ":==", "<>", "shr", "shl", 
+                                  "\n", "if", "then", "FreeAndNil", "TList<", "self.", "(self)", ".Delete(", "end;", "Assigned(", "CompareStr", "CompareText", "Result", "function", "for ", 
+                                  "high(", "IntToStr", "FloatToStr", ".VType", "vtInteger", "vtInt64", "vtUnicodeString", "vtExtended", "^", "integer", "Integer"},
 
             Delphi_CSNonRegexSubstitutes = { "(char)", "\"", " && ", " || ", 
-                                               "^ ", "! ", "==", "0*", "result = (", "=", "!=", ">>", "<<", 
-                                               "", "if(", ")", "//FreeAndNil", "List<", "", "(this)", ".RemoveAt(", "", "WrapperUtilities.Assigned(" };
+                                               "^ ", "! ", "==", "0*", "result = (", "return;", "=", "!=", ">>", "<<", 
+                                               "", "if(", ")", "//FreeAndNil", "List<", "", "(this)", ".RemoveAt(", "}", "WrapperUtilities.Assigned(", "delphistring.CompareDelphiString", "delphistring.CompareDelphiString", "result", "", "for (", 
+                                               "ArrayUtilities.high(", "StringUtils.IntToStr", "StringUtils.FloatToStr", ".GetType().Name", "\"int\"", "\"long\"", "\"delphistring\"", "\"double\"", "", "int", "int"};
 
         public static string ReplaceElementsInStringRegex(string istring, ref string[] iElementList, ref string[] iSubstitutesList)
         {
             string pattern = "";
+            string treturn = "";
+            string[] twords = istring.Trim().Split(' ');
 
-            for (int i = 0; i < iElementList.GetLength(0); i++)
+            for (int j = 0; j < twords.Length; j++)
             {
-                pattern = "\\b" + iElementList[i] + "\\b";
-                istring = Regex.Replace(istring, pattern, iSubstitutesList[i]);
+                string tstring = twords[j].Trim();
+
+                for (int i = 0; i < iElementList.GetLength(0); i++)
+                {
+                    if (tstring == iElementList[i])
+                        tstring = iSubstitutesList[i];
+                    //pattern = "\\b" + iElementList[i] + "\\b";
+                    //istring = Regex.Replace(istring, pattern, iSubstitutesList[i]);
+                }
+                treturn = treturn + " " + tstring;
             }
-            return istring;
+            return treturn;
         }
         public static string ReplaceElementsInStringSimple(string istring, ref string[] iElementList, ref string[] iSubstitutesList)
         {

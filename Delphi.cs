@@ -927,6 +927,7 @@ namespace Translator
                 tparameters = treturntypearray[1];
             }
 
+            tparameters = tparameters.Replace("array of ", "arrof");
             string[] tparameter_array = tparameters.Split(';');
             tparameters = "";
             //Trim the parameters and stitch them back
@@ -937,7 +938,7 @@ namespace Translator
                 for (int j = 0; j < tparameter.GetLength(0); j++)
                 {
                     if ((tparameter[j] != "") && (tparameter[j] != " "))
-                        tformatted_param = tformatted_param + "_" +tparameter[j];
+                        tformatted_param = tformatted_param + "•" + tparameter[j].Replace("arrof", "array of ");
                 }
 
                 //Separate parameters with '|' and remove trailing and beginning spaces
@@ -1334,7 +1335,7 @@ namespace Translator
             bool tusesfound = false, tconstfound = false, tkeysresized = false;
             int tcounter = 0;
 
-            //mplementation sub sections
+            //Implementation sub sections
             while (tcurr_string_count != -1 && tcurr_string_count < endImplementation)
             {                
                 tnext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tcurr_string_count);
@@ -1660,7 +1661,16 @@ namespace Translator
             string[] tclassnamearray = tfuncstring.Split('.');
             string[] treturnarray = tclassnamearray;
             tclassnamearray = tclassnamearray[0].Split(' ');
-            tclassname = tclassnamearray[tclassnamearray.GetLength(0)-1];
+
+            tclassname = "";
+
+            if (tclassnamearray.Length > 0)
+                for (int i = 1; i < tclassnamearray.Length; i++ )
+                {
+                    tclassname = tclassname + tclassnamearray[i];
+                }
+            tclassname = tclassname.Replace("class", "").Replace("function", "").Replace("procedure", "");
+            //tclassname = tclassnamearray[tclassnamearray.GetLength(0)-1];
 
             inext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tnext_pos);
 
@@ -1805,12 +1815,13 @@ namespace Translator
             //Trim the parameters and stitch them back
             for (int i = 0; i < tparameter_array.GetLength(0); i++)
             {
-                string[] tparameter = tparameter_array[i].Split(' ');
+                string ttempparameter = tparameter_array[i].Replace("array of ", "arrof");
+                string[] tparameter = ttempparameter.Split(' ');
                 string tformatted_param = "";
                 for (int j = 0; j < tparameter.GetLength(0); j++)
                 {
                     if ((tparameter[j] != "") && (tparameter[j] != " "))
-                        tformatted_param = tformatted_param + "_" + tparameter[j];
+                        tformatted_param = tformatted_param + "•" + tparameter[j].Replace("arrof", "array of ");
                 }
 
                 //Separate parameters with '|' and remove trailing and beginning spaces
@@ -1967,7 +1978,11 @@ namespace Translator
 
             for (int i = istartpos + 1; i < istrings.Count; i++)
             {
-                if (Check_If_StringList_Elements_Exist_In_String(istrings[i], ref ikeys) != -1)
+                //Remove comments
+                string tstring = istrings[i].Split('{')[0];
+                tstring = tstring.Split("//".ToCharArray())[0];
+
+                if (Check_If_StringList_Elements_Exist_In_String(tstring, ref ikeys) != -1)
                     return i;
             }
             return -1;
@@ -2343,7 +2358,7 @@ namespace Translator
 
             for (int ii = 0; ii < iheader_arr.GetLength(0); ii++)
             {
-                string[] tvar_arr = iheader_arr[ii].Trim().Split('_');
+                string[] tvar_arr = iheader_arr[ii].Replace(',',' ').Trim().Split('•');
 
                 //Remove first element that is always "" empty
                 tlist = new List<string>(tvar_arr);
@@ -2370,7 +2385,7 @@ namespace Translator
                 else if (tlength == 2)
                 {
                     //Variables in method parameter. They are not static, so false in Variable Constructor
-                    tvar = new Variable(tvar_arr[0], tvar_arr[tlength - 1], "", "", false);
+                    tvar = new Variable(tvar_arr[0], tvar_arr[tlength - 1].Replace("array of const", "object[]"), "", "", false);
                     tparams.Add(tvar);
                 }
                 else //if (tlength == 3)
@@ -2379,7 +2394,7 @@ namespace Translator
                     //tvar = new Variable(tvar_arr[0] + " " + tvar_arr[1],  tvar_arr[tlength - 1], false);
                     for (int jj = 1; jj < (tlength - 1); jj++)
                     {
-                        tvar = new Variable(tvar_arr[jj], tvar_arr[tlength - 1], "", "", false);
+                        tvar = new Variable(tvar_arr[jj], tvar_arr[tlength - 1].Replace("array of const", "object[]"), "", "", false);
                         tparams.Add(tvar);
                     }
                 }
@@ -2444,7 +2459,21 @@ namespace Translator
                             tvar_arr[1] = tvar_arr[1].Replace(";", "");
                             tvar_arr[1] = tvar_arr[1].Trim();
 
-                            tconsts.Add(new Constant(tvar_arr[0], tvar_arr[1]));
+                            //In case the Type of the constant is included
+                            if (tvar_arr[0].IndexOf(":") != -1)
+                            {
+                                string tconst_type, tconst_name;
+                                string[] tconst_temp_arr = tvar_arr[0].Split(':');
+                                tconst_name = tconst_temp_arr[0].Trim();
+                                tconst_type = tconst_temp_arr[1].Trim();
+                                if (tconst_type == "integer")
+                                    tconst_type = "int";
+                                tconsts.Add(new Constant(tconst_name, tconst_type, tvar_arr[1].Trim(), ""));
+                            }
+                            else
+                            {
+                                tconsts.Add(new Constant(tvar_arr[0].Trim(), tvar_arr[1].Trim()));
+                            }
                         }
                     }
                 }
@@ -2725,7 +2754,7 @@ namespace Translator
                     if (!tcomma && tchar == ',')
                     {
                         istring.Remove(i, 1);
-                        istring.Insert(i, "±@");
+                        istring.Insert(i, "±");
                     }
                 }
             }
@@ -2768,7 +2797,7 @@ namespace Translator
                 {
                     istring = istring.Split(';')[0];
 
-                    string[] tnames = istring.Split("±@".ToCharArray());
+                    string[] tnames = istring.Split("±".ToCharArray());
 
                     for (int i = 0; i < tnames.Length; i++)
                     {
@@ -2809,7 +2838,7 @@ namespace Translator
                     string[] thex_array = tvalue.Split('+');
 
                     if (thex_array[0].IndexOf("#$") != -1)
-                        thex_array[0] = "(char)" + Convert.ToInt32(thex_array[0].Replace("#$", ""), 16);
+                        thex_array[0] = "(char)" + Convert.ToInt32(thex_array[0].Replace("#$", "").Trim(), 16);
 
                     tvalue = thex_array[0];
 
@@ -2819,7 +2848,7 @@ namespace Translator
                         {
                             string thex_temp_string = thex_array[ti].Replace("#$", "").Trim();
                             int ttemp_hex_int_val = Convert.ToInt32(thex_temp_string, 16);
-                            thex_array[ti] = " + (char)" + (char)ttemp_hex_int_val;
+                            thex_array[ti] = " + (char)" + ttemp_hex_int_val;
                         }
                         tvalue = tvalue + thex_array[ti];
                     }
@@ -2867,15 +2896,23 @@ namespace Translator
 
         private string GetComment(string istring)
         {
-            string tcomment = "";
-            string[] tarr = istring.Split('{');
-            
-            if (tarr.Length > 1)
-                tcomment = tarr[1];
+            string tcomment = "", tstring = "";
 
-            istring = tarr[0];
+            int tcommentstart = istring.IndexOf('{'), tcommentend = istring.IndexOf('}');            
 
-            tarr = istring.Split("//".ToCharArray());
+            if (tcommentstart != -1)
+                if (tcommentend != -1)
+                {
+                    tcomment = istring.Substring(tcommentstart, tcommentend - tcommentstart);
+                    tstring = istring.Substring(0, tcommentstart) + istring.Substring(tcommentend + 1);
+                }
+                else
+                {
+                    tcomment = istring.Substring(tcommentstart);
+                    tstring = istring.Substring(0, tcommentstart);
+                }
+
+            string[] tarr = tstring.Split("//".ToCharArray());
 
             if (tarr.Length > 1)
                 return tcomment + tarr[1];
@@ -2886,7 +2923,17 @@ namespace Translator
         private string RemoveComment(string istring)
         {
             string[] tarr = istring.Split("//".ToCharArray());
-            return tarr[0].Split('{')[0];
+            string tstring = tarr[0];
+
+            int tcommentstart = istring.IndexOf('{'), tcommentend = istring.IndexOf('}');
+
+            if (tcommentstart != -1)
+                if (tcommentend != -1)
+                    tstring = istring.Substring(0, tcommentstart) + istring.Substring(tcommentend + 1);
+                else
+                    tstring = istring.Substring(0, tcommentstart);
+            
+            return tstring;
         }
 
         private Variable StringToVariable(string istring, string itype, string icomment)
@@ -2911,7 +2958,9 @@ namespace Translator
                 tname = istring;
                 ttype = itype;
             }
-
+            string ttemp = ttype.Trim();
+            if ((ttemp == "integer") || (ttemp == "integer;"))
+                ttype = "int";
             tout = new Variable(tname, ttype, tvalue, comment, false);
             return tout;
         }
@@ -2930,7 +2979,7 @@ namespace Translator
                 string ttype = "", comment = "";
 
                 comment = icomment + GetComment(istring);
-                istring = RemoveComment(istring);
+                string tstring = RemoveComment(istring);
 
                 if (istring.Trim() != "")
                 {

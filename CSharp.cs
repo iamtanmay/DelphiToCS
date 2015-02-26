@@ -41,7 +41,7 @@ namespace Translator {
         }
 
         //Convert a script to C#
-        public List<string> Write(ref Script iscript, string inamespace, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
+        public List<string> Write(Script iscript, string inamespace, ref List<string> oglobal_names, ref List<string> oglobals, ref List<string> olocal_names, ref List<string> olocals, ref List<string> iStandardReferences, ref List<List<string>> iStandardCSReferences)
 		{
 			List<string> tout = new List<string>();
 
@@ -57,7 +57,6 @@ namespace Translator {
             //References
             tout.Add("");
             tout.Add("/*References Start*/");
-            tout.Add("");
 
             //Add standard references
             for (int i = 0; i < standard_references.Count; i++)
@@ -76,24 +75,21 @@ namespace Translator {
                 tout.Add("using " + project_references[i] + ";");
             }
 
-            tout.Add("");
             tout.Add("/*References End*/");
             tout.Add("");
 
             //Types
-            tout.Add("");
             tout.Add("/*Types Start*/");
-            tout.Add("");
-            //for( int i=0; i < iscript.includes.Count; i++)
-            //{
-            //    tout.Add("using " + ConvertToStandardLibrary(iscript.includes[i]));
-            //}
-            tout.Add("");
+            for( int i=0; i < iscript.classes[0].types.Count; i++)
+                tout.Add(Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(TypeToString(iscript.classes[0].types[i])).Replace(";;", ";")).Replace("==", "=").Trim());
+
+            for (int i = 0; i < iscript.classes[1].types.Count; i++)
+                tout.Add(Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(TypeToString(iscript.classes[1].types[i])).Replace(";;", ";")).Replace("==", "=").Trim());
+
             tout.Add("/*Types End*/");
             tout.Add("");
 
             //Namespace
-            tout.Add("");
             tout.Add("namespace " + inamespace);
             tout.Add("{");
 
@@ -103,6 +99,19 @@ namespace Translator {
             //Local Constants, Variables and Enums
             ProcessGlobals(iscript.classes[1], ref olocals, ref olocal_names);
 
+            List<string> telement_names = new List<string>();
+            string classtype = "";
+            classtype = "class";
+            tout.Add("");
+            tout.Add("//Class GlobalVars");
+            tout.Add(Indent(4) + "public " + classtype + " GlobalVars");
+            tout.Add(Indent(4) + "{");
+
+            tout.AddRange(WriteClassBody(iscript.classes[0], ref telement_names));
+            tout.AddRange(WriteClassBody(iscript.classes[1], ref telement_names));
+
+            tout.Add(Indent(4) + "}");
+
             //Classes
             for (int i = 2; i < iscript.classes.Count; i++)
             {
@@ -110,7 +119,7 @@ namespace Translator {
                 if ((iscript.classes[i].baseclass == null) || (iscript.classes[i].baseclass == "") || (iscript.classes[i].baseclass == "null"))
                     tHasBaseclass = false;
 
-                string classtype = "";
+                classtype = "";
                 if ((iscript.classes[i].type == "c"))
                     classtype = "class";
                 else if ((iscript.classes[i].type == "r"))
@@ -132,7 +141,7 @@ namespace Translator {
 
                 tout.Add(Indent(4) + "{");
 
-                List<string> telement_names = new List<string>();
+                telement_names = new List<string>();
                 tout.AddRange(WriteClassBody(iscript.classes[i], ref telement_names));
 
                 tout.Add(Indent(4) + "}");
@@ -157,7 +166,7 @@ namespace Translator {
             for (int i = 0; i < iclass.constants.Count; i++)
             {
                 oelement_names.Add(iclass.constants[i].name);
-                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(ConstantToString(iclass.constants[i]))));
+                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(ConstantToString(iclass.constants[i])).Replace("==", "=").Replace(":", ""));
             }
 
             for (int i = 0; i < iclass.enums.Count; i++)
@@ -178,18 +187,19 @@ namespace Translator {
             for (int i = 0; i < iclass.properties.Count; i++)
             {
                 oelement_names.Add(iclass.properties[i].name);
-
+                string tproperty = "";
                 if (iclass.properties[i].isStatic)
-                    tout.Add(Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
+                    tproperty = (Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
                 else
-                    tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
+                    tproperty = (Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
+                tout.Add(tproperty.Replace("/*", "{").Replace("*/", "}"));
             }
 
-            for (int i = 0; i < iclass.types.Count; i++)
-            {
-                oelement_names.Add(iclass.types[i].name); 
-                tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(TypeToString(iclass.types[i]))));
-            }
+            //for (int i = 0; i < iclass.types.Count; i++)
+            //{
+            //    oelement_names.Add(iclass.types[i].name); 
+            //    tout.Add(Indent(4) + Indent(4) + (Utilities.Delphi2CSRules(TypeToString(iclass.types[i]))));
+            //}
 
             for (int i = 0; i < iclass.functions.Count; i++)
             {
@@ -224,6 +234,37 @@ namespace Translator {
             //Method body
             List<string> tbody = new List<string>();
 
+
+            bool tHasBaseclass = true;
+            string tinheritance = "";
+
+            if ((iclass.baseclass == null) || (iclass.baseclass == "") || (iclass.baseclass == "null"))
+                tHasBaseclass = false;
+
+            bool tisConstructor = false;
+            //Special Constructor rules
+            if (ifunction.name == "Create")
+            {
+                tisConstructor = true;
+
+                //Change Create to Class name in C#
+                tfunction_name = iclass.name;
+
+                int ttemplatestart = tfunction_name.IndexOf('<');
+                if (ttemplatestart != -1)
+                {
+                    int ttemplateend = tfunction_name.IndexOf('>');
+                    if (ttemplateend != tfunction_name.Length - 1)
+                        tfunction_name = tfunction_name.Substring(0, ttemplatestart) + tfunction_name.Substring(ttemplateend, tfunction_name.Length - 1);
+                    else
+                        tfunction_name = tfunction_name.Substring(0, ttemplatestart);
+                }
+
+                ifunction.isStatic = false;
+                ifunction.returnType = "";
+                treturn_type = "";
+            }
+
             for (int j = 0; j < ifunction.commands.Count; j++)
             {
                 string tstr = ifunction.commands[j].Trim();
@@ -231,7 +272,107 @@ namespace Translator {
                 {
                     //Remove all empty lines
                     if ((tstr != "") && (tstr != "\n"))
+                    {
                         tstr = Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(ifunction.commands[j]));
+                        if (tstr != "")
+                        {
+                            if ((tstr.IndexOf("inherited") == -1) & (tstr.IndexOf("Inherited") == -1))
+                                tstr = tstr.Replace("Create(", tfunction_name + "(");
+
+                            if ((tstr.IndexOf("default") != -1) & (tstr.IndexOf("default:") == -1))
+                                tstr = tstr.Replace("default", "new").Replace("(", "").Replace(")", "()") + "//TODO";
+
+                            //Add Semicolons
+                            if ((tstr.IndexOf("=") != -1) & (tstr[tstr.Length - 1] != ';') & (tstr.IndexOf("==") == -1) & ((tstr.IndexOf("for (") == -1) & (tstr.IndexOf("for(") == -1)))
+                                tstr = tstr + ';';
+                            //Check for loops
+                            else if  ((tstr.IndexOf("for (") != -1) || (tstr.IndexOf("for(") != -1))
+                            {
+                                string ttempstr = tstr.Trim();
+                                string[] tfor_elements = ttempstr.Split(' ');
+                                string tfor_counter = tfor_elements[1].Split('(')[1];
+                                tstr = tstr.Replace("to", "; " + tfor_counter + " <");
+                                tstr = tstr.Substring(0,tstr.Length-1) + "; " + tfor_counter + "++ )";
+                            }
+                            //Switch cases
+                            else if ((tstr.IndexOf("case (") != -1) || (tstr.IndexOf("case(") != -1))
+                            {
+                                tstr = tstr.Replace("case", "switch").Replace("of", "{");
+
+                                int tswitchbegincounter = 0;
+                                int tswitchcounter = j + 1;
+                                int tswitchstart = j;
+                                while (tswitchbegincounter > -1 & tswitchcounter < ifunction.commands.Count)
+                                {
+                                    string tswitchcommand = ifunction.commands[tswitchcounter].Trim();
+
+                                    if (tswitchcommand != "")
+                                    {
+                                        if (tswitchcommand[0] == '/')
+                                        {
+                                            ifunction.commands[tswitchcounter] = "";
+                                        }
+                                        else if (tswitchcommand == "begin")
+                                        {
+                                            tswitchbegincounter++;
+                                            //ifunction.commands[tswitchcounter] = "{";
+                                        }
+                                        else if (tswitchcommand == "end;" || tswitchcommand == "end")
+                                        {
+                                            tswitchbegincounter--;
+                                            ifunction.commands[tswitchcounter] = "End;";
+                                        }
+                                        //Add default case
+                                        else if (tswitchcommand == "else")
+                                        {
+                                            ifunction.commands[tswitchcounter] = "default:";
+                                        }
+                                    }
+                                    tswitchcounter++;
+                                }
+                                ifunction.commands.Insert(tswitchcounter - 1, "break;");
+                                tswitchcounter++;
+
+                                int toldk = tswitchstart + 1;
+                                for (int k = tswitchstart + 1; k < tswitchcounter; k++)
+                                {
+                                    string tswitchcommand = ifunction.commands[k];
+                                    string tcasename = "";
+                                    List<string> tcasebody = new List<string>();
+                                    //Add all the cases
+                                    if (tswitchcommand.IndexOf(':') != -1 & tswitchcommand.IndexOf(":=") == -1)
+                                    {
+                                        tcasename = tswitchcommand;
+                                        k++;
+                                        string tnextcase = ifunction.commands[k];
+                                        int tcurrcommandcounter = k;
+
+                                        while (k < tswitchcounter & (tnextcase.IndexOf(':') == -1 || tnextcase.IndexOf(":=") != -1))
+                                        {
+                                            tcasebody.Add(tnextcase);
+                                            k++;
+                                            tnextcase = ifunction.commands[k];
+                                        }
+
+                                        //Check for multiple cases
+                                        string[] tcasesarr = tcasename.Split(',');
+                                        List<string> tconvertedswitchcommands = new List<string>();
+
+                                        for (int l = 0; l < tcasesarr.Length; l++)
+                                        {
+                                            tconvertedswitchcommands.Add("case " + tcasesarr[l].Trim().Replace(':', ' ') + ":    ");
+                                            tconvertedswitchcommands.AddRange(tcasebody);
+                                            tconvertedswitchcommands.Add("break;");
+                                        }
+                                        ifunction.commands.RemoveRange(toldk, k - toldk);
+                                        ifunction.commands.InsertRange(toldk, tconvertedswitchcommands);
+                                        toldk = toldk + tconvertedswitchcommands.Count;
+                                    }
+                                }
+                                //j = tswitchcounter;
+                            }
+                        }
+                    }
 
                     //Check if output is empty
                     if ((tstr != "") && (tstr != "\n"))
@@ -250,22 +391,26 @@ namespace Translator {
                 }
             }
 
-            bool tHasBaseclass = true;
-            string tinheritance = "";
-
-            if ((iclass.baseclass == null) || (iclass.baseclass == "") || (iclass.baseclass == "null"))
-                tHasBaseclass = false;
-
+            string tspecialconstructor = "";
+            tfunction_name = tfunction_name.Trim();
             //Special Constructor rules
-            if (ifunction.name == "Create")
+            if (tisConstructor)
             {
-                //Change Create to Class name in C#
-                tfunction_name = iclass.name;
-
                 //Remove "inherited Create();"
                 int tfound = Delphi.FindStringInList("inherited Create", ref tbody, 0, true);
                 if (tfound != -1)
                     tbody.RemoveAt(tfound);
+
+                for (int j = 0; j < tbody.Count; j++)
+                {
+                    string tstr = tbody[j].Trim();
+                    if (tstr.IndexOf(tfunction_name) != -1)
+                    {
+                        tspecialconstructor = tbody[j].Trim().Replace(tfunction_name, " : this").Replace(';', ' ');
+                        tbody[j] = "";
+                        break;
+                    }
+                }
 
                 //If the constructor is inherited
                 if (tHasBaseclass)
@@ -296,7 +441,7 @@ namespace Translator {
             if (ifunction.parameters.Count > 0)
                 tparam_string = tparam_string + VarToString(ifunction.parameters[ifunction.parameters.Count - 1]).Replace(";", "");
 
-            tparam_string = tparam_string.Replace(";", ",").Replace(":", "").Replace("const", "").Replace("  ", " ");
+            tparam_string = tparam_string.Replace(";", ", ").Replace(":", "").Replace("const", "").Replace("  ", " ");
 
             //Method Attributes
             string tattributes = "";
@@ -311,20 +456,23 @@ namespace Translator {
                 tattributes += "abstract ";
 
             //Method Definition (attributes + return type + name + parameters + inheritance)
-            tout.Add(Indent(4) + Indent(4) + "public " + tattributes + treturn_type + " " + tfunction_name + "(" + Utilities.Beautify_Delphi2CS(tparam_string) + ")" + tinheritance);
+            tout.Add(Indent(4) + Indent(4) + "public " + tattributes + treturn_type + " " + tfunction_name + "(" + Utilities.Beautify_Delphi2CS(tparam_string) + ")" + tinheritance + tspecialconstructor);
 
             tout.Add(Indent(4) + Indent(4) + "{");
+
+            treturn_type = treturn_type.Trim();
+
             //Add 'result'
-            if (treturn_type != "void")
+            if (treturn_type != "void" & treturn_type != "")
                 tout.Add(Indent(4) + Indent(4) + Indent(4) + treturn_type + " result;");
 
             //Method Constants
             for (int j = 0; j < ifunction.constants.Count; j++)
-                tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(ConstantToString(ifunction.constants[j])));
+                tout.Add(Indent(4) + Indent(4) + Indent(4) + ConstantToString(ifunction.constants[j]));
 
             //Method Variables
             for (int j = 0; j < ifunction.variables.Count; j++)
-                tout.Add(Indent(4) + Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(VarToString(ifunction.variables[j])));
+                tout.Add(Indent(4) + Indent(4) + Indent(4) + VarToString(ifunction.variables[j]));
 
             if (tbody.Count > 0)
             {
@@ -332,12 +480,23 @@ namespace Translator {
                 //tbody.RemoveAt(tbody.Count - 1);
             }
 
+            //Insert return statement
+            if (treturn_type != "void" & tbody.Count != 0 & treturn_type != "")
+            {
+                for (int j = tbody.Count - 1; j > 0; j--)
+                {
+                    if (tbody[j].Trim() == "}")
+                    {
+                        tbody.Insert(j, Indent(4) + Indent(4) + Indent(4) + "return result;");
+                        goto return_over;
+                    }
+                }
+            }
+            return_over:
+
             tout.AddRange(tbody);
 
-            if (treturn_type != "void")
-                tout.Add(Indent(4) + Indent(4) + Indent(4) + "return result;");
-
-            tout.Add(Indent(4) + Indent(4) + "}");
+            //tout.Add(Indent(4) + Indent(4) + "}");
             
             return tout;
         }
@@ -373,7 +532,7 @@ namespace Translator {
 
             //Remove type name from ivar.name
             ivar.name = ivar.name.Replace("class", "").Replace("var", "");
-
+            ivar.type = ivar.type.Replace(";", "");
             string tout = "";
             
             if (ivar.value != "" )
@@ -399,7 +558,7 @@ namespace Translator {
                     tcomment += tarr[1];
 
                 char[] tchar_arr = tarr[0].ToCharArray();
-                if (tchar_arr[0] == 'f')
+                if (tchar_arr[0] != 'f')
                     tarr[0] = tarr[0] + "()";
 
                 tread = "return " + tarr[0] + ";";
