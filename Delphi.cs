@@ -155,7 +155,7 @@ namespace Translator
     	//Raw strings
     	//Header, class names, SubSection names, Uses interface, Uses implementation, (Global and Local): consts, enums, types and vars 
         [System.Xml.Serialization.XmlIgnoreAttribute]
-        private List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal, Delegates;
+        public List<string> classNames, SubSection_Names, Uses_Interface, Uses_Implementation, ConstsGlobal, EnumsGlobal, TypesGlobal, VarsGlobal, ConstsLocal, EnumsLocal, TypesLocal, VarsLocal, Delegates;
 
         [System.Xml.Serialization.XmlIgnoreAttribute]
         private List<Function> FunctionsGlobal, ProceduresGlobal, FunctionsLocal, ProceduresLocal;
@@ -182,7 +182,7 @@ namespace Translator
         public static string[] interfaceKindKeys = { "class function", "class procedure", "class", "record", "procedure", "function", "interface" };
         
         [System.Xml.Serialization.XmlIgnoreAttribute]
-        public static string[] implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const" };
+        public static string[] implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "var", "const" };
         
         [System.Xml.Serialization.XmlIgnoreAttribute]
         public static string[] const_implementKindKeys = { "uses", "strict private", "public const", "public", "private const", "private", "protected", "destructor", "constructor", "class var", "class function", "class procedure", "class property", "procedure", "function", "property", "class const", "const", "var", "begin" };
@@ -273,7 +273,7 @@ namespace Translator
 
             ParseInterface(ref istrings, ref Uses_Interface, ref classNames, ref classDefinitions, ref ConstsGlobal, ref VarsGlobal, ref EnumsGlobal, ref TypesGlobal);
             //ParseVar(ref istrings, ref VarsGlobal);
-            ParseImplementation(ref istrings, ref Uses_Implementation, ref classNames, ref classDefinitions, ref ConstsLocal, ref EnumsLocal, ref TypesLocal);
+            ParseImplementation(ref istrings, ref Uses_Implementation, ref classNames, ref classDefinitions, ref ConstsLocal, ref VarsLocal, ref EnumsLocal, ref TypesLocal);
 
             //Generate Global procedures and functions
 
@@ -282,7 +282,7 @@ namespace Translator
             script.classes.Add(classGlobals);
             VarsGlobal.Clear();
 
-            GenerateGlobalClass("Locals_" + name, ref classLocals, ref ConstsLocal, ref EnumsLocal, ref TypesLocal, ref VarsGlobal, ref ProceduresLocal, ref FunctionsLocal);
+            GenerateGlobalClass("Locals_" + name, ref classLocals, ref ConstsLocal, ref EnumsLocal, ref TypesLocal, ref VarsLocal, ref ProceduresLocal, ref FunctionsLocal);
             script.classes.Add(classLocals);
 
             GenerateClasses(ref istrings, ref script.classes, ref classNames, ref classDefinitions, ref classImplementations);
@@ -622,11 +622,130 @@ namespace Translator
                                             if ((tstring.IndexOf("class(") != -1) || (tstring.IndexOf("class of") != -1))
                                             {
                                                 string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('='); 
-                                                tclassname = ttemparr[0];                                                
+                                                tclassname = ttemparr[0];
+                                                tclassname = tclassname.Replace("class", "").Replace(":", "").Replace(" ", "");
                                                 tclassdef.name = tclassname;
                                                 tclassdef.type = "c";
                                                 tclassdef.baseclass = ttemparr[1].Replace("class(", "").Replace(");", "");
                                                 oclassnames.Add(tclassname); 
+                                                oclassdefinitions.Add(tclassdef);
+                                                tcurr_string_count++;
+                                                tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
+                                            }
+                                            //Alias with no baseclass
+                                            else if ((tstring.IndexOf("class;") != -1))
+                                            {
+                                                string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('=');
+                                                tclassname = ttemparr[0];
+                                                tclassdef.name = tclassname;
+                                                tclassname = tclassname.Replace("class", "").Replace(":", "").Replace(" ", "");
+                                                tclassdef.type = "c";
+                                                tclassdef.baseclass = "";
+                                                oclassnames.Add(tclassname);
+                                                oclassdefinitions.Add(tclassdef);
+                                                tcurr_string_count++;
+                                                tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
+                                            }
+                                            //Forward declaration, ignore
+                                            else
+                                            {
+                                                tcurr_string_count = tnext_subsection_pos + 1;
+                                                //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                            }
+                                        }
+                                        else
+                                        { 
+                                            tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+                                            tclassname = tclassname.Replace("class", "").Replace(":", "").Replace(" ", "");
+                                            if (tnext_subsection_pos == -1)
+                                                throw new Exception("Incomplete class definition");
+
+                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                                            tclassdef.type = "c";
+                                            tclassdef.name = tclassname;
+
+                                            oclassnames.Add(tclassname);
+                                            oclassdefinitions.Add(tclassdef);
+                                            tcurr_string_count = tnext_subsection_pos + 1;
+                                            //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                        }
+
+                                        break;
+
+                        case "interface":
+                                        //Check if it is a forward declaration or alias
+                                        tstring = istrings[tcurr_string_count];
+                                        if (tstring.IndexOf(";") != -1)
+                                        {
+                                            //Alias, just make an empty class with this baseclass
+                                            if (tstring.IndexOf("interface(") != -1)
+                                            {
+                                                string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('=');
+                                                tclassname = ttemparr[0];
+                                                tclassname = tclassname.Replace("interface", "").Replace(":", "").Replace(" ", "");
+                                                tclassdef.name = tclassname;
+                                                tclassdef.type = "i";
+                                                tclassdef.baseclass = ttemparr[1].Replace("interface(", "").Replace(");", "");
+                                                oclassnames.Add(tclassname);
+                                                oclassdefinitions.Add(tclassdef);
+                                                tcurr_string_count++;
+                                                tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
+                                            }
+                                            //Alias with no baseclass
+                                            else if ((tstring.IndexOf("interface;") != -1))
+                                            {
+                                                string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('=');
+                                                tclassname = ttemparr[0];
+                                                tclassdef.name = tclassname;
+                                                tclassname = tclassname.Replace("interface", "").Replace(":", "").Replace(" ", "");
+                                                tclassdef.type = "i";
+                                                tclassdef.baseclass = "";
+                                                oclassnames.Add(tclassname);
+                                                oclassdefinitions.Add(tclassdef);
+                                                tcurr_string_count++;
+                                                tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
+                                            }
+                                            //Forward declaration, ignore
+                                            else
+                                            {
+                                                tcurr_string_count = tnext_subsection_pos + 1;
+                                                //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+                                            tclassname = tclassname.Replace("interface", "").Replace(":", "").Replace(" ", "");
+                                            if (tnext_subsection_pos == -1)
+                                                throw new Exception("Incomplete interface definition");
+
+                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                                            tclassdef.type = "i";
+                                            tclassdef.name = tclassname;
+
+                                            oclassnames.Add(tclassname);
+                                            oclassdefinitions.Add(tclassdef);
+                                            tcurr_string_count = tnext_subsection_pos + 1;
+                                            //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                                        }
+
+                                        break;
+
+                        case "record":  //Check if it is a forward declaration or alias
+                                        tstring = istrings[tcurr_string_count];
+                                        if (tstring.IndexOf(";") != -1)
+                                        {
+                                            //Alias, just make an empty class with this baseclass
+                                            if ((tstring.IndexOf("class(") != -1) || (tstring.IndexOf("class of") != -1))
+                                            {
+                                                string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('=');
+                                                tclassname = ttemparr[0];
+                                                tclassdef.name = tclassname;
+                                                tclassdef.type = "c";
+                                                tclassdef.baseclass = ttemparr[1].Replace("class(", "").Replace(");", "");
+                                                oclassnames.Add(tclassname);
                                                 oclassdefinitions.Add(tclassdef);
                                                 tcurr_string_count++;
                                                 tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
@@ -652,7 +771,7 @@ namespace Translator
                                             }
                                         }
                                         else
-                                        { 
+                                        {
                                             tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
                                             tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
 
@@ -669,63 +788,19 @@ namespace Translator
                                             //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                         }
 
-                                        break;
-                        case "interface":   //Check if it is a forward declaration or alias
-                                        tstring = istrings[tcurr_string_count];
-                                        if (tstring.IndexOf(";") != -1)
-                                        {
-                                            //Alias, just make an empty class with this baseclass
-                                            if (tstring.IndexOf("interface(") != -1)
-                                            {
-                                                string[] ttemparr = (Regex.Replace(tstring, @"\s+", "")).Split('=');
-                                                tclassname = ttemparr[0];
-                                                tclassdef.name = tclassname;
-                                                tclassdef.baseclass = ttemparr[1].Replace("interface(", "").Replace(");", "");
-                                                tclassdef.type = "i";
-                                                oclassnames.Add(tclassname);
-                                                oclassdefinitions.Add(tclassdef);
-                                                tcurr_string_count++;
-                                                tnext_subsection_pos = tcurr_string_count + 1;// Its only one line
-                                            }
-                                            //Forward declaration, ignore
-                                            else
-                                            {
-                                                tcurr_string_count = tnext_subsection_pos + 1;
-                                                //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
-                                            tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
+                                        //tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
+                        //                tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
 
-                                            if (tnext_subsection_pos == -1)
-                                                throw new Exception("Incomplete interface definition");
-
-                                            tclassdef = ParseInterfaceClass(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
-                                            tclassdef.name = tclassname;
-                                            tclassdef.type = "i";
-                                            oclassnames.Add(tclassname);
-                                            oclassdefinitions.Add(tclassdef);
-                                            tcurr_string_count = tnext_subsection_pos + 1;
-                                            //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
-                                        }
-
-                                        break;
-
-                        case "record":  tnext_subsection_pos = FindNextSymbol(ref istrings, "end;", tcurr_string_count);
-                                        tclassname = ((Regex.Replace(istrings[tcurr_string_count], @"\s+", "")).Split('='))[0];
-
-                                        if (tnext_subsection_pos == -1)
-                                            throw new Exception("Incomplete class definition");
+                        //                if (tnext_subsection_pos == -1)
+                        //                    throw new Exception("Incomplete class definition");
                                         
-                                        tclassdef = ParseRecord(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
-                                        tclassdef.name = tclassname;
-                                        tclassdef.type = "r";
-                                        oclassnames.Add(tclassname);
-                                        oclassdefinitions.Add(tclassdef);
-                                        tcurr_string_count = tnext_subsection_pos + 1;
-                                        //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
+                        //                tclassdef = ParseRecord(ref istrings, tclassname, tcurr_string_count, tnext_subsection_pos);
+                        //                tclassdef.name = tclassname;
+                        //                tclassdef.type = "r";
+                        //                oclassnames.Add(tclassname);
+                        //                oclassdefinitions.Add(tclassdef);
+                        //                tcurr_string_count = tnext_subsection_pos + 1;
+                        //                //tcurr_string_count = FindNextInterfaceSubType(ref istrings, tcurr_string_count + 1);
                                         break;
 
                         //Check if Enum or Type Alias, else Log unrecognized sub section
@@ -761,8 +836,15 @@ namespace Translator
                                                     for (ti = tcurr_string_count; ti < tend_semicolon + 1; ti++)
                                                         tmethod_string += istrings[ti];
                                                 }
+                                                //Enum start
                                                 else
                                                 {
+                                                    tnext_subsection_pos = FindNextSymbol(ref istrings, ");", tcurr_string_count);
+
+                                                    if (tnext_subsection_pos == -1)
+                                                        throw new Exception("Incomplete Enum definition");
+                                                    else
+                                                        oenums.Add(string.Concat((GetStringSubList(ref istrings, tcurr_string_count, tnext_subsection_pos + 1).ToArray())));
                                                 }
                                             }
 
@@ -863,7 +945,10 @@ namespace Translator
             //If not function parameter brackets, e.g Create; instead of Create();, then add empty brackets for parsing
             if (tnext_pos == -1)
             {
-                iFiltered_strings[icurr_string_count] = iFiltered_strings[icurr_string_count].Replace(";", "();");
+                if (iFiltered_strings[icurr_string_count].IndexOf(':') != -1)
+                    iFiltered_strings[icurr_string_count] = iFiltered_strings[icurr_string_count].Replace(":", "():");
+                else
+                    iFiltered_strings[icurr_string_count] = iFiltered_strings[icurr_string_count].Replace(";", "();");
                 tnext_pos = icurr_string_count;
             }
 
@@ -875,6 +960,10 @@ namespace Translator
             {
                 tfuncstring = tfuncstring + iFiltered_strings[i].Trim();
             }
+
+            tfuncstring = tfuncstring.Replace("array of const", "arrofcont");
+            tfuncstring = tfuncstring.Replace("array of var", "arrofvr");
+            tfuncstring = tfuncstring.Replace("array of ", "arrof");
 
             //Check and strip out overload, virtual, abstract
             if (tfuncstring.IndexOf("static;") != -1)
@@ -927,18 +1016,88 @@ namespace Translator
                 tparameters = treturntypearray[1];
             }
 
+
+            //Check for multiple parameters of same type
+            if (tparameters.IndexOf(',') != -1)
+            {
+                //Break up parameters and stitch them back
+                string[] ttempparamarr = tparameters.Split(';');
+                string ttempparamstring = "";
+                tparameters = "";
+
+                for (int i = 0; i < ttempparamarr.Length; i++)
+                {
+                    // Convert <Type1, Type2> to <Type1# Type2> to make parsing easier
+                    int tTemplateindex1 = ttempparamarr[i].IndexOf('<');
+                    int tTemplateindex2 = ttempparamarr[i].IndexOf('>');
+
+                    if (tTemplateindex1 != -1)
+                    {
+                        string[] tttempstrarr = ttempparamarr[i].Split('<');
+                        string[] tttempstrarr2 = tttempstrarr[1].Split('>');
+                        tttempstrarr2[0] = tttempstrarr2[0].Replace(',', '#');
+                        ttempparamarr[i] = tttempstrarr[0] + "<" + tttempstrarr2[0] + ">" + tttempstrarr2[1];
+                    }
+
+                    string ttempconststr = "", ttempvarstr = "";
+
+                    if (ttempparamarr[i].IndexOf("const") != -1)
+                    {
+                        ttempconststr = "const ";
+                        ttempparamarr[i] = ttempparamarr[i].Replace("const", "");
+                    }
+
+                    if (ttempparamarr[i].IndexOf("var") != -1)
+                    {
+                        ttempvarstr = "var ";
+                        ttempparamarr[i] = ttempparamarr[i].Replace("var", "");
+                    }
+
+                    string[] ttempcommaarr = ttempparamarr[i].Split(',');
+                    string ttemppartype = ttempcommaarr[ttempcommaarr.Length - 1];
+                    ttemppartype = ttemppartype.Split(':')[1];
+                    string ttemppartname = ttempcommaarr[0].Split(':')[0];
+
+                    string tsemicolon = "";
+
+                    if (i > 0)
+                        tsemicolon = "; ";
+
+                    if (ttempcommaarr.Length > 1)
+                        ttempparamstring = ttempparamstring.Trim() + tsemicolon + ttempconststr + ttempvarstr + ttemppartname.Trim() + ": " + ttemppartype.Trim() + ";";
+                    else
+                        ttempparamstring = ttempparamstring.Trim() + tsemicolon + ttempconststr + ttempvarstr + ttemppartname.Trim() + ": " + ttemppartype.Trim();
+
+                    for (int j = 1; j < ttempcommaarr.Length - 1; j++)
+                    {
+                        ttempparamstring = ttempparamstring.Trim() + ttempconststr + ttempvarstr + ttempcommaarr[j] + ": " + ttemppartype + "; ";
+                    }
+                    if (ttempcommaarr.Length > 1)
+                        ttempparamstring = ttempparamstring.Trim() + ttempconststr + ttempvarstr + ttempcommaarr[ttempcommaarr.Length - 1].Trim();
+                }
+                tparameters = ttempparamstring.Trim();
+                tparameters = tparameters.Replace('#', ',');
+            }
+
+
+
             tparameters = tparameters.Replace("array of ", "arrof");
             string[] tparameter_array = tparameters.Split(';');
             tparameters = "";
             //Trim the parameters and stitch them back
             for (int i = 0; i < tparameter_array.GetLength(0); i++)
             {
-                string[] tparameter = tparameter_array[i].Split(' ');
+                string[] tparameter = tparameter_array[i].Trim().Split(' ');
+                if (tparameter[0].Trim() == "var")
+                {
+                    tparameter[0] = tparameter[1];
+                    tparameter[1] = "object";
+                }
                 string tformatted_param = "";
                 for (int j = 0; j < tparameter.GetLength(0); j++)
                 {
                     if ((tparameter[j] != "") && (tparameter[j] != " "))
-                        tformatted_param = tformatted_param + "•" + tparameter[j].Replace("arrof", "array of ");
+                        tformatted_param = tformatted_param + "•" + tparameter[j].Replace("arrofvr", "array of var ").Replace("arrofcont", "array of const ").Replace("arrof", "array of ");
                 }
 
                 //Separate parameters with '|' and remove trailing and beginning spaces
@@ -1329,11 +1488,14 @@ namespace Translator
         */
 
         //oclassimplementations is a list of class functions and procedures
-        private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations, ref List<string> oconsts, ref List<string> oenum, ref List<string> oalias)
+        private void ParseImplementation(ref List<string> istrings, ref List<string> ouses, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations, ref List<string> oconsts, ref List<string> ovars, ref List<string> oenum, ref List<string> oalias)
         {
             int tcurr_string_count = startImplementation, tnext_subsection_pos = -1;
-            bool tusesfound = false, tconstfound = false, tkeysresized = false;
+            bool tusesfound = false, tconstfound = false, tvarfound = false;
+            int tkeysresized = 0;
             int tcounter = 0;
+            string tcurrent_key = "";
+            string[] torigimplementKindKeys = implementKindKeys;
 
             //Implementation sub sections
             while (tcurr_string_count != -1 && tcurr_string_count < endImplementation)
@@ -1377,7 +1539,8 @@ namespace Translator
                     }
                     else
                     {
-                        switch (RecognizeKey(istrings[tcurr_string_count], ref implementKindKeys))
+                        tcurrent_key = RecognizeKey(istrings[tcurr_string_count], ref implementKindKeys);
+                        switch (tcurrent_key)
                         {
                             case "class function":  //Break down function elements
                                 string tmethodtype = "classfunction";
@@ -1402,6 +1565,55 @@ namespace Translator
                             case "constructor": //Break down function elements
                                 tmethodtype = "constructor";
                                 ParseImplementationMethod(tmethodtype, tcurr_string_count, ref tnext_subsection_pos, ref istrings, ref oclassnames, ref oclassimplementations);
+                                break;
+
+                            case "var":
+                                tvarfound = true;
+
+                                tnext_subsection_pos = FindNextKey(ref istrings, ref const_implementKindKeys, tcurr_string_count);
+
+                                if (tnext_subsection_pos == -1)
+                                    tnext_subsection_pos = endImplementation;
+
+                                for (int j = tcurr_string_count + 1; j < tnext_subsection_pos - 1 && j < istrings.Count; j++)
+                                {
+                                    string tconststr = istrings[j];
+
+                                    string ttempstr = istrings[j].Trim();
+
+                                    if (ttempstr != "")
+                                    {
+                                        if (ttempstr[0] == '{')
+                                        {
+                                            //Ignore comments containing class name
+                                            while (ttempstr.IndexOf('}') == -1)
+                                            {
+                                                j++;
+                                                ttempstr = istrings[j].Trim();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (ttempstr != "" && ttempstr[0] != '/')
+                                            {
+                                                bool tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                while (!tsemicolonfound && (ttempstr.IndexOf("//") == -1))
+                                                {
+                                                    j++;
+                                                    ttempstr = istrings[j].Trim();
+                                                    tconststr = tconststr + istrings[j];
+
+
+                                                    if (ttempstr != "")
+                                                        tsemicolonfound = (ttempstr[ttempstr.Length - 1] == ';');
+                                                    else
+                                                        tsemicolonfound = false;
+                                                }
+                                                ovars.Add(tconststr.Replace("=", ":="));
+                                            }
+                                        }
+                                    }
+                                }                                
                                 break;
 
                             case "const": 
@@ -1470,12 +1682,29 @@ namespace Translator
                         }
                     }
 
-                    if (!tkeysresized)
-                        if ((!tusesfound && !tconstfound) || (tusesfound && tcounter > 1))
+                    if (tkeysresized > -1 & tkeysresized < 2)
+                    {
+                        List<string> ttimplementKindKeys = implementKindKeys.ToList();
+
+                        if (tcurrent_key == "var" )
                         {
-                            Array.Resize(ref implementKindKeys, implementKindKeys.Length - 1);
-                            tkeysresized = true;
+                            ttimplementKindKeys.Remove("var");
+                            tkeysresized++;
                         }
+                        if (tcurrent_key == "const" )
+                        {
+                            ttimplementKindKeys.Remove("const");
+                            tkeysresized++;
+                        }
+                    }
+                    if (tcounter > 2 & tcounter < 4)
+                    {
+                        List<string> ttimplementKindKeys = implementKindKeys.ToList();
+                        ttimplementKindKeys.Remove("var");
+                        ttimplementKindKeys.Remove("const");
+                        tkeysresized = -1;
+                        implementKindKeys = ttimplementKindKeys.ToArray();
+                    }
 
                     tnext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tcurr_string_count);
 
@@ -1490,11 +1719,7 @@ namespace Translator
                     tcurr_string_count++;
                 }
             }
-            if (tkeysresized)
-            {
-                Array.Resize(ref implementKindKeys, implementKindKeys.Length + 1);
-                implementKindKeys[implementKindKeys.Length - 1] = "const";
-            }
+            implementKindKeys = torigimplementKindKeys;
         }
         
         private void ParseImplementationMethod(string imethodtype, int icurr_string_count, ref int inext_subsection_pos, ref List<string> istrings, ref List<string> oclassnames, ref List<DelphiClassStrings> oclassimplementations)
@@ -1619,6 +1844,18 @@ namespace Translator
                     goto ActionFilter;
                 }
 
+                int k = 0;
+                //Check if var is a parameter
+                if (topenbracket_pos != -1)
+                {
+                    while ((tvar_pos <= tclosebracket_pos) && (tvar_pos >= topenbracket_pos))
+                    {
+                        //Look for more consts
+                        tvar_pos = FindNextSymbol(ref istrings, "var", icurr_string_count + k);
+                        k++;
+                    }
+                }
+
                 //If the var comes before the begin, then this belongs to our current function. 
                 if (tvar_pos < tnext_pos)
                     tnext_pos = tvar_pos;
@@ -1643,6 +1880,8 @@ namespace Translator
                 //Check if this const comes before "begin". If yes, then this is a sub-section declaration. Otherwise ignore.
                 if ((tconst_pos != -1) && (tconst_pos < tnext_pos))
                     tnext_pos = tconst_pos;
+                else if (tconst_pos < tbegin_pos)
+                { }
                 else
                     tconst_pos = -1;
             }
@@ -1682,7 +1921,7 @@ namespace Translator
                     List<string> tlist = ParseImplementationMethodBody(tclassname, ref istrings, ref treturnarray, tfuncstring, imethodtype, tnext_pos, inext_subsection_pos);
                     
 
-                    string theader = tlist[0];
+                    string theader = tlist[0].Replace("||","|");
                     tlist.RemoveAt(0);
                     oclassimplementations[i].AddMethodBody(theader, tlist, tvar_pos, tconst_pos, tbegin_pos, tnext_pos);
 
@@ -1757,6 +1996,14 @@ namespace Translator
                         inext_subsection_pos = FindNextKey(ref istrings, ref implementKindKeys, tnext_pos + told_string_count);
 
                         tlist = ParseImplementationMethodBody(tclassname, tactionstrings, ref treturnarray, tfuncstring, imethodtype, tnext_pos, tactionstrings.Count - 1);
+
+                        if (tbegin_pos > 1)
+                            tbegin_pos -= 2;
+                        if (tvar_pos > 1)
+                            tvar_pos -= 2;
+                        if (tconst_pos > 1)
+                            tconst_pos -= 2;
+
                         oclassimplementations[i].AddAction(theader, tlist, tvar_pos, tconst_pos, tbegin_pos);
                     }
                     icurr_string_count = told_string_count;
@@ -1776,7 +2023,9 @@ namespace Translator
 
             //Break down function elements
             string treturntype, tparameters, tmethodname;
-            string[] treturntypearray = ifuncstring.Split(')');
+            ifuncstring = ifuncstring.Replace("array of const", "arrofcont");
+            ifuncstring = ifuncstring.Replace("array of var", "arrofvr");
+            string[] treturntypearray = ifuncstring.Replace("array of ", "arrof").Split(')');
 
             //If there are no parameters
             if (treturntypearray.GetLength(0) == 1)
@@ -1810,18 +2059,85 @@ namespace Translator
                 tparameters = treturntypearray[1];
             }
 
+            //Check for multiple parameters of same type
+            if (tparameters.IndexOf(',') != -1)
+            {
+                //Break up parameters and stitch them back
+                string[] ttempparamarr = tparameters.Split(';');
+                string ttempparamstring = "";
+                tparameters = "";
+
+                for (int i=0; i<ttempparamarr.Length; i++)
+                {
+                    // Convert <Type1, Type2> to <Type1# Type2> to make parsing easier
+                    int tTemplateindex1 = ttempparamarr[i].IndexOf('<');
+                    int tTemplateindex2 = ttempparamarr[i].IndexOf('>');
+
+                    if (tTemplateindex1 != -1)
+                    {
+                        string[] tttempstrarr = ttempparamarr[i].Split('<');
+                        string[] tttempstrarr2 = tttempstrarr[1].Split('>');
+                        tttempstrarr2[0] = tttempstrarr2[0].Replace(',','#');
+                        ttempparamarr[i] = tttempstrarr[0] + "<" + tttempstrarr2[0] + ">" + tttempstrarr2[1];
+                    }
+
+                    string ttempconststr = "", ttempvarstr = "";
+
+                    if (ttempparamarr[i].IndexOf("const") != -1)
+                    {
+                        ttempconststr = "const ";
+                        ttempparamarr[i] = ttempparamarr[i].Replace("const", "");
+                    }
+
+                    if (ttempparamarr[i].IndexOf("var") != -1)
+                    {
+                        ttempvarstr = "var ";
+                        ttempparamarr[i] = ttempparamarr[i].Replace("var", "");
+                    }
+
+                    string[] ttempcommaarr = ttempparamarr[i].Split(',');
+                    string ttemppartype = ttempcommaarr[ttempcommaarr.Length - 1];
+                    ttemppartype = ttemppartype.Split(':')[1];
+                    string ttemppartname = ttempcommaarr[0].Split(':')[0];
+
+                    string tsemicolon = "";
+
+                    if (i > 0)
+                        tsemicolon = "; ";
+
+                    if (ttempcommaarr.Length > 1)
+                        ttempparamstring = ttempparamstring.Trim() + tsemicolon + ttempconststr + ttempvarstr + ttemppartname.Trim() + ": " + ttemppartype.Trim() + ";";
+                    else
+                        ttempparamstring = ttempparamstring.Trim() + tsemicolon + ttempconststr + ttempvarstr + ttemppartname.Trim() + ": " + ttemppartype.Trim();
+
+                    for (int j=1; j<ttempcommaarr.Length - 1; j++)
+                    {
+                        ttempparamstring = ttempparamstring.Trim() + ttempconststr + ttempvarstr + ttempcommaarr[j] + ": " + ttemppartype + "; ";
+                    }
+                    if (ttempcommaarr.Length > 1)
+                        ttempparamstring = ttempparamstring.Trim() + ttempconststr + ttempvarstr + ttempcommaarr[ttempcommaarr.Length - 1].Trim();
+                }
+                tparameters = ttempparamstring.Trim();
+                tparameters = tparameters.Replace('#', ',');
+            }
+
             string[] tparameter_array = tparameters.Split(';');
             tparameters = "";
             //Trim the parameters and stitch them back
             for (int i = 0; i < tparameter_array.GetLength(0); i++)
             {
                 string ttempparameter = tparameter_array[i].Replace("array of ", "arrof");
-                string[] tparameter = ttempparameter.Split(' ');
+                string[] tparameter = ttempparameter.Trim().Split(' ');
+                if (tparameter[0].Trim() == "var")
+                {
+                    tparameter[0] = tparameter[1];
+                    tparameter[1] = "object";
+                }
                 string tformatted_param = "";
                 for (int j = 0; j < tparameter.GetLength(0); j++)
                 {
                     if ((tparameter[j] != "") && (tparameter[j] != " "))
-                        tformatted_param = tformatted_param + "•" + tparameter[j].Replace("arrof", "array of ");
+                        tformatted_param = tformatted_param + "•" + tparameter[j].Replace("arrofvr", "array of var ").Replace("arrofcont", "array of const ").Replace("arrof", "array of ");
                 }
 
                 //Separate parameters with '|' and remove trailing and beginning spaces
@@ -2511,7 +2827,7 @@ namespace Translator
                                 ttempstr = iMethodStrings[ii].Trim();
                             }
                         }
-                        else if (ttempstr != "" && ttempstr[0] != '/')
+                        else if (ttempstr != "" && ttempstr[0] != '/' && ttempstr.IndexOf("end") == -1)
                         {
                             string tvarcomment = "";
                             string[] tvarcommentarr = tvar_str.Split("//".ToCharArray());
@@ -2729,6 +3045,11 @@ namespace Translator
 
         private List<Constant> StringToConstant(string istring)
         {
+            return StringToConstant(istring, false);
+        }
+
+        private List<Constant> StringToConstant(string istring, bool isstatic)
+        {
             List<Constant> tlist = new List<Constant>();
 
             string ttype = "", comment = "";
@@ -2780,7 +3101,7 @@ namespace Translator
                     ttype = tstr[tstr.GetLength(0) - 1] + "[]";
                     tname = tname.Replace("var", "");
                     tname = tname.Replace(" ", "");
-                    tlist.Add(new Constant(tname, ttype, tvalue, comment));
+                    tlist.Add(new Constant(tname, ttype, tvalue, comment, isstatic));
                 }
                 //Check for DATA TYPES that are Arrays
                 else if (tOpBracket != -1 && ((istring.IndexOf("low(") == -1) && (istring.IndexOf("high(") == -1)))
@@ -2791,7 +3112,7 @@ namespace Translator
                     ttype = tstr[tstr.GetLength(0) - 1];
                     tname = tname.Replace("var", "");
                     tname = tname.Replace(" ", "");
-                    tlist.Add(new Constant(tname, ttype, tvalue, comment));
+                    tlist.Add(new Constant(tname, ttype, tvalue, comment, isstatic));
                 }
                 else
                 {
@@ -2801,7 +3122,7 @@ namespace Translator
 
                     for (int i = 0; i < tnames.Length; i++)
                     {
-                        tlist.Add(StringToConstant(tnames[i], comment, 0));
+                        tlist.Add(StringToConstant(tnames[i], comment, 0, isstatic));
                     }
                 }
             }
@@ -2809,6 +3130,11 @@ namespace Translator
         }
 
         private Constant StringToConstant(string iconst, string icomment, int idummy)
+        {
+            return  StringToConstant(iconst, icomment, idummy, false);
+        }
+
+        private Constant StringToConstant(string iconst, string icomment, int idummy, bool isstatic)
         {
             Constant tout;
             string tname = "", tvalue = "", ttype = "";
@@ -2890,7 +3216,7 @@ namespace Translator
                 }
             }
 
-            tout = new Constant(tname, ttype, tvalue, icomment);
+            tout = new Constant(tname, ttype, tvalue, icomment, isstatic);
             return tout;
         }
 
@@ -2938,6 +3264,11 @@ namespace Translator
 
         private Variable StringToVariable(string istring, string itype, string icomment)
         {
+            return StringToVariable(istring, itype, icomment, false);
+        }
+
+        private Variable StringToVariable(string istring, string itype, string icomment, bool isstatic)
+        {
             Variable tout;
             string tname = "", ttype = "", tvalue = "", comment = icomment;
 
@@ -2961,7 +3292,7 @@ namespace Translator
             string ttemp = ttype.Trim();
             if ((ttemp == "integer") || (ttemp == "integer;"))
                 ttype = "int";
-            tout = new Variable(tname, ttype, tvalue, comment, false);
+            tout = new Variable(tname, ttype, tvalue, comment, isstatic);
             return tout;
         }
 
@@ -2972,7 +3303,14 @@ namespace Translator
 
         private List<Variable> StringToVariable(string istring, string icomment)
         {
+            return StringToVariable(istring, icomment, false);
+        }
+
+        private List<Variable> StringToVariable(string istring, string icomment, bool isstatic)
+        {
             List<Variable> tlist = new List<Variable>();
+            int tisinitialised = istring.IndexOf('=');
+
             string tfilterstring = istring.Trim();
             if (tfilterstring != "implementation" && tfilterstring != "type")
             {
@@ -2989,7 +3327,12 @@ namespace Translator
 
                     for (int i = 0; i < tnames.Length; i++)
                     {
-                        tlist.Add(StringToVariable(tnames[i], ttype, comment));
+                        if (tisinitialised != -1)
+                        {
+                            tlist.Add(StringToVariable(tnames[i] + tarr[2], ttype, comment, isstatic));
+                        }
+                        else
+                            tlist.Add(StringToVariable(tnames[i], ttype, comment, isstatic));
                         comment = "";
                     }
                 }
@@ -3024,7 +3367,7 @@ namespace Translator
             return tout;
         }
 
-        private TypeAlias StringToType(string istring)
+        public TypeAlias StringToType(string istring)
         {
             TypeAlias tout;
             string tname, ttype;
@@ -3092,7 +3435,7 @@ namespace Translator
 
                             for (int ii = 0; ii < tconstants_arr.Length; ii++)
                                 if (tconstants_arr[ii].Trim() != "")
-                                    tconstants.AddRange(StringToConstant(tconstants_arr[ii] + ";"));
+                                    tconstants.AddRange(StringToConstant(tconstants_arr[ii] + ";", true));
                         }
                     }
                 }
@@ -3158,7 +3501,7 @@ namespace Translator
                     {
                     }
 
-                    tvars.AddRange(StringToVariable(tvarglobal, tvarsGlobal_comment));
+                    tvars.AddRange(StringToVariable(tvarglobal, tvarsGlobal_comment, true));
                 }
             }
 

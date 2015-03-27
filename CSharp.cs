@@ -104,13 +104,16 @@ namespace Translator {
             classtype = "class";
             tout.Add("");
             tout.Add("//Class GlobalVars");
-            tout.Add(Indent(4) + "public " + classtype + " GlobalVars");
-            tout.Add(Indent(4) + "{");
+            int tGlobalVarInsert = tout.Count;
 
-            tout.AddRange(WriteClassBody(iscript.classes[0], ref telement_names));
-            tout.AddRange(WriteClassBody(iscript.classes[1], ref telement_names));
+            List<string> tGlobalVarClass = new List<string>();
+            tGlobalVarClass.Add(Indent(4) + "public " + classtype + " GlobalVars");
+            tGlobalVarClass.Add(Indent(4) + "{");
 
-            tout.Add(Indent(4) + "}");
+            tGlobalVarClass.AddRange(WriteClassBody(iscript.classes[0], ref telement_names));
+            tGlobalVarClass.AddRange(WriteClassBody(iscript.classes[1], ref telement_names));
+
+            tGlobalVarClass.Add(Indent(4) + "}");
 
             //Classes
             for (int i = 2; i < iscript.classes.Count; i++)
@@ -149,8 +152,11 @@ namespace Translator {
 
             tout.Add("}");
 
+            List<string> temptytypeslist = new List<string>();
+
             //Replace the local Globals used in the text
-            Translate.GlobalsRename(inamespace + "_Locals.", ref tout, olocals);
+            Translate.GlobalsRename(inamespace + ".GlobalVars.", ref tout, olocal_names, temptytypeslist);
+            tout.InsertRange(tGlobalVarInsert, tGlobalVarClass);
             return tout;
         }        
 
@@ -159,40 +165,52 @@ namespace Translator {
             obody.AddRange(WriteClassBody(iclass, ref onames));
         }
 
+        public string GetElementName(string iElement)
+        {
+            string tout = iElement;
+            string[] tarr = tout.Split('=');
+            tarr = tarr[0].Trim().Split(' ');
+            tout = tarr[tarr.Length-1].Replace(";","");
+            return tout;
+        }
+
         public List<string> WriteClassBody(Class iclass, ref List<string> oelement_names)
         {
             List<string> tout = new List<string>();
 
             for (int i = 0; i < iclass.constants.Count; i++)
             {
-                oelement_names.Add(iclass.constants[i].name);
-                tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(ConstantToString(iclass.constants[i])).Replace("==", "=").Replace(":", ""));
+                string tconststatic = "";
+                if (iclass.constants[i].isStatic)
+                    tconststatic = "static ";
+                tout.Add(Indent(4) + Indent(4) + "public " + tconststatic + Utilities.Beautify_Delphi2CS(ConstantToString(iclass.constants[i])).Replace("==", "=").Replace(":", ""));
+                oelement_names.Add(GetElementName(tout[tout.Count - 1]));
             }
 
             for (int i = 0; i < iclass.enums.Count; i++)
             {
-                oelement_names.Add(iclass.enums[i].name);
-                tout.Add(Indent(4) + Indent(4) + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(EnumToString(iclass.enums[i]))));
+                tout.Add(Indent(4) + Indent(4) + "public " + EnumToString(iclass.enums[i]));
+                oelement_names.Add(GetElementName(tout[tout.Count - 1]));
             }
 
             for (int i = 0; i < iclass.variables.Count; i++)
             {
-                oelement_names.Add(iclass.variables[i].name);
                 if (iclass.variables[i].isStatic)
-                    tout.Add(Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(VarToString(iclass.variables[i]))));
+                    tout.Add(Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(VarToString(iclass.variables[i]))).Replace("==", "=").Replace(";;", ";"));
                 else
-                    tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(VarToString(iclass.variables[i]))));
+                    tout.Add(Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(VarToString(iclass.variables[i]))).Replace("==", "=").Replace(";;", ";"));
+                oelement_names.Add(GetElementName(tout[tout.Count - 1]));
             }
 
             for (int i = 0; i < iclass.properties.Count; i++)
             {
-                oelement_names.Add(iclass.properties[i].name);
                 string tproperty = "";
                 if (iclass.properties[i].isStatic)
                     tproperty = (Indent(4) + Indent(4) + "public static " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
                 else
                     tproperty = (Indent(4) + Indent(4) + "public " + Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(PropertyToString(iclass.properties[i]))));
                 tout.Add(tproperty.Replace("/*", "{").Replace("*/", "}"));
+                oelement_names.Add(GetElementName(tout[tout.Count - 1]));
             }
 
             //for (int i = 0; i < iclass.types.Count; i++)
@@ -208,6 +226,11 @@ namespace Translator {
                 Function tfunc = iclass.functions[i];
 
                 List<string> tconvertedfunc = ConvertFunction(tfunc, ref iclass, i, false);
+                if (iclass.type == "i")
+                {
+                    tconvertedfunc.RemoveAt(tconvertedfunc.Count - 1);
+                    tconvertedfunc[tconvertedfunc.Count - 1] = tconvertedfunc[tconvertedfunc.Count - 1] + ";";
+                }
                 tout.AddRange(tconvertedfunc);
             }
 
@@ -268,108 +291,166 @@ namespace Translator {
             for (int j = 0; j < ifunction.commands.Count; j++)
             {
                 string tstr = ifunction.commands[j].Trim();
+
                 if (tstr != "end.")
                 {
                     //Remove all empty lines
                     if ((tstr != "") && (tstr != "\n"))
                     {
-                        tstr = Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(ifunction.commands[j]));
+                        //Preprocessing
+                        //Check for return statements
+                        if (tstr.IndexOf("EXIT;") != -1)
+                            if (ifunction.returnType != "")
+                                tstr = tstr.Replace("EXIT;", "return result;");
+
+                        if (tstr.IndexOf("while") != -1)
+                            if (tstr.IndexOf("(") == -1)
+                                tstr = tstr.Replace("while", "while(");
+
+                        //Processing
+                        tstr = Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(tstr));
+
+                        //Postprocessing
                         if (tstr != "")
                         {
                             if ((tstr.IndexOf("inherited") == -1) & (tstr.IndexOf("Inherited") == -1))
                                 tstr = tstr.Replace("Create(", tfunction_name + "(");
 
-                            if ((tstr.IndexOf("default") != -1) & (tstr.IndexOf("default:") == -1))
+                            if ((tstr.IndexOf("default") != -1) & (tstr.IndexOf(":") == -1))
                                 tstr = tstr.Replace("default", "new").Replace("(", "").Replace(")", "()") + "//TODO";
 
-                            //Add Semicolons
-                            if ((tstr.IndexOf("=") != -1) & (tstr[tstr.Length - 1] != ';') & (tstr.IndexOf("==") == -1) & ((tstr.IndexOf("for (") == -1) & (tstr.IndexOf("for(") == -1)))
-                                tstr = tstr + ';';
-                            //Check for loops
-                            else if  ((tstr.IndexOf("for (") != -1) || (tstr.IndexOf("for(") != -1))
+                            //Check for StringReplace
+                            if ((tstr.IndexOf("StringReplace") != -1))
                             {
-                                string ttempstr = tstr.Trim();
-                                string[] tfor_elements = ttempstr.Split(' ');
-                                string tfor_counter = tfor_elements[1].Split('(')[1];
-                                tstr = tstr.Replace("to", "; " + tfor_counter + " <");
-                                tstr = tstr.Substring(0,tstr.Length-1) + "; " + tfor_counter + "++ )";
+                                tstr = tstr.Replace("StringReplace", "WrapperUtilities.StringReplace").Replace("]", "}").Replace("[", "new string[] {").Replace("rfReplaceAll", "\"rfReplaceAll\"").Replace("rfIgnoreCase", "\"rfIgnoreCase\"");
                             }
-                            //Switch cases
-                            else if ((tstr.IndexOf("case (") != -1) || (tstr.IndexOf("case(") != -1))
+                            else if ((tstr.IndexOf("SetLength") != -1))
                             {
-                                tstr = tstr.Replace("case", "switch").Replace("of", "{");
-
-                                int tswitchbegincounter = 0;
-                                int tswitchcounter = j + 1;
-                                int tswitchstart = j;
-                                while (tswitchbegincounter > -1 & tswitchcounter < ifunction.commands.Count)
+                                tstr = tstr.Replace("SetLength", "WrapperUtilities.SetLength").Replace("(", "( ref ");
+                            }
+                            else if ((tstr.IndexOf("Inc(") != -1))
+                            {
+                                tstr = tstr.Replace("Inc(", "WrapperUtilities.Inc(").Replace("(", "( ref ");
+                            }
+                            else if ((tstr.IndexOf("FillChar") != -1))
+                            {
+                                tstr = tstr.Replace("(", "( ref ");
+                            }
+                            else if ((tstr.IndexOf("SHGetSpecialFolderPath") != -1))
+                            {
+                                tstr = tstr.Replace(",", ",ref").Replace("ref false", "false").Replace("ref true", "true");
+                            }                                
+                            else
+                            {
+                                //Add Semicolons
+                                if ((tstr.IndexOf("=") != -1) & (tstr[tstr.Length - 1] != ';') & (tstr.IndexOf("==") == -1) & ((tstr.IndexOf("for (") == -1) & (tstr.IndexOf("for(") == -1)))
+                                    tstr = tstr + ';';
+                                //Check for loops
+                                else if ((tstr.IndexOf("for (") != -1) || (tstr.IndexOf("for(") != -1))
                                 {
-                                    string tswitchcommand = ifunction.commands[tswitchcounter].Trim();
-
-                                    if (tswitchcommand != "")
+                                    string ttempstr = tstr.Trim();
+                                    string[] tfor_elements = ttempstr.Split(' ');
+                                    string tfor_counter = tfor_elements[1].Split('(')[1];
+                                    tstr = tstr.Replace("to", "; " + tfor_counter + " <=");
+                                    tstr = tstr.Substring(0, tstr.Length - 1) + "; " + tfor_counter + "++ )";
+                                }
+                                //Switch cases
+                                else if (((tstr.IndexOf("case ") != -1) || (tstr.IndexOf("case (") != -1) || (tstr.IndexOf("case(") != -1)) && (tstr.IndexOf(":") == -1) )
+                                {
+                                    if ((tstr.IndexOf("case ") != -1) && (tstr.IndexOf(" of") != -1) && (tstr.IndexOf("case (") == -1))
                                     {
-                                        if (tswitchcommand[0] == '/')
-                                        {
-                                            ifunction.commands[tswitchcounter] = "";
-                                        }
-                                        else if (tswitchcommand == "begin")
-                                        {
-                                            tswitchbegincounter++;
-                                            //ifunction.commands[tswitchcounter] = "{";
-                                        }
-                                        else if (tswitchcommand == "end;" || tswitchcommand == "end")
-                                        {
-                                            tswitchbegincounter--;
-                                            ifunction.commands[tswitchcounter] = "End;";
-                                        }
-                                        //Add default case
-                                        else if (tswitchcommand == "else")
-                                        {
-                                            ifunction.commands[tswitchcounter] = "default:";
-                                        }
+                                        tstr = tstr.Replace("case", "switch(").Replace("of", "){");
                                     }
+                                    else if ((tstr.IndexOf("case (") != -1) || (tstr.IndexOf("case(") != -1))
+                                    {
+                                        tstr = tstr.Replace("case", "switch").Replace("of", "{");
+                                    }
+                                    int tswitchbegincounter = 0;
+                                    int tswitchcounter = j + 1;
+                                    int tswitchstart = j;
+                                    while (tswitchbegincounter > -1 & tswitchcounter < ifunction.commands.Count)
+                                    {
+                                        string tswitchcommand = ifunction.commands[tswitchcounter].Trim();
+
+                                        if (tswitchcommand != "")
+                                        {
+                                            if (tswitchcommand[0] == '/')
+                                            {
+                                                ifunction.commands[tswitchcounter] = "";
+                                            }
+                                            else if (tswitchcommand == "begin")
+                                            {
+                                                tswitchbegincounter++;
+                                                //ifunction.commands[tswitchcounter] = "{";
+                                            }
+                                            else if (tswitchcommand == "end;" || tswitchcommand == "end")
+                                            {
+                                                tswitchbegincounter--;
+                                                ifunction.commands[tswitchcounter] = "End;";
+                                            }
+                                            //Add default case
+                                            else if (tswitchcommand == "else")
+                                            {
+                                                ifunction.commands[tswitchcounter] = "default:";
+                                            }
+                                        }
+                                        tswitchcounter++;
+                                    }
+                                    ifunction.commands.Insert(tswitchcounter - 1, "break;");
                                     tswitchcounter++;
-                                }
-                                ifunction.commands.Insert(tswitchcounter - 1, "break;");
-                                tswitchcounter++;
 
-                                int toldk = tswitchstart + 1;
-                                for (int k = tswitchstart + 1; k < tswitchcounter; k++)
-                                {
-                                    string tswitchcommand = ifunction.commands[k];
-                                    string tcasename = "";
-                                    List<string> tcasebody = new List<string>();
-                                    //Add all the cases
-                                    if (tswitchcommand.IndexOf(':') != -1 & tswitchcommand.IndexOf(":=") == -1)
+                                    int toldk = tswitchstart + 1;
+                                    int k = 0;
+                                    for (k = tswitchstart + 1; k < tswitchcounter && k < ifunction.commands.Count; k++)
                                     {
-                                        tcasename = tswitchcommand;
-                                        k++;
-                                        string tnextcase = ifunction.commands[k];
-                                        int tcurrcommandcounter = k;
-
-                                        while (k < tswitchcounter & (tnextcase.IndexOf(':') == -1 || tnextcase.IndexOf(":=") != -1))
+                                        string tswitchcommand = ifunction.commands[k];
+                                        string tcasename = "";
+                                        List<string> tcasebody = new List<string>();
+                                        //Add all the cases
+                                        if (tswitchcommand.IndexOf(':') != -1 & tswitchcommand.IndexOf(":=") == -1)
                                         {
-                                            tcasebody.Add(tnextcase);
+                                            tcasename = tswitchcommand;
                                             k++;
-                                            tnextcase = ifunction.commands[k];
-                                        }
+                                            string tnextcase = ifunction.commands[k];
+                                            int tcurrcommandcounter = k;
 
-                                        //Check for multiple cases
-                                        string[] tcasesarr = tcasename.Split(',');
-                                        List<string> tconvertedswitchcommands = new List<string>();
+                                            while (k < tswitchcounter & (tnextcase.IndexOf(':') == -1 || tnextcase.IndexOf(":=") != -1))
+                                            {
+                                                tcasebody.Add(tnextcase);
+                                                k++;
+                                                tnextcase = ifunction.commands[k];
+                                            }
 
-                                        for (int l = 0; l < tcasesarr.Length; l++)
-                                        {
-                                            tconvertedswitchcommands.Add("case " + tcasesarr[l].Trim().Replace(':', ' ') + ":    ");
-                                            tconvertedswitchcommands.AddRange(tcasebody);
-                                            tconvertedswitchcommands.Add("break;");
+                                            //Check for multiple cases
+                                            string[] tcasesarr = tcasename.Split(',');
+                                            List<string> tconvertedswitchcommands = new List<string>();
+
+                                            for (int l = 0; l < tcasesarr.Length; l++)
+                                            {
+                                                string tcasestring = tcasesarr[l].Trim().Replace(':', ' ');
+
+                                                if (tcasestring.IndexOf("default") != -1)
+                                                {
+                                                    tconvertedswitchcommands.Add(tcasestring + ":    ");
+                                                }
+                                                else
+                                                {
+                                                    tconvertedswitchcommands.Add("case " + tcasestring + ":    ");
+                                                }
+
+                                                tconvertedswitchcommands.AddRange(tcasebody);
+                                                tconvertedswitchcommands.Add("break;");
+                                            }
+                                            ifunction.commands.RemoveRange(toldk, k - toldk);
+                                            tswitchcounter = tswitchcounter + tconvertedswitchcommands.Count - k + toldk;
+                                            k = toldk + tconvertedswitchcommands.Count - 1;
+                                            ifunction.commands.InsertRange(toldk, tconvertedswitchcommands);
+                                            toldk = toldk + tconvertedswitchcommands.Count;
                                         }
-                                        ifunction.commands.RemoveRange(toldk, k - toldk);
-                                        ifunction.commands.InsertRange(toldk, tconvertedswitchcommands);
-                                        toldk = toldk + tconvertedswitchcommands.Count;
+                                        //j = tswitchcounter;
                                     }
+                                    ifunction.commands.RemoveRange(toldk - 1, 1);
                                 }
-                                //j = tswitchcounter;
                             }
                         }
                     }
@@ -377,6 +458,13 @@ namespace Translator {
                     //Check if output is empty
                     if ((tstr != "") && (tstr != "\n"))
                     {
+                        if (tstr.IndexOf("return result;") != -1)
+                            if (treturn_type.Trim() == "void")
+                            {
+                                tbody.Add(Indent(4) + Indent(4) + Indent(4) + "return;");
+                                tstr = "";
+                            }
+
                         //If line is only "Exit;", check for type to return
                         if (tstr.IndexOf("Exit;") != -1)
                         {
@@ -386,7 +474,7 @@ namespace Translator {
                                 tbody.Add(Indent(4) + Indent(4) + Indent(4) + "return;");
                         }
                         else
-                            tbody.Add(Indent(4) + Indent(4) + tstr);
+                            tbody.Add(Indent(4) + Indent(4) + Indent(4) + tstr);
                     }
                 }
             }
@@ -455,24 +543,83 @@ namespace Translator {
             if (ifunction.isAbstract)
                 tattributes += "abstract ";
 
+            //Replace "array of" with "[]"
+            string[] ttempparamarr = tparam_string.Split(' ');
+            string ttempparamstr = "";
+
+            for (int k = 0; k < ttempparamarr.Length; k++)
+            {
+                if (ttempparamarr[k] == "array")
+                {
+                    ttempparamarr[k] = "";
+                    k++;
+                    ttempparamarr[k] = "";
+                    k++;
+                    ttempparamarr[k] = ttempparamarr[k] + "[]";
+                }
+                ttempparamstr = ttempparamstr + " " + ttempparamarr[k];
+            }
+            tparam_string = ttempparamstr.Trim();
+
+            ttempparamarr = treturn_type.Split(' ');
+            ttempparamstr = "";
+            for (int k = 0; k < ttempparamarr.Length; k++)
+            {
+                if (ttempparamarr[k] == "array")
+                {
+                    ttempparamarr[k] = "";
+                    k++;
+                    ttempparamarr[k] = "";
+                    k++;
+                    ttempparamarr[k] = ttempparamarr[k] + "[]";
+                }
+                ttempparamstr = ttempparamstr + " " + ttempparamarr[k];
+            }
+            treturn_type = ttempparamstr.Trim();
+
+
             //Method Definition (attributes + return type + name + parameters + inheritance)
-            tout.Add(Indent(4) + Indent(4) + "public " + tattributes + treturn_type + " " + tfunction_name + "(" + Utilities.Beautify_Delphi2CS(tparam_string) + ")" + tinheritance + tspecialconstructor);
+            tout.Add(Indent(4) + Indent(4) + "public " + tattributes + Utilities.Beautify_Delphi2CS(treturn_type) + " " + tfunction_name + "(" + Utilities.Beautify_Delphi2CS(tparam_string) + ")" + tinheritance + tspecialconstructor);
 
             tout.Add(Indent(4) + Indent(4) + "{");
 
             treturn_type = treturn_type.Trim();
 
             //Add 'result'
-            if (treturn_type != "void" & treturn_type != "")
-                tout.Add(Indent(4) + Indent(4) + Indent(4) + treturn_type + " result;");
+            if (treturn_type != "void" & treturn_type != "" & iclass.type != "i")
+            {
+                if ((treturn_type == "ansistring") || (treturn_type == "widestring") || (treturn_type == "unicodestring") || (treturn_type == "string") || (treturn_type == "delphistring"))
+                    tout.Add(Indent(4) + Indent(4) + Indent(4) + VarToString(new Variable("result", treturn_type, "\"" + "\"", "", false)));
+                else if ((treturn_type.IndexOf("TArray") != -1 || (treturn_type.IndexOf("TList") != -1)))
+                    tout.Add(Indent(4) + Indent(4) + Indent(4) + VarToString(new Variable("result", treturn_type, "null", "", false)));
+                else
+                    tout.Add(Indent(4) + Indent(4) + Indent(4) + VarToString(new Variable("result", treturn_type, "", "", false)));
+            }
 
             //Method Constants
             for (int j = 0; j < ifunction.constants.Count; j++)
+            {
+                string ttemptype = ifunction.constants[j].type.Replace(';', ' ').Trim();
+
+                if ((ttemptype == "ansistring") || (ttemptype == "widestring") || (ttemptype == "unicodestring") || (ttemptype == "string") || (ttemptype == "delphistring"))
+                    if (ifunction.constants[j].value == "")
+                        ifunction.constants[j].value = "\"" + "\"";
+
                 tout.Add(Indent(4) + Indent(4) + Indent(4) + ConstantToString(ifunction.constants[j]));
+            }
 
             //Method Variables
             for (int j = 0; j < ifunction.variables.Count; j++)
+            {
+                string ttemptype = ifunction.variables[j].type.Replace(';',' ').Trim();
+
+                if ((ttemptype == "ansistring") || (ttemptype == "widestring") || (ttemptype == "unicodestring") || (ttemptype == "string") || (ttemptype == "delphistring") || (ttemptype == "PWideChar"))
+                    ifunction.variables[j].value = "\"" + "\"";
+                else if ((ttemptype.IndexOf("TArray") != -1 || (ttemptype.IndexOf("TList") != -1)))
+                    ifunction.variables[j].value =  "null";
+
                 tout.Add(Indent(4) + Indent(4) + Indent(4) + VarToString(ifunction.variables[j]));
+            }
 
             if (tbody.Count > 0)
             {
@@ -492,10 +639,10 @@ namespace Translator {
                     }
                 }
             }
-            return_over:
+        return_over:
 
             tout.AddRange(tbody);
-
+            tout[tout.Count - 1] = Indent(4) + Indent(4) + tout[tout.Count - 1].Trim();
             //tout.Add(Indent(4) + Indent(4) + "}");
             
             return tout;
@@ -503,7 +650,7 @@ namespace Translator {
 
         public string ConstantToString(Constant iconst)
         {
-            return iconst.type + " " + iconst.name + " = " + iconst.value + ";";
+            return Utilities.Beautify_Delphi2CS(iconst.type) + " " + iconst.name + " = " + iconst.value + ";";
         }
 
         public string EnumToString(Enum ienum)
@@ -512,10 +659,13 @@ namespace Translator {
 
             for (int i = 0; i < ienum.enums.Count - 1; i++)
             {
-                tout = tout + ConstantToString(ienum.enums[i]) + ", ";
+                if (ienum.enums[i].name != null)
+                    tout = tout + ienum.enums[i].name + "=" + ienum.enums[i].value.Replace(";","") + ", ";
             }
 
-            tout = tout + ConstantToString(ienum.enums[ienum.enums.Count - 1]) + " };";
+            if (ienum.enums[ienum.enums.Count - 1].name != null)
+                tout = tout + ienum.enums[ienum.enums.Count - 1].name + "=" + ienum.enums[ienum.enums.Count - 1].value.Replace(";", "") + " };";
+
             return tout;
         }
 
@@ -532,10 +682,15 @@ namespace Translator {
 
             //Remove type name from ivar.name
             ivar.name = ivar.name.Replace("class", "").Replace("var", "");
-            ivar.type = ivar.type.Replace(";", "");
+            ivar.type = Utilities.Beautify_Delphi2CS(ivar.type.Replace(";", "").Trim());
+
+            //For 'var' types
+            if (ivar.type.Trim() == "")
+                ivar.type = "object";
+
             string tout = "";
-            
-            if (ivar.value != "" )
+
+            if (ivar.value != "")
                 tout = ivar.type + " " + ivar.name + " = " + ivar.value + ";" + ivar.comment;
             else
                 tout = ivar.type + " " + ivar.name + ";" + ivar.comment;

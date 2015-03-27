@@ -11,13 +11,24 @@ using System.Windows.Threading;
 using System.Windows.Forms;
 using System.Collections.ObjectModel;
 using System.Xml;
+using DelphiToCSTranslator;
 
 namespace Translator
 {
-    public struct ReferenceStruct
+    public class ReferenceStruct
     {
         public string name;
-        public List<string> globals, locals;
+        public List<string> globals, types;
+
+        public ReferenceStruct(string iname, List<string> iglobals)
+        {
+            name = iname;
+            globals = iglobals;
+        }
+
+        public ReferenceStruct()
+        {
+        }
     }
 
     public partial class s : Form
@@ -68,7 +79,7 @@ namespace Translator
 
         private void GUI_Load(object sender, EventArgs e)
         {
-            standardDelphiReferences = new List<string> { "+DelphiStandardWrapper", "-System.Generics.Collections", "-Generics.Defaults", "Generics.Collections / System.Collections.Generic", 
+            standardDelphiReferences = new List<string> { "+DelphiStandardWrapper", "-IOUtils", "-ShlObj", "-Types", "-IniFiles", "-Math", "-Messages", "-Dialogs", "-System.Generics.Collections", "-Generics.Defaults", "-TypInfo", "-RTTI", "-Variants", "-Classes", "Generics.Collections / System.Collections.Generic", 
             "SysUtils / String System", "System / System", "Windows / System.Windows", "Forms / System.Windows.Forms" };
 
             List<string> tignoreDelphiLibraries = new List<string> { "dclOfficeXP", "adortl150", "bdertl150", "cxDataD15", "cxEditorsD15", "cxExportD15", "cxExtEditorsD15", "cxGridD15", 
@@ -282,5 +293,42 @@ namespace Translator
         {
 
         }
+
+        private void testBtn_Click(object sender, EventArgs e)
+        {
+            listBox1.Text = "Test started..."+ Environment.NewLine;
+            Start();
+        }
+
+        async public void Start()
+        {
+            Task doWorkTask = Worker();
+            await doWorkTask;
+        }
+
+        async Task Worker()
+        {
+            await Task.Run(() =>
+            {
+                string message = String.Empty;
+                if(checkLibs.Checked)
+                   message += TranslateTest.DelphiToCSConversionTest(Path.Combine(BoxDest.Text, @"Libs"), @"..\..\DelphiConversionTest\CorrectOutput", checkLogFileNotFound.Checked);
+                if(checkApps.Checked)
+                    message += TranslateTest.DelphiToCSConversionTest(Path.Combine(BoxDest.Text, @"Apps"), @"..\..\DelphiConversionTest\CorrectOutput", checkLogFileNotFound.Checked);
+                if(checkPlugins.Checked)
+                    message += TranslateTest.DelphiToCSConversionTest(Path.Combine(BoxDest.Text, @"Plugins"), @"..\..\DelphiConversionTest\CorrectOutput", checkLogFileNotFound.Checked);
+                
+                BeginInvoke((Action)(() =>
+                {
+                    listBox1.Text += message;
+                }));
+            });
+        }
+
+        private void BoxThreadingEnabled_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
     }
 }

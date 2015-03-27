@@ -101,23 +101,35 @@ namespace Translator
             return istring;
         }
 
-        public static string[] Delphi_CSRegexTypes = {"TList", "boolean", "Boolean", "integer", "Integer", 
+        public static string[] Delphi_CSRegexTypes = {"TList", "boolean", "Boolean", "integer", "Integer", "Longint",
                                                     "word", "Word", "dword", "Dword", "shortstring", "Shortstring", 
-                                                    "Real", "real", "begin", "end;", "end.", "Double", "extended", "Extended", "string", "var", "do", "End;"},
+                                                    "Real", "real", "begin", "end;", "end.", "Double", "extended", "Extended", 
+                                                    "string", "var", "do", "End;", "Copy", "copy", "int64", "Int64", "variant", "ansistring", "widestring", "unicodestring", "TObject",
+                                                     "try", "finally", "end", "PWideChar"},
 
-            Delphi_CSRegexTypesSubstitutes = { "List", "bool", "bool", "int", "int", 
+            Delphi_CSRegexTypesSubstitutes = { "List", "bool", "bool", "int", "int", "int",
                                             "uint", "uint", "uint", "uint", "string", "string", 
-                                            "double", "double", "{", "}", "", "double", "double", "double", "delphistring", "ref", ")", "}"},
+                                            "double", "double", "{", "}", "", "double", "double", "double", 
+                                            "delphistring", "ref", ")", "}", "WrapperUtilities.Copy", "WrapperUtilities.Copy", "long", "long", "System.Object", "delphistring", "delphistring", "delphistring", "object",
+                                             "try{", "}finally{", "}", "delphistring"},
 
             Delphi_CSNonRegexTypes = { "#", "'", " and ", " or ", 
                                   "xor ", "not ", "=", "low(Integer)", "EXIT(", "EXIT;", ":==", "<>", "shr", "shl", 
-                                  "\n", "if", "then", "FreeAndNil", "TList<", "self.", "(self)", ".Delete(", "end;", "Assigned(", "CompareStr", "CompareText", "Result", "function", "for ", 
-                                  "high(", "IntToStr", "FloatToStr", ".VType", "vtInteger", "vtInt64", "vtUnicodeString", "vtExtended", "^", "integer", "Integer"},
+                                  "\n", "if", "then", "SysUtils.FreeAndNil", "FreeAndNil", "TList<", "self.", "(self)", ".Delete(", "end;", "Assigned(", "CompareStr", "CompareText", "Result", "function", "for ", 
+                                  "high(", "IntToStr", "FloatToStr", ".VType", "vtInteger", "vtInt64", "vtUnicodeString", "vtExtended", "^", "integer", "Integer", "BREAK", "SetLength(", "Copy(", "copy(", 
+                                  "length(", "Length(", "Pos(", "SysLocale", "StrToFloat", "StrToInt", "<boolean", "boolean>", " FormatSettings", ".ClassName", ".UnitName", "Unassigned", 
+                                  "VarIsEmpty", "FileExists", "FileCreate", "FileClose", "nil", "SameText", " variant", 
+                                  "StrAlloc", "FillChar", "SHGetSpecialFolderPath", "StrDispose", "MAX_PATH", "CSIDL_", " TArray",
+                                     "FindFirst("},
 
             Delphi_CSNonRegexSubstitutes = { "(char)", "\"", " && ", " || ", 
                                                "^ ", "! ", "==", "0*", "result = (", "return;", "=", "!=", ">>", "<<", 
-                                               "", "if(", ")", "//FreeAndNil", "List<", "", "(this)", ".RemoveAt(", "}", "WrapperUtilities.Assigned(", "delphistring.CompareDelphiString", "delphistring.CompareDelphiString", "result", "", "for (", 
-                                               "ArrayUtilities.high(", "StringUtils.IntToStr", "StringUtils.FloatToStr", ".GetType().Name", "\"int\"", "\"long\"", "\"delphistring\"", "\"double\"", "", "int", "int"};
+                                               "", "if(", ")", "//SysUtils.FreeAndNil", "//FreeAndNil", "List<", "", "(this)", ".RemoveAt(", "}", "WrapperUtilities.Assigned(", "delphistring.CompareDelphiString", "delphistring.CompareDelphiString", "result", "", "for (", 
+                                               "ArrayUtilities.high(", "StringUtils.IntToStr", "StringUtils.FloatToStr", ".GetType().Name", "\"int\"", "\"long\"", "\"delphistring\"", "\"double\"", "", "int", "int", "break", "WrapperUtilities.SetLen( ref ", "WrapperUtilities.Copy(", "WrapperUtilities.Copy(", 
+                                               "WrapperUtilities.length(", "WrapperUtilities.Length(", "WrapperUtilities.Pos(", "SysUtils.Instance.SysLocale", "WrapperUtilities.StrToFloat", "WrapperUtilities.StrToInt", "<bool", "bool>", " SysUtils.Instance.FormatSettings", ".GetType().Name", ".GetType().Namespace", "null", 
+                                               "WrapperUtilities.VarIsEmpty", "WrapperUtilities.FileExists", "WrapperUtilities.FileCreate", "WrapperUtilities.FileClose", "null", "WrapperUtilities.SameText", " System.Object",
+                                           "WrapperUtilities.StrAlloc", "WrapperUtilities.FillChar", "WrapperUtilities.SHGetSpecialFolderPath", "WrapperUtilities.StrDispose", "0", "(int)WrapperUtilities.CSIDL.CSIDL_", " DelphiStandardWrapper.TArray",
+                                           "WrapperUtilities.FindFirst("};
 
         public static string ReplaceElementsInStringRegex(string istring, ref string[] iElementList, ref string[] iSubstitutesList)
         {
@@ -151,6 +163,11 @@ namespace Translator
 
         public static string Beautify_Delphi2CS(string istring)
         {
+            if (istring == null)
+                return "";
+            else if (istring == "")
+                return "";
+
             //Change comments from { to //
             istring = istring.Replace("{", "/*").Replace("}", "*/");
 

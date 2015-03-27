@@ -167,11 +167,15 @@ namespace Translator
             //Write .sln to disk
 
             //Replace global strings from references in files
-            ResolveReferences(ref delphiParsedFiles, ref delphiReferences);
+            ResolveReferences(ref delphiParsedFiles);
         }
 
-        private void ResolveReferences( ref List<Translate> iDelphi, ref List<ReferenceStruct> iReferences)
+        private void ResolveReferences( ref List<Translate> iDelphi)
         {
+            List<ReferenceStruct> treferences = new List<ReferenceStruct>();
+            for (int i = 0; i < iDelphi.Count; i++)
+                treferences.Add(iDelphi[i].globals);
+
             //Loop through all files and check their references
             for (int i=0; i < iDelphi.Count; i++)
             {                
@@ -179,13 +183,13 @@ namespace Translator
                 for (int j = 0; j < iDelphi[i].IL.script.includes.Count; j++)
                 {
                     //If it is a reference to a project in the solution
-                    if (isSolutionReference(iDelphi[i].IL.script.includes[j]))
-                        ReplaceReferenceGlobalStringsInFile(iDelphi[i].IL.outPath, iDelphi[i].IL.script.includes[j], ref iReferences);
+                    if (isNotSolutionReference(iDelphi[i].IL.script.includes[j]))
+                        ReplaceReferenceGlobalStringsInFile(iDelphi[i].outPathCS + "\\" + iDelphi[i].filename + ".cs", iDelphi[i].IL.script.includes[j], ref treferences);
                 }
             }
         }
 
-        public bool isSolutionReference(string iReference)
+        public bool isNotSolutionReference(string iReference)
         {
             for (int i = 0; i < delphiStandardReferences.Count; i++)
             {
@@ -204,7 +208,7 @@ namespace Translator
             {
                 if (iReferences[i].name == iReferenceName)
                 {
-                    Translate.GlobalsRename(iReferenceName + "_Globals.", ref itext, iReferences[i].globals);
+                    Translate.GlobalsRename(iReferenceName + ".GlobalVars.", ref itext, iReferences[i].globals, iReferences[i].types);
                 }
             }
             File.WriteAllLines(iFilepath, itext, Encoding.UTF8);
@@ -398,10 +402,7 @@ namespace Translator
                 AnalyzeFolder(directories[i], iOutPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], tcurr_patch_path, tcurr_override_path, iILPath + "\\" + tpath_elements[tpath_elements.GetLength(0) - 1], ref oReferences, ref oDelphi, ref iStandardReferences, ref iDelphiStandardReferences, ref standardCSReferences, iform);
             }
         }
-
-
-
-
+        
         private void ConvertDelphiFiles(ref List<Translate> oDelphi, s iform)
         {
             if (threadingEnabled)
@@ -437,8 +438,7 @@ namespace Translator
                     }
                 }
         }
-
-
+        
         public void ReadProj(string ipath, string ioutpath, XmlDocument icsproj)
         {
             //Get output path
@@ -624,11 +624,12 @@ namespace Translator
             return stream;
         }
     }
-
+    
     public class Translate
     {
         public Delphi IL;
         public CSharp CS;
+        public ReferenceStruct globals = new ReferenceStruct();
         public string filename;
         public string path, directory, outPath, patchPath, patchFile, overridePath, overrideFile, outPathCS;
         public LogDelegate log;
@@ -691,6 +692,37 @@ namespace Translator
                     x.Serialize(writer, tdelphi, ns);
 
                 IL = tdelphi;
+
+                List<string> tglobalnames = new List<string>();
+                List<string> tglobaltypes = new List<string>();
+
+                for (int i = 0; i < tdelphi.ConstsGlobal.Count; i++ )
+                {
+                    string[] tstrarr = tdelphi.ConstsGlobal[i].Trim().Split(' ');
+                    tglobalnames.Add(tstrarr[0]);
+                }
+
+                for (int i = 0; i < tdelphi.EnumsGlobal.Count; i++)
+                {
+                    string[] tstrarr = tdelphi.EnumsGlobal[i].Trim().Split(' ');
+                    tglobalnames.Add(tstrarr[0]);
+                }
+
+                for (int i = 0; i < tdelphi.VarsGlobal.Count; i++)
+                {
+                    string[] tstrarr = tdelphi.VarsGlobal[i].Trim().Split(' ');
+                    tglobalnames.Add(tstrarr[0]);
+                }
+
+                for (int i = 0; i < tdelphi.TypesGlobal.Count; i++)
+                {
+                    //string[] tstrarr = tdelphi.TypesGlobal[i].Trim().Split(' ');
+                    //tglobaltypes.Add(tdelphi.TypesGlobal[i].Trim());//tstrarr[0]);
+                    CSharp tsharp = new CSharp();
+                    tglobaltypes.Add(Utilities.Beautify_Delphi2CS(Utilities.Delphi2CSRules(tsharp.TypeToString(tdelphi.StringToType(tdelphi.TypesGlobal[i].Trim()))).Replace(";;", ";")).Replace("==", "=").Trim());
+                }
+                globals = new ReferenceStruct(filename, tglobalnames);
+                globals.types = tglobaltypes;
             }
             else
                 overriden = true;
@@ -745,8 +777,18 @@ namespace Translator
         }
 
         //Append a string to a list of words if found in text
-        public static void GlobalsRename(string iappendName, ref List<string> itext, List<string> isearchWords)
+        public static void GlobalsRename(string iappendName, ref List<string> itext, List<string> isearchWords, List<string> itypealias)
         {
+            int tinsertpos = 0;
+            for (int i = 0; i < itext.Count; i++)
+                if (itext[i].IndexOf("/*Types End*/") != -1)
+                {
+                    tinsertpos = i - 1;
+                    break;
+                }
+
+            itext.InsertRange(tinsertpos, itypealias);
+
             for (int i = 0; i < itext.Count; i++)
                 for (int j = 0; j < isearchWords.Count; j++)
                     itext[i] = itext[i].Replace(isearchWords[j], iappendName + isearchWords[j]);

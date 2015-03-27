@@ -60,6 +60,13 @@
             this.ButtonGroupProj = new System.Windows.Forms.Button();
             this.richTextBox2 = new System.Windows.Forms.RichTextBox();
             this.label8 = new System.Windows.Forms.Label();
+            this.testBtn = new System.Windows.Forms.Button();
+            this.checkLogFileNotFound = new System.Windows.Forms.CheckBox();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.checkLibs = new System.Windows.Forms.CheckBox();
+            this.checkApps = new System.Windows.Forms.CheckBox();
+            this.checkPlugins = new System.Windows.Forms.CheckBox();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // BtnSource
@@ -215,6 +222,7 @@
             this.BoxThreadingEnabled.Size = new System.Drawing.Size(15, 14);
             this.BoxThreadingEnabled.TabIndex = 17;
             this.BoxThreadingEnabled.UseVisualStyleBackColor = true;
+            this.BoxThreadingEnabled.CheckedChanged += new System.EventHandler(this.BoxThreadingEnabled_CheckedChanged);
             // 
             // BoxIL
             // 
@@ -342,11 +350,83 @@
             this.label8.TabIndex = 31;
             this.label8.Text = "Delphi library ignore list";
             // 
+            // testBtn
+            // 
+            this.testBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.testBtn.Location = new System.Drawing.Point(380, 91);
+            this.testBtn.Name = "testBtn";
+            this.testBtn.Size = new System.Drawing.Size(75, 23);
+            this.testBtn.TabIndex = 32;
+            this.testBtn.Text = "Test";
+            this.testBtn.UseVisualStyleBackColor = true;
+            this.testBtn.Click += new System.EventHandler(this.testBtn_Click);
+            // 
+            // checkLogFileNotFound
+            // 
+            this.checkLogFileNotFound.AutoSize = true;
+            this.checkLogFileNotFound.Location = new System.Drawing.Point(20, 19);
+            this.checkLogFileNotFound.Name = "checkLogFileNotFound";
+            this.checkLogFileNotFound.Size = new System.Drawing.Size(144, 17);
+            this.checkLogFileNotFound.TabIndex = 33;
+            this.checkLogFileNotFound.Text = "Log correct file not found";
+            this.checkLogFileNotFound.UseVisualStyleBackColor = true;
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.checkPlugins);
+            this.groupBox1.Controls.Add(this.checkApps);
+            this.groupBox1.Controls.Add(this.checkLibs);
+            this.groupBox1.Controls.Add(this.checkLogFileNotFound);
+            this.groupBox1.Controls.Add(this.testBtn);
+            this.groupBox1.Location = new System.Drawing.Point(571, 123);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(461, 120);
+            this.groupBox1.TabIndex = 34;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Test";
+            // 
+            // checkLibs
+            // 
+            this.checkLibs.AutoSize = true;
+            this.checkLibs.Checked = true;
+            this.checkLibs.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkLibs.Location = new System.Drawing.Point(20, 42);
+            this.checkLibs.Name = "checkLibs";
+            this.checkLibs.Size = new System.Drawing.Size(69, 17);
+            this.checkLibs.TabIndex = 34;
+            this.checkLibs.Text = "Test Libs";
+            this.checkLibs.UseVisualStyleBackColor = true;
+            // 
+            // checkApps
+            // 
+            this.checkApps.AutoSize = true;
+            this.checkApps.Checked = true;
+            this.checkApps.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkApps.Location = new System.Drawing.Point(20, 65);
+            this.checkApps.Name = "checkApps";
+            this.checkApps.Size = new System.Drawing.Size(74, 17);
+            this.checkApps.TabIndex = 35;
+            this.checkApps.Text = "Test Apps";
+            this.checkApps.UseVisualStyleBackColor = true;
+            // 
+            // checkPlugins
+            // 
+            this.checkPlugins.AutoSize = true;
+            this.checkPlugins.Checked = true;
+            this.checkPlugins.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkPlugins.Location = new System.Drawing.Point(20, 88);
+            this.checkPlugins.Name = "checkPlugins";
+            this.checkPlugins.Size = new System.Drawing.Size(84, 17);
+            this.checkPlugins.TabIndex = 36;
+            this.checkPlugins.Text = "Test Plugins";
+            this.checkPlugins.UseVisualStyleBackColor = true;
+            // 
             // s
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1045, 741);
+            this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.richTextBox2);
             this.Controls.Add(this.BoxGroupProj);
@@ -381,6 +461,8 @@
             this.Name = "s";
             this.Text = "Delphi2CS";
             this.Load += new System.EventHandler(this.GUI_Load);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -420,6 +502,12 @@
         private System.Windows.Forms.Button ButtonGroupProj;
         private System.Windows.Forms.RichTextBox richTextBox2;
         private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Button testBtn;
+        private System.Windows.Forms.CheckBox checkLogFileNotFound;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.CheckBox checkLibs;
+        private System.Windows.Forms.CheckBox checkApps;
+        private System.Windows.Forms.CheckBox checkPlugins;
 
     }
 }
